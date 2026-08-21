@@ -1,0 +1,40 @@
+{% extends "layout_app.html" %}
+{% from "_icons.html" import icon %}
+{% block content %}
+<div class="page-head">
+  <h2>Notifications</h2>
+  {% set unread = notes|selectattr('unread')|list|length %}
+  {% if unread %}<span class="badge badge-red">{{ unread }} unread</span>{% endif %}
+</div>
+
+<div class="pill-tabs" data-tabgroup="notifTabs">
+  <button class="pill-tab active" data-tab="All">All</button>
+  <button class="pill-tab" data-tab="Risk">Risk</button>
+  <button class="pill-tab" data-tab="Stock">Stock</button>
+  <button class="pill-tab" data-tab="Expiry">Expiry</button>
+  <button class="pill-tab" data-tab="Request">Request</button>
+  <button class="pill-tab" data-tab="System">System</button>
+</div>
+
+{% for cat in ['All', 'Risk', 'Stock', 'Expiry', 'Request', 'System'] %}
+{% set filtered = notes if cat == 'All' else notes|selectattr('category', 'equalto', cat)|list %}
+<div data-tabpanel="notifTabs" data-tabvalue="{{ cat }}" {% if cat != 'All' %}style="display:none;"{% endif %}>
+  {% for n in filtered %}
+    <div class="notif-card">
+      <div class="notif-icon {{ n.icon_bg }}">{{ icon(n.icon, 18) }}</div>
+      <div style="flex:1;">
+        <div class="notif-title-row">
+          <span class="notif-title">{{ n.title }}</span>
+          <span class="badge badge-{{ 'red' if n.severity=='critical' else 'amber' if n.severity=='warning' else 'blue' }}">{{ n.severity }}</span>
+          {% if n.unread %}<span class="unread-dot"></span>{% endif %}
+        </div>
+        <div class="notif-body">{{ n.body }}</div>
+        <div class="notif-time">{{ n.time_label }}</div>
+      </div>
+    </div>
+  {% else %}
+    <div class="empty-state"><div class="ic">{{ icon('bell', 34) }}</div><div class="t">No notifications</div><div>You're all caught up</div></div>
+  {% endfor %}
+</div>
+{% endfor %}
+{% endblock %}

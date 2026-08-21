@@ -1,0 +1,82 @@
+<div class="modal-scrim" id="registerChildModal">
+  <div class="modal-box wide">
+    <div class="modal-head">
+      <h3>Register New Child</h3>
+      <button class="modal-close" data-close-modal>×</button>
+    </div>
+    <form method="post" action="">
+      <div class="modal-body">
+        <div class="section-divider-bar" style="margin-top:0;">Basic Information</div>
+        <div class="form-grid-2">
+          <div class="form-group"><label>Full Name</label><input class="form-control" name="full_name" required></div>
+          <div class="form-group"><label>Sex</label>
+            <select class="form-control" name="sex" required><option value="M">Male</option><option value="F">Female</option></select>
+          </div>
+          <div class="form-group"><label>Date of Registration</label><input class="form-control" type="date" name="date_registered" value="{{ today.isoformat() }}" required></div>
+          <div class="form-group"><label>Date of Birth</label><input class="form-control" type="date" name="date_of_birth" required></div>
+          {% if barangays %}
+          <div class="form-group"><label>Barangay</label>
+            <select class="form-control" name="barangay_id" required>
+              {% for b in barangays %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}
+            </select>
+          </div>
+          {% endif %}
+          <div class="form-group"><label>Guardian Name</label><input class="form-control" name="guardian_name"></div>
+          <div class="form-group"><label>Contact Number</label><input class="form-control" name="guardian_contact" placeholder="09XXXXXXXXX"></div>
+          <div class="form-group"><label>Address</label><input class="form-control" name="address" placeholder="Purok, Barangay"></div>
+        </div>
+
+        <div class="section-divider-bar">BCG &amp; Hepatitis B</div>
+        <div class="form-grid-2">
+          <div class="form-group"><label>BCG (date given)</label><input class="form-control" type="date" name="dose_BCG"></div>
+          <div class="form-group"><label>Hepa B-BD (date given)</label><input class="form-control" type="date" name="dose_HEPA-BD"></div>
+        </div>
+
+        <div class="section-divider-bar">DPT-Hib-HepB</div>
+        <div class="form-grid-2">
+          <div class="form-group"><label>DPT-1 (1st dose)</label><input class="form-control" type="date" name="dose_DPT1"></div>
+          <div class="form-group"><label>DPT-2 (2nd dose)</label><input class="form-control" type="date" name="dose_DPT2"></div>
+          <div class="form-group"><label>DPT-3 (3rd dose)</label><input class="form-control" type="date" name="dose_DPT3"></div>
+        </div>
+
+        <div class="section-divider-bar">OPV</div>
+        <div class="form-grid-2">
+          <div class="form-group"><label>OPV 1st Dose</label><input class="form-control" type="date" name="dose_OPV1"></div>
+          <div class="form-group"><label>OPV 2nd Dose</label><input class="form-control" type="date" name="dose_OPV2"></div>
+          <div class="form-group"><label>OPV 3rd Dose</label><input class="form-control" type="date" name="dose_OPV3"></div>
+        </div>
+
+        <div class="section-divider-bar">PCV</div>
+        <div class="form-grid-2">
+          <div class="form-group"><label>PCV 1st Dose</label><input class="form-control" type="date" name="dose_PCV1"></div>
+          <div class="form-group"><label>PCV 2nd Dose</label><input class="form-control" type="date" name="dose_PCV2"></div>
+          <div class="form-group"><label>PCV 3rd Dose</label><input class="form-control" type="date" name="dose_PCV3"></div>
+        </div>
+
+        <div class="section-divider-bar">IPV</div>
+        <div class="form-grid-2">
+          <div class="form-group"><label>IPV 1st Dose</label><input class="form-control" type="date" name="dose_IPV1"></div>
+          <div class="form-group"><label>IPV 2nd Dose</label><input class="form-control" type="date" name="dose_IPV2"></div>
+        </div>
+
+        <div class="section-divider-bar">MMR</div>
+        <div class="form-grid-2">
+          <div class="form-group"><label>MMR 1st Dose</label><input class="form-control" type="date" name="dose_MMR1"></div>
+          <div class="form-group"><label>MMR 2nd Dose</label><input class="form-control" type="date" name="dose_MMR2"></div>
+        </div>
+
+        <div class="section-divider-bar">Supplementary (Not a Vaccine)</div>
+        <div class="form-grid-2">
+          <div class="form-group"><label>Vitamin A (date given)</label><input class="form-control" type="date" name="vitamin_a_date"></div>
+          <div class="form-group"><label>MNP Given</label>
+            <select class="form-control" name="mnp_given"><option value="">No</option><option value="1">Yes</option></select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" data-close-modal>Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Child Record</button>
+      </div>
+    </form>
+  </div>
+</div>

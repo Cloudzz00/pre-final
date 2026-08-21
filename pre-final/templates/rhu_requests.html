@@ -1,0 +1,47 @@
+{% extends "layout_app.html" %}
+{% from "_icons.html" import icon %}
+{% block content %}
+<div class="page-head"><h2>Vaccine Requests</h2></div>
+
+<div class="stat-grid">
+  <div class="stat-card"><div class="stat-icon bg-orange">{{ icon('clock', 21) }}</div><div class="stat-value">{{ stats.pending }}</div><div class="stat-label">Pending</div></div>
+  <div class="stat-card"><div class="stat-icon bg-blue">{{ icon('check-circle', 21) }}</div><div class="stat-value">{{ stats.approved }}</div><div class="stat-label">Approved</div></div>
+  <div class="stat-card"><div class="stat-icon bg-green">{{ icon('package', 21) }}</div><div class="stat-value">{{ stats.distributed }}</div><div class="stat-label">Distributed</div></div>
+  <div class="stat-card"><div class="stat-icon bg-red">{{ icon('x-circle', 21) }}</div><div class="stat-value">{{ stats.rejected }}</div><div class="stat-label">Rejected</div></div>
+</div>
+
+<div class="pill-tabs">
+  <a class="pill-tab {{ 'active' if tab=='pending' }}" href="{{ url_for('rhu.requests', tab='pending') }}">Pending ({{ stats.pending }})</a>
+  <a class="pill-tab {{ 'active' if tab=='all' }}" href="{{ url_for('rhu.requests', tab='all') }}">All Requests</a>
+</div>
+
+<div class="table-wrap auto-height">
+<table class="data-table">
+<thead><tr><th>Request ID</th><th>Barangay</th><th>Requester</th><th>Vaccine</th><th>Qty</th><th>Priority</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+<tbody>
+{% for r in reqs %}
+<tr>
+  <td><b>{{ r.request_code }}</b></td>
+  <td>{{ r.barangay.name }}</td>
+  <td>{{ r.requested_by.full_name }}</td>
+  <td>{{ r.antigen.name }}</td>
+  <td>{{ r.quantity_requested }} vials</td>
+  <td><span class="badge badge-{{ 'red' if r.priority=='Urgent' else 'amber' if r.priority=='High' else 'gray' }}">{{ r.priority }}</span></td>
+  <td>{{ r.requested_at.strftime('%Y-%m-%d') }}</td>
+  <td><span class="badge badge-{{ 'amber' if r.status=='pending' else 'blue' if r.status=='approved' else 'green' if r.status=='fulfilled' else 'red' }}">{{ r.status|capitalize }}</span></td>
+  <td class="flex-gap">
+    {% if r.status == 'pending' %}
+      <form method="post" action="{{ url_for('rhu.request_action', req_id=r.id, action='approve') }}"><button class="btn btn-outline btn-sm" title="Approve">{{ icon('check', 15) }}</button></form>
+      <form method="post" action="{{ url_for('rhu.request_action', req_id=r.id, action='reject') }}"><button class="btn btn-outline btn-sm" title="Reject">{{ icon('x', 15) }}</button></form>
+    {% elif r.status == 'approved' %}
+      <form method="post" action="{{ url_for('rhu.request_action', req_id=r.id, action='distribute') }}"><button class="btn btn-outline btn-sm">{{ icon('arrow-right', 14) }} Distribute</button></form>
+    {% else %}<span class="text-muted">—</span>{% endif %}
+  </td>
+</tr>
+{% else %}
+<tr><td colspan="9"><div class="empty-state"><div class="ic">{{ icon('clipboard', 34) }}</div><div class="t">No requests found</div></div></td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+{% endblock %}

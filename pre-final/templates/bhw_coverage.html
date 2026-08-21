@@ -1,0 +1,60 @@
+{% extends "layout_app.html" %}
+{% from "_icons.html" import icon %}
+{% block content %}
+<div class="page-head">
+  <h2>Coverage Analytics</h2>
+  <div class="flex-gap">
+    <a class="btn btn-outline btn-sm" href="{{ url_for('bhw.reports', type='coverage') }}">{{ icon('download', 15) }} Export PDF</a>
+    <a class="btn btn-outline btn-sm" href="{{ url_for('bhw.reports', type='coverage') }}">{{ icon('download', 15) }} Export Excel</a>
+  </div>
+</div>
+
+<div class="stat-grid">
+  <div class="stat-card"><span class="stat-trend up">{{ icon('trending-up', 12, 2.5) }} +3.2%</span><div class="stat-icon bg-blue">{{ icon('activity', 21) }}</div><div class="stat-value">{{ stats.coverage_rate }}%</div><div class="stat-label">Avg. Coverage Rate</div></div>
+  <div class="stat-card"><div class="stat-icon bg-green">{{ icon('check-circle', 21) }}</div><div class="stat-value">{{ stats.fully_immunized }}</div><div class="stat-label">Fully Immunized</div><div class="stat-caption">of enrolled children</div></div>
+  <div class="stat-card"><div class="stat-icon bg-teal">{{ icon('baby', 21) }}</div><div class="stat-value">{{ stats.total_children }}</div><div class="stat-label">Total Enrolled</div></div>
+  <div class="stat-card"><div class="stat-icon bg-orange">{{ icon('alert-triangle', 21) }}</div><div class="stat-value">{{ 1 if stats.coverage_rate < 90 else 0 }}</div><div class="stat-label">Below Target</div><div class="stat-caption">vs. 90% goal</div></div>
+</div>
+
+<div class="pill-tabs" data-tabgroup="covTabs">
+  <button class="pill-tab active" data-tab="vaccine">By Vaccine</button>
+  <button class="pill-tab" data-tab="trend">Monthly Trend</button>
+</div>
+
+<div data-tabpanel="covTabs" data-tabvalue="vaccine">
+  <div class="card card-pad">
+    <div class="card-title">Completion Rate by Vaccine Type</div>
+    <div class="card-sub">Percentage of eligible children who received each vaccine</div>
+    <div class="chart-box tall"><canvas id="vaccineChart"></canvas></div>
+  </div>
+</div>
+<div data-tabpanel="covTabs" data-tabvalue="trend" style="display:none;">
+  <div class="card card-pad">
+    <div class="card-title">Monthly Coverage Trend</div>
+    <div class="card-sub">Monthly immunization coverage rate vs 95% national target</div>
+    <div class="chart-box tall"><canvas id="trendChart"></canvas></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/vendor/chart.umd.js') }}"></script>
+<script>Chart.defaults.maintainAspectRatio = false; Chart.defaults.responsive = true;</script>
+<script>
+new Chart(document.getElementById('vaccineChart'), {
+  type: 'bar',
+  data: { labels: [{% for r in by_vaccine %}{{ r.vaccine|tojson }},{% endfor %}],
+    datasets: [{ data: [{% for r in by_vaccine %}{{ r.pct }},{% endfor %}], backgroundColor: '#14b8a6', borderRadius: 5 }] },
+  options: { plugins: { legend: { display: false } }, scales: { y: { max: 100 } } }
+});
+new Chart(document.getElementById('trendChart'), {
+  type: 'line',
+  data: { labels: [{% for m, v in trend %}{{ m|tojson }},{% endfor %}],
+    datasets: [
+      { label: 'Coverage %', data: [{% for m, v in trend %}{{ v }},{% endfor %}], borderColor: '#0d9488', backgroundColor: 'rgba(13,148,136,0.1)', fill: true, tension: 0.35, pointRadius: 4 },
+      { label: '95% Target', data: [{% for m, v in trend %}95,{% endfor %}], borderColor: '#94a3b8', borderDash: [6,6], pointRadius: 0 }
+    ] },
+  options: { scales: { y: { min: 50, max: 100 } } }
+});
+</script>
+{% endblock %}

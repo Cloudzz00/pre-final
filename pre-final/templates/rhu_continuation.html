@@ -1,0 +1,95 @@
+{% extends "layout_app.html" %}
+{% from "_icons.html" import icon %}
+{% block content %}
+<div class="page-head"><h2>Continuation Predictor</h2></div>
+<p class="text-muted" style="margin-top:-10px;">Predicts, for every enrolled child, whether they are likely to continue and complete their vaccination schedule.</p>
+
+<div class="stat-grid">
+  <div class="stat-card"><div class="stat-icon bg-green">{{ icon('check-circle', 21) }}</div><div class="stat-value">{{ dist.low_count }}</div><div class="stat-label">Likely to Continue</div><div class="stat-caption">On track</div></div>
+  <div class="stat-card"><div class="stat-icon bg-red">{{ icon('alert-triangle', 21) }}</div><div class="stat-value">{{ rows|length }}</div><div class="stat-label">At Risk of Discontinuing</div><div class="stat-caption">Needs follow-up</div></div>
+  <div class="stat-card"><div class="stat-icon bg-blue">{{ icon('baby', 21) }}</div><div class="stat-value">{{ stats.total_children }}</div><div class="stat-label">Total Children Assessed</div></div>
+  <div class="stat-card">
+    <div class="stat-icon bg-purple">{{ icon('cpu', 21) }}</div>
+    <div class="stat-value" style="font-size:17px;">{{ engine.engine }}</div>
+    <div class="stat-label">Scoring Engine</div>
+    <div class="stat-caption">{% if engine.trained %}Selected by recall{% else %}{{ engine.version }}{% endif %}</div>
+  </div>
+</div>
+
+{% if engine.trained %}
+<div class="card card-pad" style="margin-bottom:18px;">
+  <div class="card-title">Model Comparison</div>
+  <div class="card-sub">3 algorithms were trained and evaluated on the same dataset; the strongest one is deployed for live predictions.</div>
+  <div class="table-wrap auto-height">
+  <table class="data-table">
+    <thead><tr><th>Algorithm</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1-Score</th><th>ROC-AUC</th><th></th></tr></thead>
+    <tbody>
+    {% for name, m in engine.all_metrics.items() %}
+      <tr {% if name == engine.engine %}style="background:var(--primary-light);"{% endif %}>
+        <td><b>{{ name }}</b></td>
+        <td>{{ (m.accuracy * 100)|round(1) }}%</td>
+        <td>{{ (m.precision * 100)|round(1) }}%</td>
+        <td>{{ (m.recall * 100)|round(1) }}%</td>
+        <td>{{ (m.f1 * 100)|round(1) }}%</td>
+        <td>{{ (m.roc_auc * 100)|round(1) }}%</td>
+        <td>{% if name == engine.engine %}<span class="badge badge-blue">Deployed</span>{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+{# Prototype build: show the actual rules in use instead of model metrics. #}
+<div class="card card-pad" style="margin-bottom:18px;">
+  <div class="card-title">Scoring Rules In Use</div>
+  <div class="card-sub">This prototype flags children using the transparent weighted rules below.
+    No machine-learning model is trained in this build, so no accuracy, precision, or recall
+    figures are reported. A child is flagged <b>At-Risk</b> when the combined score reaches 50%.</div>
+  <div class="table-wrap auto-height">
+  <table class="data-table">
+    <thead><tr><th>Indicator</th><th>Weight</th><th>Contribution</th></tr></thead>
+    <tbody>
+    {% for key, weight in scoring_rules.items() %}
+      <tr>
+        <td><b>{{ feature_labels.get(key, key) }}</b></td>
+        <td>{{ (weight * 100)|round(0)|int }}%</td>
+        <td>
+          <div class="bar-track"><div class="bar-fill" style="width: {{ (weight * 100 / 0.34)|round(1) }}%;"></div></div>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+{% endif %}
+  </div>
+</div>
+
+<div class="card card-pad">
+  <div class="card-title">Children Predicted Not to Continue</div>
+  <div class="card-sub">Ranked by discontinuation risk — highest first</div>
+  <div class="table-wrap">
+  <table class="data-table">
+    <thead><tr><th>Rank</th><th>Patient ID</th><th>Barangay</th><th>Continuation Likelihood</th><th>Missed Vaccines</th><th>Next Dose Due</th><th>Last Visit</th><th>Recommendation</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td><span class="rank-badge">{{ loop.index }}</span></td>
+        <td><b>{{ r.child.barangay.name[:2]|upper }}-{{ '%03d'|format(r.child.id) }}</b><br><span class="text-muted" style="font-size:11.5px">{{ r.child.full_name }} · {{ 'Male' if r.child.sex=='M' else 'Female' }} · {{ r.child.age_display }}</span></td>
+        <td>{{ r.child.barangay.name }}</td>
+        <td><span class="progress-track"><span class="progress-fill {{ 'red' if r.continuation_pct < 30 else 'amber' }}" style="width:{{ r.continuation_pct }}%"></span></span>{{ r.continuation_pct }}%</td>
+        <td>{{ r.missed }} of {{ r.due }}</td>
+        <td>
+          {% if r.next_dose %}
+            {{ r.next_dose.name }}{% if r.next_dose.overdue %} <span class="badge badge-red">Overdue</span>{% endif %}
+          {% else %}All doses given{% endif %}
+        </td>
+        <td>{{ r.last_visit.strftime('%Y-%m-%d') if r.last_visit else '—' }}</td>
+        <td><span class="badge badge-{{ 'red' if r.recommendation=='Home Visit' else 'amber' }}">{{ r.recommendation }}</span></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="8"><div class="empty-state"><div class="ic">{{ icon('check-circle', 34) }}</div><div class="t">No children currently predicted to discontinue</div></div></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

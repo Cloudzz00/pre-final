@@ -1,0 +1,94 @@
+{% extends "layout_app.html" %}
+{% block content %}
+<div class="page-head">
+  <h2>Edit Child Record — {{ child.full_name }}</h2>
+  <a href="{{ back_url }}" class="btn btn-outline btn-sm">‹ Back to Child Records</a>
+</div>
+
+<div class="card card-pad" style="max-width:900px;">
+  {% if child.latest_risk %}
+  <div class="alert-banner {{ 'warning' if child.latest_risk.risk_label == 'At-Risk' else '' }}" style="{% if child.latest_risk.risk_label != 'At-Risk' %}background:var(--green-bg);border-left-color:var(--green-light);{% endif %} margin-bottom:20px;">
+    <div class="title" style="{% if child.latest_risk.risk_label != 'At-Risk' %}color:var(--green);{% endif %}">
+      Current risk status: <span class="badge badge-{{ 'red' if child.latest_risk.risk_label == 'At-Risk' else 'green' }}">{{ child.latest_risk.risk_label }}</span>
+      <span class="text-muted" style="font-weight:400;font-size:12.5px;">({{ (child.latest_risk.risk_probability * 100)|round(1) }}% probability, as of {{ child.latest_risk.computed_at.strftime('%Y-%m-%d') }})</span>
+    </div>
+  </div>
+  {% endif %}
+
+  <form method="post" action="{{ form_action }}">
+    <div class="section-divider-bar" style="margin-top:0;">Basic Information</div>
+    <div class="form-grid-2">
+      <div class="form-group"><label>Full Name</label><input class="form-control" name="full_name" value="{{ child.full_name }}" required></div>
+      <div class="form-group"><label>Sex</label>
+        <select class="form-control" name="sex" required>
+          <option value="M" {% if child.sex=='M' %}selected{% endif %}>Male</option>
+          <option value="F" {% if child.sex=='F' %}selected{% endif %}>Female</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Date of Registration</label><input class="form-control" type="date" name="date_registered" value="{{ child.date_registered.isoformat() }}" required></div>
+      <div class="form-group"><label>Date of Birth</label><input class="form-control" type="date" name="date_of_birth" value="{{ child.date_of_birth.isoformat() }}" required></div>
+      <div class="form-group"><label>Barangay</label><input class="form-control" value="{{ child.barangay.name }}" disabled>
+        <span class="text-muted" style="font-size:11.5px;">Barangay reassignment is not done here — contact your System Administrator.</span>
+      </div>
+      <div class="form-group"><label>Guardian Name</label><input class="form-control" name="guardian_name" value="{{ child.guardian_name or '' }}"></div>
+      <div class="form-group"><label>Contact Number</label><input class="form-control" name="guardian_contact" value="{{ child.guardian_contact or '' }}" placeholder="09XXXXXXXXX"></div>
+      <div class="form-group"><label>Address</label><input class="form-control" name="address" value="{{ child.address or '' }}" placeholder="Purok, Barangay"></div>
+    </div>
+
+    <div class="section-divider-bar">BCG &amp; Hepatitis B</div>
+    <div class="form-grid-2">
+      <div class="form-group"><label>BCG (date given)</label><input class="form-control" type="date" name="dose_BCG" value="{{ doses.BCG.isoformat() if doses.BCG else '' }}"></div>
+      <div class="form-group"><label>Hepa B-BD (date given)</label><input class="form-control" type="date" name="dose_HEPA-BD" value="{{ doses['HEPA-BD'].isoformat() if doses['HEPA-BD'] else '' }}"></div>
+    </div>
+
+    <div class="section-divider-bar">DPT-Hib-HepB</div>
+    <div class="form-grid-2">
+      <div class="form-group"><label>DPT-1 (1st dose)</label><input class="form-control" type="date" name="dose_DPT1" value="{{ doses.DPT1.isoformat() if doses.DPT1 else '' }}"></div>
+      <div class="form-group"><label>DPT-2 (2nd dose)</label><input class="form-control" type="date" name="dose_DPT2" value="{{ doses.DPT2.isoformat() if doses.DPT2 else '' }}"></div>
+      <div class="form-group"><label>DPT-3 (3rd dose)</label><input class="form-control" type="date" name="dose_DPT3" value="{{ doses.DPT3.isoformat() if doses.DPT3 else '' }}"></div>
+    </div>
+
+    <div class="section-divider-bar">OPV</div>
+    <div class="form-grid-2">
+      <div class="form-group"><label>OPV 1st Dose</label><input class="form-control" type="date" name="dose_OPV1" value="{{ doses.OPV1.isoformat() if doses.OPV1 else '' }}"></div>
+      <div class="form-group"><label>OPV 2nd Dose</label><input class="form-control" type="date" name="dose_OPV2" value="{{ doses.OPV2.isoformat() if doses.OPV2 else '' }}"></div>
+      <div class="form-group"><label>OPV 3rd Dose</label><input class="form-control" type="date" name="dose_OPV3" value="{{ doses.OPV3.isoformat() if doses.OPV3 else '' }}"></div>
+    </div>
+
+    <div class="section-divider-bar">PCV</div>
+    <div class="form-grid-2">
+      <div class="form-group"><label>PCV 1st Dose</label><input class="form-control" type="date" name="dose_PCV1" value="{{ doses.PCV1.isoformat() if doses.PCV1 else '' }}"></div>
+      <div class="form-group"><label>PCV 2nd Dose</label><input class="form-control" type="date" name="dose_PCV2" value="{{ doses.PCV2.isoformat() if doses.PCV2 else '' }}"></div>
+      <div class="form-group"><label>PCV 3rd Dose</label><input class="form-control" type="date" name="dose_PCV3" value="{{ doses.PCV3.isoformat() if doses.PCV3 else '' }}"></div>
+    </div>
+
+    <div class="section-divider-bar">IPV</div>
+    <div class="form-grid-2">
+      <div class="form-group"><label>IPV 1st Dose</label><input class="form-control" type="date" name="dose_IPV1" value="{{ doses.IPV1.isoformat() if doses.IPV1 else '' }}"></div>
+      <div class="form-group"><label>IPV 2nd Dose</label><input class="form-control" type="date" name="dose_IPV2" value="{{ doses.IPV2.isoformat() if doses.IPV2 else '' }}"></div>
+    </div>
+
+    <div class="section-divider-bar">MMR</div>
+    <div class="form-grid-2">
+      <div class="form-group"><label>MMR 1st Dose</label><input class="form-control" type="date" name="dose_MMR1" value="{{ doses.MMR1.isoformat() if doses.MMR1 else '' }}"></div>
+      <div class="form-group"><label>MMR 2nd Dose</label><input class="form-control" type="date" name="dose_MMR2" value="{{ doses.MMR2.isoformat() if doses.MMR2 else '' }}"></div>
+    </div>
+
+    <div class="section-divider-bar">Supplementary (Not a Vaccine)</div>
+    <div class="form-grid-2">
+      <div class="form-group"><label>Vitamin A (date given)</label><input class="form-control" type="date" name="vitamin_a_date" value="{{ child.vitamin_a_date.isoformat() if child.vitamin_a_date else '' }}"></div>
+      <div class="form-group"><label>MNP Given</label>
+        <select class="form-control" name="mnp_given">
+          <option value="" {% if not child.mnp_given %}selected{% endif %}>No</option>
+          <option value="1" {% if child.mnp_given %}selected{% endif %}>Yes</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="modal-footer" style="padding:20px 0 0;border-top:1px solid var(--border);margin-top:20px;">
+      <a href="{{ back_url }}" class="btn btn-outline">Cancel</a>
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

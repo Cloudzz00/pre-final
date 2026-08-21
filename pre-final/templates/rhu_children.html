@@ -1,0 +1,75 @@
+{% extends "layout_app.html" %}
+{% from "_icons.html" import icon %}
+{% block content %}
+<div class="page-head">
+  <h2>My Children</h2>
+  <button class="btn btn-primary rounded-pill-btn" data-open-modal="registerChildModal">+ Add Child</button>
+</div>
+
+<form class="filter-bar" method="get">
+  <div class="search-input-wrap">
+    <span class="si-icon">{{ icon('search', 16) }}</span>
+    <input type="text" name="q" value="{{ search }}" placeholder="Search by name...">
+  </div>
+  {% if barangays %}
+  <select name="barangay_id" class="select-sm" onchange="this.form.submit()">
+    <option value="">All Barangays</option>
+    {% for b in barangays %}<option value="{{ b.id }}" {% if selected_barangay==b.id %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
+  </select>
+  {% endif %}
+  <select name="risk_level" class="select-sm" onchange="this.form.submit()">
+    <option value="">All Risk Levels</option>
+    <option value="At-Risk" {% if selected_risk=='At-Risk' %}selected{% endif %}>At-Risk</option>
+    <option value="Not At-Risk" {% if selected_risk=='Not At-Risk' %}selected{% endif %}>Not At-Risk</option>
+  </select>
+  <button class="btn btn-outline btn-sm" type="submit">Filter</button>
+  {% if search or selected_barangay or selected_risk %}<a class="link" href="{{ url_for(request.endpoint) }}">× Clear filters</a>{% endif %}
+</form>
+
+<p class="text-muted" style="margin-top:-8px;">{{ children|length }} children found</p>
+
+<div class="table-wrap">
+<table class="data-table pin-first">
+<thead>
+<tr>
+  <th>ID</th><th>Reg. Date</th><th>Date of Birth</th><th>Sex</th><th>Barangay</th>
+  {% for code, name, antigen, dose_no, rec_days in vaccine_schedule %}<th class="vaccine-group-head">{{ name }}</th>{% endfor %}
+  <th>Risk</th><th>Actions</th>
+</tr>
+</thead>
+<tbody>
+{% for c in children %}
+<tr>
+  <td class="id-chip"><span class="sex-dot {{ c.sex }}"></span>{{ c.barangay.name[:2]|upper }}-{{ '%03d'|format(c.id) }}</td>
+  <td>{{ c.date_registered.strftime('%m/%d/%y') }}</td>
+  <td>{{ c.date_of_birth.strftime('%m/%d/%y') }}</td>
+  <td>{{ c.sex }}</td>
+  <td>{{ c.barangay.name }}</td>
+  {% for code, name, antigen, dose_no, rec_days in vaccine_schedule %}
+    {% set given = dose_matrix[c.id][code] %}
+    <td class="{{ 'cell-green' if given else 'cell-muted' }}">
+      {{ given.strftime('%m/%d/%y') if given else '—' }}
+    </td>
+  {% endfor %}
+  <td>
+    {% set label = risk_labels[c.id] %}
+    {% if label %}
+      <span class="badge badge-{{ 'red' if label=='At-Risk' else 'green' }}">{{ label }}</span>
+    {% else %}<span class="badge badge-gray">Pending</span>{% endif %}
+  </td>
+  <td class="flex-gap">
+    <a href="{{ url_for('rhu.edit_child', child_id=c.id) }}" class="btn btn-outline btn-sm">{{ icon('pencil', 14) }} Edit</a>
+    <form method="post" action="{{ url_for('rhu.recompute_risk', child_id=c.id) }}" style="display:inline">
+      <button class="btn btn-outline btn-sm" type="submit">{{ icon('refresh', 14) }} Re-assess</button>
+    </form>
+  </td>
+</tr>
+{% else %}
+<tr><td colspan="20"><div class="empty-state"><div class="ic">{{ icon('folder', 34) }}</div><div class="t">No children found</div></div></td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+
+{% include "register_child_modal.html" %}
+{% endblock %}

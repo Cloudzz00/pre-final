@@ -1,0 +1,7 @@
+# Additional dependencies for the FINAL defense build only (model training).
+# Install these on top of requirements.txt, then run:  python data_processor.py
+numpy
+pandas
+scikit-learn
+xgboost
+joblib

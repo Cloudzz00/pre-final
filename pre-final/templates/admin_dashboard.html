@@ -1,0 +1,59 @@
+{% extends "layout_app.html" %}
+{% from "_icons.html" import icon %}
+{% block content %}
+<div class="banner">
+  <div>
+    <h2>System Administration</h2>
+    <p>ImmunoVision · User &amp; Access Management</p>
+  </div>
+  <div class="banner-meta">{{ icon('clock', 15) }} {{ (now.strftime('%b') ~ ' ' ~ now.day ~ ', ' ~ now.year) if now else '' }}</div>
+</div>
+
+<div class="stat-grid">
+  <div class="stat-card"><div class="stat-icon bg-blue">{{ icon('users', 21) }}</div><div class="stat-value">{{ stats.total }}</div><div class="stat-label">Total Users</div></div>
+  <div class="stat-card"><div class="stat-icon bg-teal">{{ icon('stethoscope', 21) }}</div><div class="stat-value">{{ stats.rhu }}</div><div class="stat-label">RHU Personnel</div></div>
+  <div class="stat-card"><div class="stat-icon bg-green">{{ icon('user-round', 21) }}</div><div class="stat-value">{{ stats.bhw }}</div><div class="stat-label">BHW Accounts</div></div>
+  <div class="stat-card"><div class="stat-icon bg-green">{{ icon('check-circle', 21) }}</div><div class="stat-value">{{ stats.active }}</div><div class="stat-label">Active</div></div>
+  <div class="stat-card"><div class="stat-icon bg-red">{{ icon('x-circle', 21) }}</div><div class="stat-value">{{ stats.disabled }}</div><div class="stat-label">Disabled</div></div>
+  <div class="stat-card"><div class="stat-icon bg-purple">{{ icon('log-in', 21) }}</div><div class="stat-value">{{ stats.logins_today }}</div><div class="stat-label">Logins Today</div><div class="stat-caption">active sessions</div></div>
+</div>
+
+<div class="grid-2">
+  <div class="card card-pad">
+    <div class="card-title">Role Distribution</div>
+    <div class="chart-box"><canvas id="roleDonut"></canvas></div>
+  </div>
+  <div class="card card-pad">
+    <div class="card-title">Quick Actions</div>
+    <a href="{{ url_for('admin.users') }}" class="settings-row" style="text-decoration:none;">
+      <div class="left"><div class="ic">{{ icon('user-plus', 18) }}</div><div class="label">Create New User</div></div><div>›</div>
+    </a>
+    <a href="{{ url_for('admin.assign_barangay') }}" class="settings-row" style="text-decoration:none;">
+      <div class="left"><div class="ic">{{ icon('map-pin', 18) }}</div><div class="label">Assign Barangay</div></div><div>›</div>
+    </a>
+    <a href="{{ url_for('admin.logs') }}" class="settings-row" style="text-decoration:none;">
+      <div class="left"><div class="ic">{{ icon('history', 18) }}</div><div class="label">View Activity Logs</div></div><div>›</div>
+    </a>
+    <div class="card-title" style="margin-top:16px;">Account Status</div>
+    {% for u in users[:3] %}
+    <div class="settings-row">
+      <div class="left"><div class="avatar-chip" style="background:var(--primary)">{{ u.full_name.split(' ')|map('first')|join('') }}</div><div class="label">{{ u.full_name }}<br><span class="text-muted" style="font-weight:400;">{{ u.role_label }}</span></div></div>
+      <span class="badge badge-{{ 'green' if u.is_active_flag else 'red' }}">{{ 'Active' if u.is_active_flag else 'Disabled' }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/vendor/chart.umd.js') }}"></script>
+<script>Chart.defaults.maintainAspectRatio = false; Chart.defaults.responsive = true;</script>
+<script>
+new Chart(document.getElementById('roleDonut'), {
+  type: 'doughnut',
+  data: { labels: ['Admin', 'RHU Personnel', 'BHW'],
+    datasets: [{ data: [{{ role_dist.admin }}, {{ role_dist.rhu }}, {{ role_dist.bhw }}], backgroundColor: ['#7c3aed', '#2563eb', '#0d9488'], borderWidth: 0 }] },
+  options: { plugins: { legend: { position: 'bottom' } } }
+});
+</script>
+{% endblock %}

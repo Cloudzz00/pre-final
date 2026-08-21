@@ -1,0 +1,34 @@
+{% extends "layout_app.html" %}
+{% from "_icons.html" import icon %}
+{% block content %}
+<div class="page-head"><h2>Settings</h2></div>
+<div class="grid-2" style="grid-template-columns: 320px 1fr;">
+  <div class="card card-pad" style="text-align:center;">
+    <div class="avatar-chip" style="width:72px;height:72px;font-size:24px;border-radius:16px;margin:0 auto 12px;">{{ current_user.full_name.split(' ')|map('first')|join('') }}</div>
+    <div style="font-weight:700;font-size:16px;">{{ current_user.full_name }}</div>
+    <div class="text-muted" style="font-size:13px;margin-bottom:10px;">{{ current_user.username }}@rhu.sanjacinto.gov.ph</div>
+    <span class="badge badge-blue">{{ current_user.role_label }}</span>
+    <span class="badge badge-gray">{{ current_user.barangay.name if current_user.barangay else 'All Barangays' }}</span>
+    <div style="margin-top:16px;"><button class="btn btn-outline btn-block">{{ icon('pencil', 15) }} Edit Profile</button></div>
+  </div>
+
+  <div>
+    <div class="card card-pad" style="margin-bottom:16px;">
+      <div class="card-title">Account Security</div>
+      <div class="settings-row"><div class="left"><div class="ic">{{ icon('lock', 18) }}</div><div class="label">Change Password</div></div><div>›</div></div>
+      <div class="settings-row"><div class="left"><div class="ic">{{ icon('shield', 18) }}</div><div class="label">Two-Factor Authentication</div></div><div class="val">Disabled ›</div></div>
+      <div class="settings-row"><div class="left"><div class="ic">{{ icon('globe', 18) }}</div><div class="label">Active Sessions</div></div><div class="val">1 active ›</div></div>
+    </div>
+    <div class="card card-pad" style="margin-bottom:16px;">
+      <div class="card-title">Notifications</div>
+      <div class="settings-row"><div class="left"><div class="ic">{{ icon('mail', 18) }}</div><div class="label">Email Notifications</div></div><div class="toggle on" data-toggle></div></div>
+      <div class="settings-row"><div class="left"><div class="ic">{{ icon('alert-triangle', 18) }}</div><div class="label">At-Risk Alerts</div></div><div class="toggle on" data-toggle></div></div>
+      <div class="settings-row"><div class="left"><div class="ic">{{ icon('package', 18) }}</div><div class="label">Stock Alerts</div></div><div class="toggle on" data-toggle></div></div>
+    </div>
+    <div class="card card-pad">
+      <div class="card-title">System</div>
+      <div class="settings-row"><div class="left"><div class="ic">{{ icon('globe', 18) }}</div><div class="label">Language</div></div><div class="val">English (Philippines) ›</div></div>
+    </div>
+  </div>
+</div>
+{% endblock %}

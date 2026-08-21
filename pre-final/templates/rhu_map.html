@@ -1,0 +1,94 @@
+{% extends "layout_app.html" %}
+{% block content %}
+<div class="page-head"><h2>Geospatial Map</h2></div>
+
+<div class="pill-tabs" data-tabgroup="mapTabs">
+  <button class="pill-tab active" data-tab="heatmap">Coverage Heatmap</button>
+  <button class="pill-tab" data-tab="atrisk">At-Risk Distribution</button>
+  <button class="pill-tab" data-tab="density">Child Density</button>
+</div>
+
+<div class="map-wrap">
+  <div class="card card-pad">
+    <div class="flex-between" style="margin-bottom:10px;">
+      <div>
+        <div class="card-title mb-0">San Jacinto, Pangasinan</div>
+        <div class="card-sub mb-0">Click a barangay to view details</div>
+      </div>
+      <div class="legend-row" id="legendHeatmap">
+        <span><span class="legend-dot" style="background:#22c55e"></span>≥90%</span>
+        <span><span class="legend-dot" style="background:#14b8a6"></span>75–89%</span>
+        <span><span class="legend-dot" style="background:#f59e0b"></span>60–74%</span>
+        <span><span class="legend-dot" style="background:#ef4444"></span>&lt;60%</span>
+      </div>
+    </div>
+    <div class="map-canvas">
+      <svg viewBox="0 0 100 100" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+        <polygon class="map-poly" points="18,15 55,10 88,22 92,55 75,88 40,92 12,68 8,35"></polygon>
+        <text x="90" y="10" font-size="5" fill="#94a3b8">N</text>
+        <g id="mapMarkers"></g>
+      </svg>
+    </div>
+  </div>
+
+  <div>
+    <div class="card card-pad" style="margin-bottom:16px;" id="selectPanel">
+      <div class="card-title">Select a Barangay</div>
+      <p class="text-muted" id="selectHint" style="font-size:13px;">Click any marker on the map to view barangay-specific immunization statistics.</p>
+    </div>
+    <div class="card card-pad">
+      <div class="card-title">Coverage Rankings</div>
+      {% for r in rankings %}
+      <div class="ranking-row">
+        <span class="rn">{{ loop.index }}</span>
+        <span class="rname">{{ r.barangay }}</span>
+        <span class="progress-track"><span class="progress-fill green" style="width:{{ r.coverage }}%"></span></span>
+        <span class="rpct">{{ r.coverage }}%</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const DATA = {
+  heatmap: {{ heatmap|tojson }},
+  atrisk: {{ at_risk|tojson }},
+  density: {{ density|tojson }}
+};
+const COLOR = { green: '#22c55e', teal: '#14b8a6', amber: '#f59e0b', red: '#ef4444', blue: '#3b82f6' };
+const markersG = document.getElementById('mapMarkers');
+const selectHint = document.getElementById('selectHint');
+const selectPanel = document.getElementById('selectPanel');
+
+function render(mode) {
+  markersG.innerHTML = '';
+  DATA[mode].forEach(m => {
+    const cx = m.x * 100, cy = m.y * 100;
+    const r = mode === 'density' ? Math.max(1.6, Math.min(3.6, m.value / 25)) : 2.2;
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', 'map-marker');
+    g.innerHTML = `
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="${COLOR[m.color]}"></circle>
+      <text x="${cx}" y="${cy + 0.8}">${m.value}</text>
+      <text class="marker-label" x="${cx}" y="${cy - r - 0.9}">${m.barangay.split(' ')[0]}</text>
+    `;
+    g.addEventListener('click', () => {
+      selectPanel.querySelector('.card-title').textContent = m.barangay;
+      selectHint.innerHTML = `<b>${m.value}${m.suffix}</b> ${mode === 'heatmap' ? 'coverage rate' : mode === 'atrisk' ? 'at-risk children' : 'total children'} in this barangay.`;
+    });
+    markersG.appendChild(g);
+  });
+}
+render('heatmap');
+
+document.querySelectorAll('[data-tabgroup="mapTabs"] [data-tab]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const map = { heatmap: 'heatmap', atrisk: 'atrisk', density: 'density' };
+    render(map[btn.getAttribute('data-tab')]);
+  });
+});
+</script>
+{% endblock %}

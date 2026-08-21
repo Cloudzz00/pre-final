@@ -1,0 +1,91 @@
+{% extends "layout_app.html" %}
+{% from "_icons.html" import icon %}
+{% block content %}
+<div class="banner">
+  <div>
+    <h2>Good morning, {{ current_user.full_name.split(' ')[0] }}</h2>
+    <p>San Jacinto Municipal Health Dashboard — {{ (now.strftime('%B') ~ ' ' ~ now.day ~ ', ' ~ now.year) if now else '' }}</p>
+  </div>
+  <div class="banner-meta">{{ icon('clock', 15) }} Prototype data · {{ now.strftime('%b %Y') if now else '' }}</div>
+</div>
+
+{% if inventory_alerts or at_risk_uncontacted %}
+<div class="alert-banner">
+  <div class="title">{{ icon('alert-triangle', 16) }} Critical Alerts</div>
+  <ul>
+    {% for a in inventory_alerts %}<li>{{ a }}</li>{% endfor %}
+    {% if at_risk_uncontacted %}<li>{{ at_risk_uncontacted }} high-risk children may need urgent follow-up</li>{% endif %}
+  </ul>
+</div>
+{% endif %}
+
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-icon bg-blue">{{ icon('baby', 21) }}</div>
+    <div class="stat-value">{{ stats.total_children }}</div>
+    <div class="stat-label">Total Children</div>
+    <div class="stat-caption">All 19 barangays</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon bg-green">{{ icon('check-circle', 21) }}</div>
+    <div class="stat-value">{{ stats.fully_immunized }}</div>
+    <div class="stat-label">Fully Immunized</div>
+    <div class="stat-caption">{{ stats.coverage_rate }}% of enrolled</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon bg-orange">{{ icon('alert-triangle', 21) }}</div>
+    <div class="stat-value">{{ stats.at_risk }}</div>
+    <div class="stat-label">At-Risk Children</div>
+    <div class="stat-caption">need follow-up</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon bg-teal">{{ icon('activity', 21) }}</div>
+    <div class="stat-value">{{ risk_dist.high_count }}</div>
+    <div class="stat-label">High Risk</div>
+    <div class="stat-caption"><a href="{{ url_for('rhu.risk') }}" class="link" style="color:var(--primary)">View Risk Prediction ›</a></div>
+  </div>
+  <a href="{{ url_for('rhu.inventory') }}" class="stat-card" style="display:block;">
+    <div class="stat-icon bg-purple">{{ icon('package', 21) }}</div>
+    <div class="stat-label" style="font-size:15px;">Vaccine Inventory</div>
+    <div class="stat-caption">Manage stock levels ›</div>
+  </a>
+  <a href="{{ url_for('rhu.requests') }}" class="stat-card" style="display:block;">
+    <div class="stat-icon bg-red">{{ icon('clipboard', 21) }}</div>
+    <div class="stat-label" style="font-size:15px;">Vaccine Requests</div>
+    <div class="stat-caption">Review barangay requests ›</div>
+  </a>
+</div>
+
+<div class="grid-2">
+  <div class="card card-pad">
+    <div class="card-title">Coverage Snapshot</div>
+    <div class="card-sub">Overall municipal immunization coverage</div>
+    <div class="chart-box"><canvas id="covGaugeChart"></canvas></div>
+  </div>
+  <div class="card card-pad">
+    <div class="card-title">Risk Distribution</div>
+    <div class="card-sub">By risk level across all children</div>
+    <div class="chart-box"><canvas id="riskDonutChart"></canvas></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/vendor/chart.umd.js') }}"></script>
+<script>Chart.defaults.maintainAspectRatio = false; Chart.defaults.responsive = true;</script>
+<script>
+new Chart(document.getElementById('covGaugeChart'), {
+  type: 'doughnut',
+  data: { labels: ['Fully Immunized', 'Remaining'], datasets: [{ data: [{{ stats.coverage_rate }}, {{ 100 - stats.coverage_rate }}], backgroundColor: ['#2563eb', '#e5e7eb'], borderWidth: 0 }] },
+  options: { cutout: '72%', plugins: { legend: { display: false } } }
+});
+new Chart(document.getElementById('riskDonutChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Not At-Risk / Low', 'Medium Risk', 'High Risk'],
+    datasets: [{ data: [{{ risk_dist.low_pct }}, {{ risk_dist.medium_pct }}, {{ risk_dist.high_pct }}], backgroundColor: ['#22c55e', '#f59e0b', '#ef4444'], borderWidth: 0 }]
+  },
+  options: { plugins: { legend: { position: 'bottom' } } }
+});
+</script>
+{% endblock %}

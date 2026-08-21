@@ -1,0 +1,15 @@
+{#
+  ImmunoVision brand mark — a single source of truth for the logo.
+  Shield (protection / immunity) with a knocked-out medical cross, so the
+  tile gradient shows through the negative space. Drawn on a 32x32 grid and
+  legible down to 16px, unlike an emoji glyph.
+#}
+{% macro brand_mark(size=44, radius=12) %}
+<span class="brand-mark" style="--mark-size:{{ size }}px;--mark-radius:{{ radius }}px;" aria-hidden="true">
+  <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" focusable="false">
+    <path fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"
+          d="M16 2.6 4.9 6.9v8.6c0 6.8 4.4 11.9 10.6 13.9a1.6 1.6 0 0 0 1 0c6.2-2 10.6-7.1 10.6-13.9V6.9L16 2.6Z
+             M17.45 9.6h-2.9v3.75H10.8v2.9h3.75v3.75h2.9v-3.75h3.75v-2.9h-3.75V9.6Z"/>
+  </svg>
+</span>
+{% endmacro %}

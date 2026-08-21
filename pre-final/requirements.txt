@@ -1,0 +1,15 @@
+# ImmunoVision — pre-final defense prototype
+#
+# These are ALL the dependencies the running system needs.
+# No pandas / scikit-learn / xgboost / joblib / numpy: risk scoring in this
+# build is handled by the rule-based scorer in data_processor.py.
+#
+# The model training code remains in data_processor.py (train_and_save_model)
+# and imports those libraries lazily, so they are only required when you
+# actually train a model for the final defense.
+
+Flask==3.1.3
+Flask-SQLAlchemy==3.1.1
+Flask-Login==0.6.3
+SQLAlchemy==2.0.52
+Werkzeug==3.1.7

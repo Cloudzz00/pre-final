@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% from "_brand.html" import brand_mark %}
+{% from "_icons.html" import icon %}
+{% block body %}
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      {{ brand_mark(38, 10) }}
+      <div class="brand-text">
+        <div class="t1">ImmunoVision</div>
+        <div class="t2">San Jacinto, Pangasinan</div>
+      </div>
+      <button class="sidebar-toggle" id="sidebarToggle" type="button" title="Collapse sidebar">‹</button>
+    </div>
+    <div class="sidebar-section-label">Navigation</div>
+    <nav class="sidebar-nav">
+      {% for item in nav_items %}
+      <a class="nav-item {% if item.key == active %}active{% endif %}" href="{{ item.url }}">
+        <span class="icon">{{ icon(item.icon, 18) }}</span>
+        <span class="label">{{ item.label }}</span>
+      </a>
+      {% endfor %}
+    </nav>
+    <div class="sidebar-footer">
+      <div class="avatar-chip">{{ current_user.full_name.split(' ')|map('first')|join('') }}</div>
+      <div class="who">
+        <div class="name">{{ current_user.full_name }}</div>
+        <div class="role">{{ current_user.role_label }}</div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main-col">
+    <header class="topbar">
+      <div>
+        <h1>{% block page_title %}{{ page_title|default('') }}{% endblock %}</h1>
+        <div class="subtitle">{% block page_subtitle %}{{ page_subtitle|default('San Jacinto, Pangasinan RHU') }}{% endblock %}</div>
+      </div>
+      <div class="topbar-right">
+        <a href="{{ notif_url|default('#') }}" class="bell-btn" title="Notifications">{{ icon('bell', 19) }}{% if unread_count and unread_count > 0 %}<span class="bell-dot"></span>{% endif %}</a>
+        <div class="account-chip">
+          <div class="avatar-chip">{{ current_user.full_name.split(' ')|map('first')|join('') }}</div>
+          <div class="who">
+            <div class="name">{{ current_user.full_name.split(' ')[0] }}</div>
+            <div class="role">{{ current_user.role_label }}</div>
+          </div>
+          <a href="{{ url_for('auth.logout') }}" class="btn btn-outline btn-sm" style="margin-left:6px;">Log out</a>
+        </div>
+      </div>
+    </header>
+    <main class="content">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ 'error' if category == 'error' else 'success' }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% endblock %}

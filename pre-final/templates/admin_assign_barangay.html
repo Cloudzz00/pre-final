@@ -1,0 +1,47 @@
+{% extends "layout_app.html" %}
+{% from "_icons.html" import icon %}
+{% block content %}
+<div class="page-head"><h2>Assign Barangay</h2></div>
+
+<div class="card card-pad" style="margin-bottom:18px;">
+  <p class="mb-0">Manage barangay assignments for all BHW accounts. Each BHW can only access records within their assigned barangay.</p>
+</div>
+
+<div class="card card-pad">
+  <div class="card-title">BHW Barangay Assignments</div>
+  {% for u in bhws %}
+  <div class="settings-row">
+    <div class="left">
+      <span class="avatar-chip" style="background:var(--teal);">{{ u.full_name.split(' ')|map('first')|join('') }}</span>
+      <div><div class="label">{{ u.full_name }}</div><div class="val">{{ u.username }} · {{ u.username }}@rhu.sanjacinto.gov.ph</div></div>
+    </div>
+    <div class="flex-gap">
+      <span class="badge badge-teal">{{ u.barangay.name if u.barangay else 'Unassigned' }}</span>
+      <button class="btn btn-outline btn-sm" data-open-modal="assignModal{{ u.id }}">{{ icon('pencil', 14) }} Change</button>
+      <span class="badge badge-{{ 'green' if u.is_active_flag else 'red' }}">{{ 'Active' if u.is_active_flag else 'Disabled' }}</span>
+    </div>
+  </div>
+  <div class="modal-scrim" id="assignModal{{ u.id }}">
+    <div class="modal-box">
+      <div class="modal-head"><h3>Reassign {{ u.full_name }}</h3><button class="modal-close" data-close-modal>×</button></div>
+      <form method="post" action="{{ url_for('admin.assign_barangay') }}">
+        <input type="hidden" name="user_id" value="{{ u.id }}">
+        <div class="modal-body">
+          <div class="form-group"><label>Assigned Barangay</label>
+            <select class="form-control" name="barangay_id">
+              {% for b in barangays %}<option value="{{ b.id }}" {% if u.barangay_id==b.id %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" data-close-modal>Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Assignment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% else %}
+  <div class="empty-state"><div class="ic">{{ icon('users', 34) }}</div><div class="t">No BHW accounts yet</div></div>
+  {% endfor %}
+</div>
+{% endblock %}

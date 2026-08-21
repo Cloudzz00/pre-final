@@ -1,0 +1,60 @@
+{% extends "layout_app.html" %}
+{% from "_icons.html" import icon %}
+{% block content %}
+<div class="banner">
+  <div>
+    <h2>Good morning, {{ current_user.full_name.split(' ')[0] }}!</h2>
+    <p>Barangay {{ current_user.barangay.name }} · {{ (now.strftime('%B') ~ ' ' ~ now.day ~ ', ' ~ now.year) if now else '' }}</p>
+  </div>
+  <div class="banner-meta">{{ icon('clock', 15) }} Prototype data</div>
+</div>
+
+<div class="filter-bar">
+  <span class="flabel">{{ icon('search', 14) }} FILTER CHILDREN</span>
+  <select class="select-sm"><option>Risk Level: All</option></select>
+  <select class="select-sm"><option>Status: All</option></select>
+  <select class="select-sm"><option>Month: All Months</option></select>
+  <span class="text-muted" style="margin-left:auto;">{{ stats.total_children }} of {{ stats.total_children }} children</span>
+</div>
+
+<div class="stat-grid">
+  <div class="stat-card"><div class="stat-icon bg-blue">{{ icon('baby', 21) }}</div><div class="stat-value">{{ stats.total_children }}</div><div class="stat-label">Registered Children</div><div class="stat-caption">Brgy. {{ current_user.barangay.name }}</div></div>
+  <div class="stat-card"><div class="stat-icon bg-green">{{ icon('check-circle', 21) }}</div><div class="stat-value">{{ stats.fully_immunized }}</div><div class="stat-label">Fully Immunized</div><div class="stat-caption">{{ stats.coverage_rate }}% of filtered</div></div>
+  <div class="stat-card"><div class="stat-icon bg-orange">{{ icon('alert-triangle', 21) }}</div><div class="stat-value">{{ stats.at_risk }}</div><div class="stat-label">At-Risk Children</div><div class="stat-caption">need follow-up</div></div>
+  <div class="stat-card"><div class="stat-icon bg-teal">{{ icon('activity', 21) }}</div><div class="stat-value">{{ stats.coverage_rate }}%</div><div class="stat-label">Coverage Rate</div><div class="stat-caption">Target: 95%</div></div>
+</div>
+
+<div class="grid-2">
+  <div class="card card-pad">
+    <div class="card-title">Risk Distribution</div>
+    <div class="card-sub">By risk level in this barangay</div>
+    <div class="chart-box"><canvas id="riskDonut"></canvas></div>
+  </div>
+  <div class="card card-pad">
+    <div class="card-title">Vaccine Request Status</div>
+    <div class="card-sub">Barangay {{ current_user.barangay.name }}</div>
+    {% if pending_requests %}
+    <div class="flex-between" style="padding:10px 0;border-bottom:1px solid var(--border);">
+      <div><b>{{ pending_requests.antigen.name }}</b><br><span class="text-muted" style="font-size:12px;">{{ pending_requests.request_code }} · {{ pending_requests.quantity_requested }} vials · {{ pending_requests.requested_at.strftime('%Y-%m-%d') }}</span></div>
+      <span class="badge badge-amber">Pending</span>
+    </div>
+    {% else %}
+    <p class="text-muted">No pending requests.</p>
+    {% endif %}
+    <a href="{{ url_for('bhw.requests') }}" class="btn btn-accent btn-block" style="margin-top:14px;">+ New Request</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/vendor/chart.umd.js') }}"></script>
+<script>Chart.defaults.maintainAspectRatio = false; Chart.defaults.responsive = true;</script>
+<script>
+new Chart(document.getElementById('riskDonut'), {
+  type: 'doughnut',
+  data: { labels: ['Not At-Risk', 'High Risk', 'Medium Risk'],
+    datasets: [{ data: [{{ risk_dist.low_pct }}, {{ risk_dist.high_pct }}, {{ risk_dist.medium_pct }}], backgroundColor: ['#22c55e', '#ef4444', '#f59e0b'], borderWidth: 0 }] },
+  options: { plugins: { legend: { position: 'bottom' } } }
+});
+</script>
+{% endblock %}

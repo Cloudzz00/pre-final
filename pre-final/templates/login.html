@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% from "_brand.html" import brand_mark %}
+{% block title %}Sign In{% endblock %}
+{% block body %}
+<div class="login-page">
+  <div class="login-hero">
+    <div class="brand">
+      {{ brand_mark(44, 12) }}
+      <div>
+        <div class="brand-title">ImmunoVision</div>
+        <div class="brand-sub">San Jacinto, Pangasinan</div>
+      </div>
+    </div>
+    <h1>Protecting children<br>one vaccine at a time.</h1>
+    <p class="lead">The predictive analytics platform built to ensure no child in San Jacinto misses a life-saving vaccine.</p>
+    <div class="feature-list">
+      <div class="feature-item">
+        <span class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
+            <polyline points="16 7 22 7 22 13"/>
+          </svg>
+        </span>
+        ML-powered risk identification
+      </div>
+      <div class="feature-item">
+        <span class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+        </span>
+        Barangay-level coverage mapping
+      </div>
+      <div class="feature-item">
+        <span class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+            <path d="m3.3 7 8.7 5 8.7-5"/>
+            <path d="M12 22V12"/>
+          </svg>
+        </span>
+        Simulated vaccine inventory
+      </div>
+    </div>
+  </div>
+
+  <div class="login-panel-wrap">
+    <div class="login-card">
+      <h2>Welcome back</h2>
+      <div class="sub">Sign in to your account</div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-error">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form method="POST" action="{{ url_for('auth.login') }}" id="loginForm">
+        <div class="form-group">
+          <label for="usernameInput">Username</label>
+          <input class="form-control" id="usernameInput" type="text" name="username" placeholder="Enter your username" required autofocus>
+        </div>
+        <div class="form-group">
+          <label for="pwInput">Password</label>
+          <div class="input-icon-wrap">
+            <input class="form-control" type="password" name="password" id="pwInput" placeholder="Enter your password" required>
+            <button type="button" class="input-icon-btn" id="pwToggle" aria-label="Show password">
+              <svg id="eyeOpen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M2.2 12S5.8 5.5 12 5.5 21.8 12 21.8 12 18.2 18.5 12 18.5 2.2 12 2.2 12Z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+              <svg id="eyeOff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden>
+                <path d="M10.7 6.1A8.9 8.9 0 0 1 12 6c6.2 0 9.8 6 9.8 6a17 17 0 0 1-3.2 3.9"/>
+                <path d="M6.4 7.4A16.6 16.6 0 0 0 2.2 12S5.8 18 12 18a9.4 9.4 0 0 0 4-.85"/>
+                <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>
+                <path d="m3 3 18 18"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="row-between">
+          <label class="checkbox-row"><input type="checkbox" name="remember"> Remember me</label>
+          <a class="link" href="#">Forgot password?</a>
+        </div>
+        <button type="submit" class="btn btn-accent btn-block">Sign In</button>
+      </form>
+      <p style="margin-top:18px;font-size:12px;color:var(--text-secondary);text-align:center;">
+        Demo accounts — RHU: <b>msantos</b> / BHW: <b>areyes</b> / Admin: <b>jdelacruz</b> · password: <b>password123</b>
+      </p>
+    </div>
+  </div>
+</div>
+<script>
+  var pwToggle = document.getElementById('pwToggle');
+  var pwInput = document.getElementById('pwInput');
+  var eyeOpen = document.getElementById('eyeOpen');
+  var eyeOff = document.getElementById('eyeOff');
+  pwToggle.addEventListener('click', function () {
+    var showing = pwInput.type === 'text';
+    pwInput.type = showing ? 'password' : 'text';
+    eyeOpen.hidden = !showing;
+    eyeOff.hidden = showing;
+    pwToggle.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+  });
+</script>
+{% endblock %}

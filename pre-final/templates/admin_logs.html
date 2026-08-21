@@ -1,0 +1,38 @@
+{% extends "layout_app.html" %}
+{% from "_icons.html" import icon %}
+{% block content %}
+<div class="page-head"><h2>Activity Logs</h2></div>
+
+<div class="filter-bar">
+  <span class="flabel">{{ logs|length }} entries · Simulated data</span>
+  <div class="pill-tabs" style="margin:0;margin-left:auto;">
+    <a class="pill-tab {{ 'active' if type_filter=='All' }}" href="{{ url_for('admin.logs', type='All') }}">All</a>
+    <a class="pill-tab {{ 'active' if type_filter=='Login' }}" href="{{ url_for('admin.logs', type='Login') }}">Login</a>
+    <a class="pill-tab {{ 'active' if type_filter=='Action' }}" href="{{ url_for('admin.logs', type='Action') }}">Action</a>
+    <a class="pill-tab {{ 'active' if type_filter=='Admin' }}" href="{{ url_for('admin.logs', type='Admin') }}">Admin</a>
+  </div>
+</div>
+
+<div class="table-wrap auto-height">
+<table class="data-table">
+<thead><tr><th>#</th><th>User</th><th>Action</th><th>Date &amp; Time</th></tr></thead>
+<tbody>
+{% for log in logs %}
+{% set is_login = 'Logged' in log.action %}
+{% set is_admin = 'Created user' in log.action or 'Disabled' in log.action or 'Enabled' in log.action or 'Reassigned' in log.action %}
+{% set cat = 'Login' if is_login else ('Admin' if is_admin else 'Action') %}
+{% if type_filter == 'All' or type_filter == cat %}
+<tr>
+  <td>{{ loop.index }}</td>
+  <td>{{ log.user.full_name if log.user else 'System' }}</td>
+  <td>{{ log.action }} <span class="badge badge-{{ 'blue' if cat=='Login' else 'purple' if cat=='Admin' else 'green' }}" style="margin-left:6px;">{{ cat|lower }}</span></td>
+  <td>{{ log.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+</tr>
+{% endif %}
+{% else %}
+<tr><td colspan="4"><div class="empty-state"><div class="ic">{{ icon('history', 34) }}</div><div class="t">No activity yet</div></div></td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+{% endblock %}

@@ -1,0 +1,99 @@
+{% extends "layout_app.html" %}
+{% from "_icons.html" import icon %}
+{% from "_brand.html" import brand_mark %}
+{% block content %}
+<div class="page-head"><h2>Reports &amp; Insights</h2></div>
+
+{% set report_types = [
+  ('coverage', 'trending-up', 'Coverage Report', 'Immunization coverage rates by barangay and vaccine'),
+  ('atrisk', 'alert-triangle', 'At-Risk Children Report', 'Children identified as at risk of incomplete immunization'),
+  ('inventory', 'package', 'Inventory Report', 'Current vaccine stock levels, expiry dates, and usage'),
+  ('barangay', 'map-pin', 'Barangay Report', 'Complete statistics for individual barangays'),
+  ('monthly', 'calendar', 'Monthly Summary', 'Monthly performance report and trend analysis'),
+] %}
+
+<div class="report-layout">
+  <div class="report-config no-print">
+    <div class="card-title" style="margin-bottom:10px;">Report Configuration</div>
+
+    <div class="config-label">Report Type</div>
+    {% for key, icon_name, title, desc in report_types %}
+    <a href="{{ url_for('rhu.reports', type=key, barangay_id=selected_barangay, period=selected_period) }}"
+       class="report-type-card {{ 'active' if report_type==key }}">
+      <div class="ic">{{ icon(icon_name, 18) }}</div>
+      <div><div class="t">{{ title }}</div><div class="d">{{ desc }}</div></div>
+    </a>
+    {% endfor %}
+
+    <form method="get" action="{{ url_for('rhu.reports') }}" class="report-filters">
+      <input type="hidden" name="type" value="{{ report_type }}">
+
+      <div class="form-group">
+        <label for="rptBarangay">Barangay</label>
+        <select class="form-control" id="rptBarangay" name="barangay_id">
+          <option value="">All Barangays</option>
+          {% for b in barangays %}
+          <option value="{{ b.id }}" {% if selected_barangay == b.id %}selected{% endif %}>{{ b.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="rptPeriod">Period</label>
+        <select class="form-control" id="rptPeriod" name="period">
+          {% for value, label in periods %}
+          <option value="{{ value }}" {% if selected_period == value or (not selected_period and loop.first) %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block">{{ icon('file-text', 15) }} Generate Report</button>
+    </form>
+
+    <div class="report-export">
+      <button type="button" class="btn btn-outline btn-sm" onclick="window.print()">{{ icon('download', 14) }} PDF</button>
+      <a class="btn btn-outline btn-sm"
+         href="{{ url_for('rhu.export_report_csv', barangay_id=selected_barangay, period=selected_period) }}">{{ icon('download', 14) }} Excel</a>
+      <button type="button" class="btn btn-outline btn-sm" onclick="window.print()">{{ icon('file-text', 14) }} Print</button>
+    </div>
+  </div>
+
+  <div class="report-doc">
+    {% set current = report_types|selectattr('0', 'equalto', report_type)|first %}
+    <div class="report-doc-head">
+      <div>
+        <div class="report-letterhead">{{ brand_mark(22, 6) }}<b style="color:var(--primary)">ImmunoVision</b></div>
+        <div style="font-weight:800;font-size:18px;">{{ current[2] if current else 'Coverage Report' }}</div>
+        <div class="text-muted" style="font-size:12.5px;">San Jacinto Rural Health Unit, Pangasinan · {{ as_of.strftime('%B %Y') }}</div>
+        <div class="text-muted" style="font-size:12px;margin-top:2px;">
+          {% if selected_barangay %}{% for b in barangays %}{% if b.id == selected_barangay %}Barangay {{ b.name }}{% endif %}{% endfor %}{% else %}All 19 barangays{% endif %}
+          · as of {{ as_of.strftime('%b %d, %Y') }}
+        </div>
+      </div>
+      <div class="text-muted" style="font-size:12px;text-align:right;">{{ icon('clock', 13) }} Generated: {{ generated_at.strftime('%b %d, %Y %I:%M %p') }}</div>
+    </div>
+
+    <div class="report-chips">
+      <div class="report-chip"><div class="v" style="color:var(--primary)">{{ stats.coverage_rate }}%</div><div class="l">Coverage Rate</div></div>
+      <div class="report-chip"><div class="v" style="color:var(--green)">{{ stats.fully_immunized }}</div><div class="l">Fully Immunized</div></div>
+      <div class="report-chip"><div class="v" style="color:var(--orange)">{{ stats.at_risk }}</div><div class="l">At-Risk Children</div></div>
+    </div>
+
+    <div class="card-title" style="font-size:14px;">Coverage Rate by Barangay</div>
+    <div class="chart-box tall"><canvas id="reportChart"></canvas></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/vendor/chart.umd.js') }}"></script>
+<script>Chart.defaults.maintainAspectRatio = false; Chart.defaults.responsive = true;</script>
+<script>
+new Chart(document.getElementById('reportChart'), {
+  type: 'bar',
+  data: { labels: [{% for r in by_barangay %}{{ r.barangay|tojson }},{% endfor %}],
+    datasets: [{ data: [{% for r in by_barangay %}{{ r.coverage }},{% endfor %}], backgroundColor: '#3b82f6', borderRadius: 5 }] },
+  options: { plugins: { legend: { display: false } }, scales: { y: { max: 100 } } }
+});
+</script>
+{% endblock %}

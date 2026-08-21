@@ -1,0 +1,66 @@
+{% extends "layout_app.html" %}
+{% from "_icons.html" import icon %}
+{% block content %}
+<div class="page-head">
+  <h2>Vaccine Inventory</h2>
+  <button class="btn btn-primary rounded-pill-btn" data-open-modal="addStockModal">+ Add Stock</button>
+</div>
+
+<div class="stat-grid">
+  <div class="stat-card"><div class="stat-icon bg-blue">{{ icon('syringe', 21) }}</div><div class="stat-value">{{ stats.total_types }}</div><div class="stat-label">Total Vaccines</div><div class="stat-caption">vaccine types tracked</div></div>
+  <div class="stat-card"><div class="stat-icon bg-red">{{ icon('x-circle', 21) }}</div><div class="stat-value">{{ stats.out_of_stock }}</div><div class="stat-label">Out of Stock</div><div class="stat-caption">requires immediate order</div></div>
+  <div class="stat-card"><div class="stat-icon bg-orange">{{ icon('alert-triangle', 21) }}</div><div class="stat-value">{{ stats.low_critical }}</div><div class="stat-label">Low / Critical</div><div class="stat-caption">below minimum stock</div></div>
+  <div class="stat-card"><div class="stat-icon bg-purple">{{ icon('hourglass', 21) }}</div><div class="stat-value">{{ stats.expiring_soon }}</div><div class="stat-label">Expiring Soon</div><div class="stat-caption">within 30 days</div></div>
+</div>
+
+{% set alerts = rows|selectattr('status', 'ne', 'Adequate')|list %}
+{% if alerts %}
+<div class="alert-banner warning">
+  <div class="title">{{ icon('alert-triangle', 16) }} Stock Alerts</div>
+  <ul>
+    {% for r in alerts %}<li>{{ r.antigen.name }}: {{ r.total }} vials remaining [{{ r.status }}]</li>{% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<div class="table-wrap auto-height">
+<table class="data-table">
+<thead><tr><th>Vaccine</th><th>Current Stock</th><th>Batches</th><th>Nearest Expiry</th><th>Status</th><th>Stock Level</th></tr></thead>
+<tbody>
+{% for r in rows %}
+<tr>
+  <td><b>{{ r.antigen.name }}</b></td>
+  <td>{{ r.total }} vials</td>
+  <td>{{ r.batches|length }}</td>
+  <td>{% set exps = r.batches|selectattr('expiry_date')|list %}{% if exps %}{{ (exps|sort(attribute='expiry_date'))[0].expiry_date.strftime('%Y-%m-%d') }}{% else %}—{% endif %}</td>
+  <td><span class="badge badge-{{ r.color }}">{{ r.status }}</span></td>
+  <td><span class="progress-track"><span class="progress-fill {{ r.color }}" style="width:{{ r.pct }}%"></span></span>{{ r.pct }}%</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+
+<div class="modal-scrim" id="addStockModal">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Add Vaccine Stock</h3><button class="modal-close" data-close-modal>×</button></div>
+    <form method="post" action="{{ url_for('rhu.inventory') if role=='rhu' else '' }}">
+      <div class="modal-body">
+        <div class="form-group"><label>Vaccine Type</label>
+          <select class="form-control" name="antigen_id" required>
+            {% for a in antigens %}<option value="{{ a.id }}">{{ a.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group"><label>Quantity (Vials)</label><input class="form-control" type="number" name="quantity" min="1" placeholder="e.g. 100" required></div>
+        <div class="form-group"><label>Batch Number</label><input class="form-control" name="batch_number" placeholder="e.g. BCG-2026-D" required></div>
+        <div class="form-group"><label>Expiry Date</label><input class="form-control" type="date" name="expiry_date"></div>
+        <div class="form-group"><label>Storage Location</label><input class="form-control" name="storage_location" placeholder="e.g. Refrigerator A, Shelf 2"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" data-close-modal>Cancel</button>
+        <button type="submit" class="btn btn-primary">Add Stock</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}ImmunoVision{% endblock %} · San Jacinto RHU</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%232563eb%27/%3E%3Cpath fill=%27white%27 fill-rule=%27evenodd%27 d=%27M16 2.6 4.9 6.9v8.6c0 6.8 4.4 11.9 10.6 13.9a1.6 1.6 0 0 0 1 0c6.2-2 10.6-7.1 10.6-13.9V6.9L16 2.6ZM17.45 9.6h-2.9v3.75H10.8v2.9h3.75v3.75h2.9v-3.75h3.75v-2.9h-3.75V9.6Z%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+{% block extra_head %}{% endblock %}
+</head>
+<body data-role="{{ role|default('') }}">
+{% block body %}{% endblock %}
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

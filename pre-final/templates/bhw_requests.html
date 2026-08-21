@@ -1,0 +1,58 @@
+{% extends "layout_app.html" %}
+{% from "_icons.html" import icon %}
+{% block content %}
+<div class="page-head">
+  <h2>Vaccine Requests</h2>
+  <button class="btn btn-primary rounded-pill-btn" data-open-modal="newRequestModal">+ New Request</button>
+</div>
+
+<div class="stat-grid">
+  <div class="stat-card"><div class="stat-icon bg-orange">{{ icon('clock', 21) }}</div><div class="stat-value">{{ stats.pending }}</div><div class="stat-label">Pending</div></div>
+  <div class="stat-card"><div class="stat-icon bg-blue">{{ icon('check-circle', 21) }}</div><div class="stat-value">{{ stats.approved }}</div><div class="stat-label">Approved</div></div>
+  <div class="stat-card"><div class="stat-icon bg-green">{{ icon('package', 21) }}</div><div class="stat-value">{{ stats.distributed }}</div><div class="stat-label">Distributed</div></div>
+  <div class="stat-card"><div class="stat-icon bg-red">{{ icon('x-circle', 21) }}</div><div class="stat-value">{{ stats.rejected }}</div><div class="stat-label">Rejected</div></div>
+</div>
+
+<div class="table-wrap auto-height">
+<table class="data-table">
+<thead><tr><th>Request ID</th><th>Vaccine</th><th>Qty</th><th>Priority</th><th>Date</th><th>Status</th></tr></thead>
+<tbody>
+{% for r in reqs %}
+<tr>
+  <td><b>{{ r.request_code }}</b></td>
+  <td>{{ r.antigen.name }}</td>
+  <td>{{ r.quantity_requested }} vials</td>
+  <td><span class="badge badge-{{ 'red' if r.priority=='Urgent' else 'amber' if r.priority=='High' else 'gray' }}">{{ r.priority }}</span></td>
+  <td>{{ r.requested_at.strftime('%Y-%m-%d') }}</td>
+  <td><span class="badge badge-{{ 'amber' if r.status=='pending' else 'blue' if r.status=='approved' else 'green' if r.status=='fulfilled' else 'red' }}">{{ r.status|capitalize }}</span></td>
+</tr>
+{% else %}
+<tr><td colspan="6"><div class="empty-state"><div class="ic">{{ icon('clipboard', 34) }}</div><div class="t">No requests found</div></div></td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+
+<div class="modal-scrim" id="newRequestModal">
+  <div class="modal-box">
+    <div class="modal-head"><h3>New Vaccine Request</h3><button class="modal-close" data-close-modal>×</button></div>
+    <form method="post" action="{{ url_for('bhw.requests') }}">
+      <div class="modal-body">
+        <div class="form-group"><label>Requesting Barangay</label><input class="form-control" value="{{ current_user.barangay.name }}" disabled></div>
+        <div class="form-group"><label>Vaccine Needed</label>
+          <select class="form-control" name="antigen_id" required>{% for a in antigens %}<option value="{{ a.id }}">{{ a.name }}</option>{% endfor %}</select>
+        </div>
+        <div class="form-group"><label>Quantity Requested (Vials)</label><input class="form-control" type="number" name="quantity" min="1" placeholder="e.g. 50" required></div>
+        <div class="form-group"><label>Priority Level</label>
+          <select class="form-control" name="priority"><option value="Normal">Normal</option><option value="High">High</option><option value="Urgent">Urgent</option></select>
+        </div>
+        <div class="form-group"><label>Justification / Notes</label><textarea class="form-control" name="notes" rows="3" placeholder="Explain the reason for this request..."></textarea></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" data-close-modal>Cancel</button>
+        <button type="submit" class="btn btn-primary">Submit Request</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
