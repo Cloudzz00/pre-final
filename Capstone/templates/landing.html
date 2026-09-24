@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+{% from "_brand.html" import brand_mark %}
+{% from "_icons.html" import icon %}
+{% block title %}ImmunoVision{% endblock %}
+
+{% block extra_head %}
+<style>
+/* ---------------------------------------------------------------------------
+   Landing page. Scoped under .lp so nothing here reaches the application UI.
+   Every colour comes from the application's own tokens - this is the same
+   product, not a separate brand.
+--------------------------------------------------------------------------- */
+.lp {
+  background: var(--card-bg); color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.lp-wrap { max-width: 1140px; margin: 0 auto; padding: 0 28px; }
+.lp-eyebrow {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 11.5px; font-weight: 700; letter-spacing: .04em;
+  color: #93c5fd; background: rgba(255,255,255,.09);
+  border: 1px solid rgba(255,255,255,.16); border-radius: 999px; padding: 6px 13px;
+}
+
+/* ---- nav ---- */
+.lp-nav { background: var(--card-bg); border-bottom: 1px solid var(--border); }
+.lp-nav .lp-wrap { display: flex; align-items: center; gap: 12px; height: 66px; }
+.lp-nav .n { font-weight: 800; font-size: 17px; letter-spacing: -.01em; }
+.lp-nav .links { margin-left: auto; display: flex; align-items: center; gap: 26px; }
+.lp-nav .links a {
+  color: var(--text-secondary); text-decoration: none; font-size: 14px; font-weight: 600;
+}
+.lp-nav .links a:hover { color: var(--text-primary); }
+
+.lp-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--primary); color: #fff; text-decoration: none;
+  padding: 11px 20px; border-radius: 10px; font-weight: 700; font-size: 14px;
+  border: 1px solid transparent; transition: background .15s, transform .15s;
+}
+.lp-btn:hover { background: var(--primary-dark); transform: translateY(-1px); color: #fff; }
+.lp-btn:focus-visible { outline: 3px solid #93c5fd; outline-offset: 2px; }
+.lp-nav .links .lp-btn { color: #fff; }
+.lp-btn.ghost {
+  background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.18);
+  font-size: 14px; font-weight: 500; opacity: .82;
+}
+.lp-btn.ghost:hover { background: rgba(255,255,255,.14); opacity: 1; }
+.lp-btn.onlight { background: #fff; color: var(--primary); }
+.lp-btn.onlight:hover { background: var(--slate-bg); color: var(--primary-dark); }
+.lp-fwd { display: inline-flex; transform: rotate(180deg); }
+
+/* ---- hero ---- */
+/* Photo behind the hero, with the same blue gradient laid over it as a
+   translucent tint. The gradient alone kept the map's white borders legible
+   against a plain dark background; here it also has to keep the photo from
+   fighting the hero text and the map for attention, so it runs darker and
+   more opaque than a purely decorative overlay would need to be. */
+.lp-hero {
+  position: relative; overflow: hidden;
+  color: #fff; padding: 64px 0 70px;
+  background: #0b1330;
+}
+.lp-hero::before {
+  content: ""; position: absolute; inset: 0;
+  background-image: url('{{ url_for("static", filename="img/hero-vaccination.jpg") }}');
+  background-size: cover; background-position: 62% 38%;
+  opacity: .82;
+}
+/* Stronger over the text column, so copy stays readable; lighter over the
+   map, so the polygons still show clean edges against the photo. */
+/* A flatter tint rather than a strong gradient: one colour, with only a
+   slight lift on the right so the map still separates from the photo behind
+   it. Text legibility comes from the tint's opacity, not a colour shift. */
+/* Back to the asymmetric gradient - darker over the text on the left for
+   legibility, lighter over the map on the right - but at lower opacity
+   throughout, so the photo shows through more than before. */
+.lp-hero::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(100deg,
+    rgba(6,12,30,.62) 0%, rgba(6,12,30,.55) 32%,
+    rgba(12,24,56,.38) 55%, rgba(22,60,180,.28) 100%);
+}
+.lp-hero .lp-wrap { position: relative; z-index: 1; }
+.lp-hero .cols { display: grid; grid-template-columns: minmax(0,1.05fr) minmax(0,.95fr); gap: 48px; align-items: center; }
+.lp-hero h1 {
+  font-size: clamp(32px, 4.4vw, 50px); line-height: 1.07; letter-spacing: -.03em;
+  font-weight: 800; margin: 18px 0 0;
+}
+.lp-hero h1 em { font-style: normal; color: #7dd3fc; }
+.lp-hero p.lead { color: #c7d6ec; font-size: 16.5px; line-height: 1.65; max-width: 48ch; margin: 20px 0 0; }
+.lp-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 30px; }
+
+/* Coverage leads at full width with the 95% target shown, because a rate means
+   nothing without the line it is measured against. The three supporting counts
+   sit below it. */
+/* The map sits on a light panel: its polygons and borders are drawn for a light
+   background, and dropping them straight onto the gradient reads as pasted on. */
+.lp-mapcard svg {
+  width: 100%; height: auto; display: block; max-height: 380px;
+  filter: drop-shadow(0 8px 24px rgba(3,10,26,.45));
+}
+
+/* ---- sections ---- */
+.lp-section { padding: 76px 0; }
+.lp-section.tint { background: var(--slate-bg); }
+.lp-head { text-align: center; max-width: 62ch; margin: 0 auto 44px; }
+.lp-head h2 { font-size: clamp(24px, 3vw, 33px); letter-spacing: -.025em; font-weight: 800; margin: 0; }
+.lp-head p { color: var(--text-secondary); font-size: 15.5px; line-height: 1.65; margin: 12px 0 0; }
+
+/* Fixed three-across, so the two cards on the last row keep the same width as
+   the three above them rather than stretching. justify-content centres that
+   short final row. */
+.lp-grid {
+  display: grid; gap: 18px;
+}
+/* Six half-columns: three cards span two each on the first row, and the two on
+   the last row start at half-column 2 and 4, which centres them without
+   changing their width. */
+.lp-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.lp-grid > * { grid-column: span 2; }
+.lp-grid > :nth-child(4) { grid-column: 2 / span 2; }
+.lp-grid > :nth-child(5) { grid-column: 4 / span 2; }
+@media (max-width: 980px) {
+  .lp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lp-grid > *, .lp-grid > :nth-child(4), .lp-grid > :nth-child(5) { grid-column: auto; }
+}
+@media (max-width: 640px) {
+  .lp-grid { grid-template-columns: minmax(0, 1fr); }
+}
+.lp-card {
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 26px;
+}
+.lp-card .ic { width: 42px; height: 42px; border-radius: 11px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+.lp-card h3 { font-size: 16.5px; font-weight: 800; margin: 0 0 7px; letter-spacing: -.01em; }
+.lp-card p { color: var(--text-secondary); font-size: 16px; line-height: 1.65; margin: 0; }
+.lp-card p span, .lp-card p em { color: inherit; }
+
+/* ---- live data panels ---- */
+/* stretch, not start: the two cards hold different content and were ending at
+   different heights. The map and chart flex to fill whatever height they get. */
+.lp-panels { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 18px; align-items: stretch; }
+.lp-panel { display: flex; flex-direction: column; }
+.lp-panel .grow { flex: 1; display: flex; align-items: center; }
+.lp-panel .grow > * { width: 100%; }
+.lp-panel {
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 24px;
+}
+.lp-panel h3 { font-size: 15.5px; font-weight: 800; margin: 0; }
+.lp-panel .sub { color: var(--text-secondary); font-size: 13px; margin: 4px 0 16px; }
+.lp-map { width: 100%; height: auto; display: block; }
+.lp-bgy {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2px 28px; margin-top: 14px;
+}
+.lp-bgy-row {
+  display: grid; grid-template-columns: minmax(0,1fr) 90px 48px;
+  align-items: center; gap: 10px; padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.lp-bgy-row .n { font-size: 13px; font-weight: 600; }
+.lp-bgy-row .p { font-size: 12.5px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+.lp-map path { stroke: var(--navy-950); stroke-width: 3; stroke-linejoin: round; }
+.lp-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 14px; font-size: 11.5px; color: var(--text-secondary); }
+.lp-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.lp-legend i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+
+/* ---- closing ---- */
+.lp-cta { background: var(--primary); color: #fff; padding: 68px 0; text-align: center; }
+.lp-cta h2 { font-size: clamp(24px, 3vw, 33px); letter-spacing: -.025em; font-weight: 800; margin: 0 0 12px; }
+.lp-cta p { color: #dbeafe; font-size: 15.5px; line-height: 1.65; max-width: 58ch; margin: 0 auto 26px; }
+
+.lp-foot { background: var(--navy-950); padding: 26px 0; }
+.lp-foot .lp-wrap { display: flex; gap: 16px; flex-wrap: wrap; justify-content: space-between; align-items: center; }
+.lp-foot .b { color: #fff; font-weight: 700; font-size: 14px; }
+.lp-foot p { color: #7c8da6; font-size: 12.5px; margin: 0; line-height: 1.7; }
+
+@media (max-width: 900px) {
+  .lp-hero .cols, .lp-panels { grid-template-columns: minmax(0, 1fr); }
+  .lp-nav .links a:not(.lp-btn) { display: none; }
+  .lp-section { padding: 54px 0; }
+}
+
+.lp-section-tinted {
+  background: #f8fafc;
+  background-image: radial-gradient(circle, #cbd5e1 1px, transparent 1px);
+  background-size: 24px 24px;
+  border-top: 1px solid #e2e8f0;
+}
+.lp-section-tinted .lp-card {
+  box-shadow: 0 2px 12px rgba(0,0,0,.06);
+}
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="lp">
+
+<nav class="lp-nav">
+  <div class="lp-wrap">
+    {{ brand_mark(36, 10) }}
+    <div class="n">ImmunoVision</div>
+    <div class="links">
+      <a href="#capabilities">Capabilities</a>
+      <a href="{{ url_for('auth.public_coverage') }}">Coverage</a>
+      <a class="lp-btn" href="{{ url_for('auth.login') }}">Sign in</a>
+    </div>
+  </div>
+</nav>
+
+<header class="lp-hero">
+  <div class="lp-wrap cols">
+    <div>
+      <h1>Immunization monitoring for <em>every child</em> in San Jacinto</h1>
+      <p class="lead">
+        A decision support platform for RHU personnel and Barangay Health Workers.
+        It tracks all {{ total_doses }} routine doses per child, scores who is drifting
+        off schedule, and shows where coverage is falling behind.
+      </p>
+      <div class="lp-actions">
+        <a class="lp-btn" href="{{ url_for('auth.login') }}">Sign in <span class="lp-fwd">{{ icon('chevron-left', 15, 2.5) }}</span></a>
+        <a class="lp-btn ghost" href="#capabilities" aria-label="Scroll to capabilities section">What it does</a>
+        <a class="lp-btn ghost" href="{{ url_for('auth.public_coverage') }}">Public coverage dashboard</a>
+      </div>
+    </div>
+
+    {# The map is what the system produces, so it leads. Figures sit beneath it,
+       where the picture gives them context. #}
+    <div class="lp-hero-map">
+      <div class="lp-mapcard">
+        <svg viewBox="0 0 1000 1000" role="img"
+             aria-label="Map of San Jacinto's {{ barangay_count }} barangays shaded by immunization coverage.">
+          {% set fills = {'green': '#22c55e', 'amber': '#f59e0b', 'red': '#ef4444', 'none': '#cbd5e1'} %}
+          {% for b in map_shapes %}
+          <path d="{{ b.d }}" fill="{{ fills.get(b.color, '#94a3b8') }}" fill-opacity=".9"
+                stroke="rgba(255,255,255,.55)" stroke-width="3" stroke-linejoin="round">
+            <title>{{ b.barangay }}: {{ b.coverage }}%</title>
+          </path>
+          {% endfor %}
+        </svg>
+      </div>
+
+
+    </div>
+  </div>
+</header>
+
+<section class="lp-section lp-section-tinted" id="capabilities">
+  <div class="lp-wrap">
+    <div class="lp-head">
+      <h2>Built for the RHU's workflow</h2>
+      <p>What the system does, matched to how immunization work already runs
+         in San Jacinto.</p>
+    </div>
+
+    <div class="lp-grid">
+      <div class="lp-card">
+        <div class="ic" style="background:#ccfbf1;color:var(--teal)">{{ icon('map', 20) }}</div>
+        <h3>Barangay coverage map</h3>
+        <p>All {{ barangay_count }} barangays drawn from PSA boundary data, shaded by coverage,
+           at-risk share, or child density. Works offline if there is no connection.</p>
+      </div>
+      <div class="lp-card">
+        <div class="ic" style="background:#ede9fe;color:var(--violet)">{{ icon('package', 20) }}</div>
+        <h3>Vaccine inventory</h3>
+        <p>Batch-level stock with expiry tracking, reorder alerts, and the request workflow
+           between barangay health workers and the RHU.</p>
+      </div>
+      <div class="lp-card">
+        <div class="ic" style="background:var(--primary-light);color:var(--primary)">{{ icon('bar-chart', 20) }}</div>
+        <h3>Coverage analytics</h3>
+        <p>Coverage by barangay, by vaccine, and year on year. Filterable to any month and
+           exportable for LGU reporting.</p>
+      </div>
+      <div class="lp-card">
+        <div class="ic" style="background:#ccfbf1;color:var(--teal)">{{ icon('baby', 20) }}</div>
+        <h3>Child records</h3>
+        <p>Every child's full dose history against the EPI schedule, showing what was given,
+           what is due, and what is overdue.</p>
+      </div>
+      <div class="lp-card">
+        <div class="ic" style="background:#ede9fe;color:var(--violet)">{{ icon('users', 20) }}</div>
+        <h3>Role-based access</h3>
+        <p>A health worker sees her own barangay, RHU personnel see the municipality, and the
+           administrator sees totals but never a child's record. Every change is logged.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="lp-cta">
+  <div class="lp-wrap">
+    <h2>Ready to sign in?</h2>
+    <p>ImmunoVision is for authorised San Jacinto RHU and Barangay Health Worker
+       accounts. If you do not have an account yet, contact your RHU administrator
+       to get access. The public coverage data is available without signing in.</p>
+    <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:4px;">
+      <a class="lp-btn onlight" href="{{ url_for('auth.login') }}">Sign in to your account</a>
+      <a class="lp-btn" href="{{ url_for('auth.public_coverage') }}" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);">View public coverage</a>
+    </div>
+  </div>
+</section>
+
+<footer class="lp-foot">
+  <div class="lp-wrap">
+    <div>
+      <span class="b">ImmunoVision</span>
+      <p>Rural Health Unit &middot; San Jacinto, Pangasinan</p>
+    </div>
+    <p>
+      Barangay boundaries: Philippine Statistics Authority (PSGC 2023)<br>
+      Prototype build &middot; figures from de-identified records
+    </p>
+  </div>
+</footer>
+
+</div>
+{% endblock %}
+
+

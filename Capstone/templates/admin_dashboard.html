@@ -1,0 +1,250 @@
+{% extends "layout_app.html" %}
+{% from "_icons.html" import icon %}
+{% block content %}
+<div class="banner">
+  <div>
+    <h2>System Administration</h2>
+    <p>ImmunoVision &middot; User &amp; Access Management and Municipal Oversight</p>
+  </div>
+</div>
+
+{# Municipality KPIs run full width, then the detail splits two ways so the
+   coverage table and the account tools are both visible without scrolling
+   past one to reach the other. #}
+<div class="section-head first">
+  <div>
+    <h3>Municipality Overview</h3>
+  </div>
+</div>
+
+<div class="filter-bar">
+  <span class="flabel">{{ icon('calendar', 14) }} FILTER</span>
+  <form method="get" action="{{ url_for('admin.dashboard') }}" style="display:flex;gap:10px;">
+    <select class="form-control select-sm" name="barangay_id" onchange="this.form.submit()"
+            aria-label="Filter by barangay">
+      <option value="">All 19 barangays</option>
+      {% for b in barangays %}
+      <option value="{{ b.id }}" {% if selected_barangay_id == b.id %}selected{% endif %}>{{ b.name }}</option>
+      {% endfor %}
+    </select>
+    <select class="form-control select-sm" name="month" onchange="this.form.submit()" aria-label="Reporting month">
+      <option value="">Month: All</option>
+      {% for name in months %}
+      <option value="{{ loop.index }}" {% if month == loop.index|string %}selected{% endif %}>{{ name }}</option>
+      {% endfor %}
+    </select>
+    <select class="form-control select-sm" name="year" onchange="this.form.submit()" aria-label="Reporting year">
+      <option value="">Year: All</option>
+      {% for y in years %}
+      <option value="{{ y }}" {% if year == y|string %}selected{% endif %}>{{ y }}</option>
+      {% endfor %}
+    </select>
+  </form>
+  <span class="text-muted" style="margin-left:auto;font-size:12.5px;">
+    {% if selected_barangay %}<b>{{ selected_barangay.name }}</b>{% else %}Municipality-wide{% endif %}
+    &middot; {{ municipality.total_children }} children
+    {%- if period_label %} &middot; as at {{ as_of.strftime('%b %d, %Y') }}{% endif %}
+    {%- if selected_barangay or as_of %} &middot; <a class="link" href="{{ url_for('admin.dashboard') }}">clear</a>{% endif %}
+  </span>
+</div>
+
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-icon bg-blue">{{ icon('baby', 21) }}</div>
+    <div class="stat-value">{{ municipality.total_children }}</div>
+    <div class="stat-label">Total Children</div>
+    <div class="stat-caption">{% if selected_barangay %}{{ selected_barangay.name }}{% else %}All {{ municipality.barangays }} barangays{% endif %}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon bg-teal">{{ icon('activity', 21) }}</div>
+    <div class="stat-value">{{ municipality.coverage_rate }}%</div>
+    <div class="stat-label">Coverage Rate</div>
+    <div class="stat-caption">target: 95%</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon bg-green">{{ icon('check-circle', 21) }}</div>
+    <div class="stat-value">{{ municipality.fully_immunized }}</div>
+    <div class="stat-label">Fully Immunized</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon bg-orange">{{ icon('alert-triangle', 21) }}</div>
+    <div class="stat-value">{{ municipality.below_target }}</div>
+    <div class="stat-label">Below Target</div>
+    <div class="stat-caption">barangays under the 95% target</div>
+  </div>
+</div>
+
+{# Its own class, not the map page's. This previously borrowed .map-wrap;
+   when the map was restructured that class was removed and this layout
+   silently collapsed to a single column. #}
+<div class="split-2-1">
+  <div>
+  <div class="card card-pad">
+    <div class="card-title" id="coverage-by-barangay">Coverage by Barangay</div>
+      <div class="card-sub">{% if selected_barangay %}{{ selected_barangay.name }} only{% else %}All 19 barangays, lowest coverage first{% endif %}</div>
+    <div class="table-wrap auto-height">
+    <table class="data-table compact">
+      <thead><tr><th>Barangay</th><th>Children</th><th>Immunized</th><th>At-Risk</th><th style="width:30%;">Coverage</th></tr></thead>
+      <tbody>
+        {% for r in barangay_rows %}
+        <tr>
+          <td><b>{{ r.barangay }}</b></td>
+          <td>{{ r.children }}</td>
+          <td>{{ r.fully_immunized }}</td>
+          <td>{{ r.at_risk }}</td>
+          <td>
+            <div class="cov-cell">
+              <span class="progress-track">
+                <span class="progress-fill {{ coverage_color(r.coverage, r.children) }}"
+                      style="width:{{ r.coverage }}%"></span>
+              </span>
+              <span class="cov-pct">{{ r.coverage }}%</span>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% if insights.barangay %}
+    <div class="insight">{{ icon('activity', 14) }}<span>{{ insights.barangay }}</span></div>
+    {% endif %}
+  </div>
+
+  {# Moved here from the admin Coverage Analytics page. That page's remaining
+     view duplicated the table above, so the whole page was retired and its two
+     unique panels live here. #}
+  <div class="card card-pad" style="margin-top:18px;">
+    <div class="card-title">Coverage by Vaccine</div>
+    <div class="card-sub">All 15 doses, in schedule order</div>
+    <div class="chart-box"><canvas id="vaccineChart"></canvas></div>
+    {% if insights.vaccine %}
+    <div class="insight">{{ icon('activity', 14) }}<span>{{ insights.vaccine }}</span></div>
+    {% endif %}
+  </div>
+
+  <div class="card card-pad" style="margin-top:18px;">
+    <div class="card-title">Annual Coverage Trend</div>
+    <div class="card-sub">Coverage at each year end</div>
+    {# Computed from actual dose dates - coverage as at 31 December of each year
+       the data covers - so this is measured, not simulated. #}
+    <div class="chart-box"><canvas id="trendChart"></canvas></div>
+    {% if insights.trend %}
+    <div class="insight">{{ icon('activity', 14) }}<span>{{ insights.trend }}</span></div>
+    {% endif %}
+  </div>
+  </div>
+
+  <div>
+    {# Account figures as compact rows rather than six full-size stat cards, so
+       the whole administration panel fits beside the coverage table. #}
+    <div class="card card-pad" style="margin-bottom:16px;">
+      <div class="flex-between" style="margin-bottom:12px;">
+        <div class="card-title mb-0">User &amp; Access</div>
+        <a class="link" style="font-size:12px;" href="{{ url_for('admin.users') }}">Manage</a>
+      </div>
+      {# Grid covers account health; the bar below covers role composition.
+         Neither repeats the other - RHU and BHW counts live only in the key. #}
+      <div class="mini-stats">
+        <div class="mini-stat"><span class="v">{{ stats.total }}</span><span class="k">Total Users</span></div>
+        <div class="mini-stat"><span class="v good">{{ stats.active }}</span><span class="k">Active</span></div>
+        <div class="mini-stat"><span class="v {{ 'bad' if stats.disabled else '' }}">{{ stats.disabled }}</span><span class="k">Disabled</span></div>
+        <div class="mini-stat"><span class="v">{{ stats.logins_today }}</span><span class="k">Logins Today</span></div>
+      </div>
+
+      <div class="role-split-label">By role</div>
+      {# A donut for 1 / 1 / 19 is two slivers and one dominant slice, and it
+         repeated the figures in the grid above. A stacked bar shows the same
+         composition in a fraction of the height. #}
+      {% set total = role_dist.admin + role_dist.rhu + role_dist.bhw %}
+      <div class="role-bar" role="img"
+           aria-label="{{ role_dist.admin }} admin, {{ role_dist.rhu }} RHU, {{ role_dist.bhw }} BHW">
+        <span style="width:{{ (role_dist.admin / total * 100)|round(2) }}%;background:#7c3aed;" title="Admin: {{ role_dist.admin }}"></span>
+        <span style="width:{{ (role_dist.rhu / total * 100)|round(2) }}%;background:#2563eb;" title="RHU: {{ role_dist.rhu }}"></span>
+        <span style="width:{{ (role_dist.bhw / total * 100)|round(2) }}%;background:#0d9488;" title="BHW: {{ role_dist.bhw }}"></span>
+      </div>
+      <div class="role-key">
+        <span><i style="background:#7c3aed"></i>Admin <b>{{ role_dist.admin }}</b></span>
+        <span><i style="background:#2563eb"></i>RHU <b>{{ role_dist.rhu }}</b></span>
+        <span><i style="background:#0d9488"></i>BHW <b>{{ role_dist.bhw }}</b></span>
+      </div>
+    </div>
+
+    <div class="card card-pad" style="margin-bottom:16px;">
+      <div class="card-title">Quick Actions</div>
+      <a href="{{ url_for('admin.users') }}" class="settings-row" style="text-decoration:none;">
+        <div class="left"><div class="ic">{{ icon('user-plus', 18) }}</div><div class="label">Create New User</div></div><div>&rsaquo;</div>
+      </a>
+      <a href="{{ url_for('admin.assign_barangay') }}" class="settings-row" style="text-decoration:none;">
+        <div class="left"><div class="ic">{{ icon('map-pin', 18) }}</div><div class="label">Assign Barangay</div></div><div>&rsaquo;</div>
+      </a>
+      <a href="{{ url_for('admin.logs') }}" class="settings-row" style="text-decoration:none;">
+        <div class="left"><div class="ic">{{ icon('history', 18) }}</div><div class="label">View Activity Logs</div></div><div>&rsaquo;</div>
+      </a>
+    </div>
+
+    {# Recent activity: the administrator's core job is oversight, and the audit
+       trail was only reachable from the Activity Logs page. #}
+    <div class="card card-pad" style="margin-bottom:16px;">
+      <div class="flex-between" style="margin-bottom:8px;">
+        <div class="card-title mb-0">Recent Activity</div>
+        <a class="link" style="font-size:12px;" href="{{ url_for('admin.logs') }}">View all</a>
+      </div>
+      {% for e in recent_activity %}
+      <div class="act-row">
+        <span class="badge badge-{{ {'Login':'blue','Admin':'purple','Record':'green','Vaccine':'teal','Report':'gray'}.get(e.category,'gray') }}">{{ e.category }}</span>
+        <div class="ac-body">
+          <div class="ac-action">{{ e.log.action }}</div>
+          <div class="ac-meta">{{ e.log.user.full_name if e.log.user else 'System' }} &middot; {{ e.log.created_at.strftime('%b %d, %H:%M') }}</div>
+        </div>
+      </div>
+      {% else %}
+      <p class="text-muted" style="font-size:13px;">No recorded activity yet.</p>
+      {% endfor %}
+    </div>
+
+    <div class="card card-pad">
+      <div class="card-title">Account Status</div>
+      {% for u in users[:3] %}
+      <div class="settings-row">
+        <div class="left">
+          <div class="avatar-chip" style="background:var(--primary)">{{ u.full_name.split(' ')|map('first')|join('') }}</div>
+          <div class="label">{{ u.full_name }}<br><span class="text-muted" style="font-weight:400;">{{ u.role_label }}</span></div>
+        </div>
+        <span class="badge badge-{{ 'green' if u.is_active_flag else 'red' }}">{{ 'Active' if u.is_active_flag else 'Disabled' }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/vendor/chart.umd.js') }}"></script>
+<script>Chart.defaults.maintainAspectRatio = false; Chart.defaults.responsive = true;</script>
+<script>
+new Chart(document.getElementById('vaccineChart'), {
+  type: 'bar',
+  data: { labels: {{ vaccine_labels|tojson }},
+    datasets: [{ data: [{% for r in by_vaccine %}{{ r.pct }},{% endfor %}], backgroundColor: {{ vaccine_colours|tojson }}, borderRadius: 5 }] },
+  options: { plugins: { legend: { display: false } },
+             scales: { y: { max: 100, ticks: { callback: v => v + '%' } },
+                       x: { ticks: { autoSkip: false, maxRotation: 60, minRotation: 45, font: { size: 10 } } } } }
+});
+const trendCounts = [{% for y, v, n in trend %}{{ n }},{% endfor %}];
+new Chart(document.getElementById('trendChart'), {
+  type: 'line',
+  data: { labels: [{% for y, v, n in trend %}{{ y|tojson }},{% endfor %}],
+    datasets: [
+      { label: 'Coverage %', data: [{% for y, v, n in trend %}{{ v }},{% endfor %}], borderColor: '#0d9488', backgroundColor: 'rgba(13,148,136,0.1)', fill: true, tension: 0.3, pointRadius: 5 },
+      { label: '95% Target', data: [{% for y, v, n in trend %}95,{% endfor %}], borderColor: '#94a3b8', borderDash: [6,6], pointRadius: 0 }
+    ] },
+  options: {
+    scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' } } },
+    plugins: { tooltip: { callbacks: {
+      afterLabel: c => c.datasetIndex === 0 ? trendCounts[c.dataIndex] + ' children enrolled' : ''
+    } } }
+  }
+});
+</script>
+{% endblock %}

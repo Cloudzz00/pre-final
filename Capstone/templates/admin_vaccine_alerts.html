@@ -1,0 +1,70 @@
+{% extends "layout_app.html" %}
+{% from "_icons.html" import icon %}
+{% block content %}
+
+{% set flagged = stock|rejectattr('status', 'equalto', 'Enough')|list %}
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-icon bg-blue">{{ icon('package', 21) }}</div>
+    <div class="stat-value">{{ stock|length }}</div>
+    <div class="stat-label">Vaccines Tracked</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon {{ 'bg-red' if flagged else 'bg-green' }}">{{ icon('alert-triangle', 21) }}</div>
+    <div class="stat-value">{{ flagged|length }}</div>
+    <div class="stat-label">Currently Flagged</div>
+    <div class="stat-caption">at or below their warning level</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon bg-teal">{{ icon('activity', 21) }}</div>
+    <div class="stat-value">{{ stock|sum(attribute='total') }}</div>
+    <div class="stat-label">Total Vials</div>
+    <div class="stat-caption">across all vaccines</div>
+  </div>
+</div>
+
+<div class="card card-pad">
+  <div class="card-title">Warning Levels</div>
+  {# Current stock sits beside each input: a threshold set without seeing what it
+     affects is a guess. The RHU sees the resulting value on Vaccine Inventory
+     but cannot change it. #}
+
+  <form method="post" action="{{ url_for('admin.update_warning_levels') }}" style="margin-top:14px;">
+    <div class="table-wrap auto-height">
+      <table class="data-table compact">
+        <thead><tr>
+          <th>Vaccine</th><th>Vials Left</th><th>Warn At</th><th>Status</th><th>Stock Level</th>
+        </tr></thead>
+        <tbody>
+          {% for r in stock %}
+          <tr>
+            <td><b>{{ r.antigen.name }}</b></td>
+            <td><b style="font-size:14.5px;">{{ r.total }}</b> <span class="text-muted">vials</span></td>
+            <td>
+              <div class="warn-cell">
+                <input class="warn-input" type="number" name="warn_{{ r.antigen.id }}"
+                       value="{{ r.reorder }}" min="0" max="100000" step="5"
+                       aria-label="Warning level for {{ r.antigen.name }}">
+                <span class="text-muted">vials</span>
+              </div>
+            </td>
+            <td><span class="badge badge-{{ r.color }}">{{ r.status }}</span></td>
+            <td>
+              <div class="cov-cell">
+                <span class="progress-track">
+                  <span class="progress-fill {{ r.color }}" style="width:{{ r.pct }}%"></span>
+                </span>
+                <span class="text-muted" style="font-size:12px;">warns at {{ r.reorder }}</span>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:16px;">
+      <button class="btn btn-primary btn-sm">{{ icon('check', 14) }} Save warning levels</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
