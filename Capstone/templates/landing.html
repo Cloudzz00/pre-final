@@ -91,16 +91,6 @@
 .lp-hero h1 em { font-style: normal; color: #7dd3fc; }
 .lp-hero p.lead { color: #c7d6ec; font-size: 16.5px; line-height: 1.65; max-width: 48ch; margin: 20px 0 0; }
 .lp-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 30px; }
-.lp-stats {
-  display: flex; flex-wrap: wrap; gap: 28px; margin-top: 34px;
-  padding-top: 22px; border-top: 1px solid rgba(255,255,255,.16);
-}
-.lp-stats .s b {
-  display: block; font-size: 26px; font-weight: 800; letter-spacing: -.02em;
-  color: #fff; line-height: 1.1;
-}
-.lp-stats .s span { display: block; font-size: 12.5px; color: #9fb2ce; margin-top: 4px; }
-.lp-asof { font-size: 12px; color: #7c8da6; margin-top: 16px; }
 
 /* Coverage leads at full width with the 95% target shown, because a rate means
    nothing without the line it is measured against. The three supporting counts
@@ -175,22 +165,6 @@
 .lp-bgy-row .p { font-size: 12.5px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
 .lp-map path { stroke: var(--navy-950); stroke-width: 3; stroke-linejoin: round; }
 .lp-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 14px; font-size: 11.5px; color: var(--text-secondary); }
-
-/* dose completion curve - the drop-off is the argument for the system, so the
-   dip point gets its own marker and callout rather than blending into the line. */
-.lp-curve { width: 100%; height: auto; display: block; }
-.lp-curve .fill { fill: url(#lpCurveFill); }
-.lp-curve .line { fill: none; stroke: var(--primary); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-.lp-curve .grid { stroke: var(--border); stroke-width: 1; }
-.lp-curve .dot { fill: var(--card-bg); stroke: var(--primary); stroke-width: 2.5; }
-.lp-curve .dot.dip { fill: var(--red); stroke: var(--red); r: 5.5; }
-.lp-curve .axis-lbl { font-size: 10px; fill: var(--text-secondary); }
-.lp-dip-callout {
-  display: flex; align-items: flex-start; gap: 10px; margin-top: 14px;
-  padding: 12px 14px; border-radius: 10px; background: var(--red-bg); color: var(--red);
-  font-size: 13px; line-height: 1.55;
-}
-.lp-dip-callout b { color: inherit; }
 .lp-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .lp-legend i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
 
@@ -251,14 +225,6 @@
         <a class="lp-btn ghost" href="#capabilities" aria-label="Scroll to capabilities section">What it does</a>
         <a class="lp-btn ghost" href="{{ url_for('auth.public_coverage') }}">Public coverage dashboard</a>
       </div>
-
-      <div class="lp-stats">
-        <div class="s"><b>{{ total_children }}</b><span>Children on record</span></div>
-        <div class="s"><b>{{ coverage_rate }}%</b><span>Coverage rate &middot; target 95%</span></div>
-        <div class="s"><b>{{ at_risk }}</b><span>Flagged for follow-up</span></div>
-        <div class="s"><b>{{ barangay_count }}</b><span>Barangays covered</span></div>
-      </div>
-      <div class="lp-asof">As of {{ as_of }} &middot; figures from de-identified RHU records</div>
     </div>
 
     {# The map is what the system produces, so it leads. Figures sit beneath it,
@@ -281,71 +247,6 @@
     </div>
   </div>
 </header>
-
-<section class="lp-section" aria-label="Coverage detail">
-  <div class="lp-wrap">
-    <div class="lp-panels">
-      <div class="lp-panel">
-        <h3>Where coverage drops off</h3>
-        <div class="sub">Completion rate by dose, in schedule order</div>
-        <div class="grow">
-          <svg viewBox="0 0 1020 320" class="lp-curve" role="img"
-               aria-label="Coverage completion by dose, from {{ curve[0].pct if curve else 0 }}% down to {{ dip_pct }}% at {{ dip_name }}.">
-            <defs>
-              <linearGradient id="lpCurveFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="var(--primary)" stop-opacity=".18"/>
-                <stop offset="100%" stop-color="var(--primary)" stop-opacity="0"/>
-              </linearGradient>
-            </defs>
-            <line class="grid" x1="60" y1="30" x2="985" y2="30"/>
-            <line class="grid" x1="60" y1="160" x2="985" y2="160"/>
-            <line class="grid" x1="60" y1="290" x2="985" y2="290"/>
-            <text class="axis-lbl" x="10" y="34">100%</text>
-            <text class="axis-lbl" x="16" y="164">50%</text>
-            <text class="axis-lbl" x="22" y="294">0%</text>
-            {% if curve %}
-            <path class="fill" d="M {{ curve[0].x }},290 L {{ curve_points }} L {{ curve[-1].x }},290 Z"></path>
-            <polyline class="line" points="{{ curve_points }}"></polyline>
-            {% for c in curve %}
-            <circle class="dot{{ ' dip' if c.name == dip_name else '' }}" cx="{{ c.x }}" cy="{{ c.y }}" r="{{ 5.5 if c.name == dip_name else 3.5 }}">
-              <title>{{ c.name }}: {{ c.pct }}%</title>
-            </circle>
-            {% endfor %}
-            {% endif %}
-          </svg>
-        </div>
-        {% if dip %}
-        <div class="lp-dip-callout">
-          {{ icon('alert-triangle', 16, 2) }}
-          <span><b>{{ dip_name }}</b> completion falls to <b>{{ dip_pct }}%</b> &mdash; the sharpest drop in the
-            schedule, and where follow-up matters most.</span>
-        </div>
-        {% endif %}
-      </div>
-
-      <div class="lp-panel">
-        <h3>Coverage by barangay</h3>
-        <div class="sub">All {{ barangay_count }} barangays, lowest coverage first</div>
-        <div class="lp-bgy">
-          {% for r in by_barangay %}
-          <div class="lp-bgy-row">
-            <span class="n">{{ r.barangay }}</span>
-            <span class="progress-track">
-              <span class="progress-fill {{ coverage_color(r.coverage, r.children) }}" style="width:{{ r.coverage }}%"></span>
-            </span>
-            <span class="p">{{ r.coverage }}%</span>
-          </div>
-          {% endfor %}
-        </div>
-        <div class="lp-legend">
-          <span><i style="background:#22c55e"></i>Meets 95% target</span>
-          <span><i style="background:#f59e0b"></i>75&ndash;94%</span>
-          <span><i style="background:#ef4444"></i>Below 75%</span>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
 
 <section class="lp-section lp-section-tinted" id="capabilities">
   <div class="lp-wrap">
