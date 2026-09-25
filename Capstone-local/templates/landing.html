@@ -242,15 +242,6 @@
 }
 .lp-frame-bar i { width: 9px; height: 9px; border-radius: 999px; background: var(--border-strong); display: block; }
 .lp-frame-bar .label { margin-left: 8px; font-size: 12px; color: var(--text-secondary); font-weight: 600; }
-.lp-frame-bar .live {
-  margin-left: auto; display: inline-flex; align-items: center; gap: 6px;
-  font-size: 11px; font-weight: 700; color: var(--green);
-}
-.lp-frame-bar .live i {
-  width: 6px; height: 6px; background: var(--green-light);
-  animation: lp-pulse 1.6s ease-in-out infinite;
-}
-@keyframes lp-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
 
 /* ---- scroll canvas: the real dashboard's own cards, stacked once, doubled,
    and animated to drift continuously upward - at the halfway point the
@@ -452,7 +443,6 @@
         <div class="lp-frame-bar">
           <i></i><i></i><i></i>
           <span class="label">San Jacinto RHU &middot; Live Dashboard</span>
-          <span class="live"><i></i>Auto-updating</span>
         </div>
         <div class="lp-scrollcanvas">
           <div class="lp-scrollcanvas-track">
