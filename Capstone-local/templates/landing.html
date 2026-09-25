@@ -433,7 +433,7 @@
       </div>
       <svg class="donut-callout-svg" viewBox="-20 -20 190 190">
         {% for c in donut_callouts %}
-        <path d="M {{ c.dot[0] }},{{ c.dot[1] }} Q {{ c.control[0] }},{{ c.control[1] }} {{ c.anchor[0] }},{{ c.anchor[1] }}"
+        <path d="M {{ c.dot[0] }},{{ c.dot[1] }} Q {{ c.control[0] }},{{ c.control[1] }} {{ c.line_end[0] }},{{ c.line_end[1] }}"
               fill="none" stroke="{{ c.colour }}" stroke-width="2" stroke-linecap="round" opacity=".6"/>
         <circle cx="{{ c.dot[0] }}" cy="{{ c.dot[1] }}" r="4" fill="{{ c.colour }}" stroke="var(--card-bg)" stroke-width="2.5"/>
         {% endfor %}

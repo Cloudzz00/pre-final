@@ -614,7 +614,7 @@ def risk_distribution(barangay_id=None):
     }
 
 
-def donut_callouts(dist, center=75, ring_r=75, label_r=116, curve_bulge=14):
+def donut_callouts(dist, center=75, ring_r=75, label_r=116, curve_bulge=14, bubble_half_w=28):
     """Leader-line geometry for the landing page's risk donut.
 
     A straight radial line only looks right for the topmost label (see the
@@ -623,6 +623,13 @@ def donut_callouts(dist, center=75, ring_r=75, label_r=116, curve_bulge=14):
     control point, not a CSS rotate trick. One curve per segment, from the
     dot on the ring's own edge out to the pill label, bowed sideways so it
     reads as a drawn line rather than a straight spoke.
+
+    The curve targets the bubble's own side (vertically centred on it,
+    horizontally offset by bubble_half_w toward whichever side faces the
+    ring), not its true centre point - a line arriving from directly below
+    or above pokes into the pill's flat top/bottom edge instead of its
+    rounded cap, which is what made the topmost label look off-centre
+    while the side ones (already arriving roughly horizontally) looked fine.
     """
     segments = [
         ("low", dist["low_pct"], "var(--green-light)"),
@@ -637,15 +644,19 @@ def donut_callouts(dist, center=75, ring_r=75, label_r=116, curve_bulge=14):
         sin_t, cos_t = math.sin(theta), math.cos(theta)
         dot = (center + ring_r * sin_t, center - ring_r * cos_t)
         anchor = (center + label_r * sin_t, center - label_r * cos_t)
-        mid = ((dot[0] + anchor[0]) / 2, (dot[1] + anchor[1]) / 2)
-        # Bulge the control point perpendicular to the dot->anchor line so
+        # The line's target: the bubble's near side, at the bubble's own
+        # vertical centre, so it always looks like it enters through the
+        # rounded cap rather than the flat edge.
+        line_end = (anchor[0] - bubble_half_w if anchor[0] >= center else anchor[0] + bubble_half_w, anchor[1])
+        mid = ((dot[0] + line_end[0]) / 2, (dot[1] + line_end[1]) / 2)
+        # Bulge the control point perpendicular to the dot->line_end line so
         # the curve bows to one side instead of running straight through it.
-        dx, dy = anchor[0] - dot[0], anchor[1] - dot[1]
+        dx, dy = line_end[0] - dot[0], line_end[1] - dot[1]
         length = math.hypot(dx, dy) or 1
         control = (mid[0] - dy / length * curve_bulge, mid[1] + dx / length * curve_bulge)
         callouts.append({
             "name": name, "pct": pct, "colour": colour,
-            "dot": dot, "anchor": anchor, "control": control,
+            "dot": dot, "anchor": anchor, "line_end": line_end, "control": control,
         })
         cursor += pct
     return callouts
