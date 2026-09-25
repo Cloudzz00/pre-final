@@ -193,6 +193,46 @@
 .lp-section-tinted .lp-card {
   box-shadow: 0 2px 12px rgba(0,0,0,.06);
 }
+
+/* ---- problem statement (stat + copy) ---- */
+.lp-problem { display: grid; grid-template-columns: minmax(0,.85fr) minmax(0,1.15fr); gap: 48px; align-items: center; }
+.lp-problem-stat {
+  background: var(--navy-950); color: #fff; border-radius: var(--radius-lg);
+  padding: 40px 32px; text-align: center;
+}
+.lp-problem-stat b { display: block; font-size: clamp(48px,7vw,72px); font-weight: 900; letter-spacing: -.03em; color: var(--amber-light); line-height: 1; }
+.lp-problem-stat span { display: block; font-size: 13.5px; color: #94a3b8; margin-top: 10px; font-weight: 600; }
+.lp-problem-copy h2 { font-size: clamp(22px,2.8vw,28px); font-weight: 800; letter-spacing: -.02em; line-height: 1.3; margin: 0 0 16px; }
+.lp-problem-copy p { font-size: 15.5px; color: var(--text-secondary); line-height: 1.75; margin: 0 0 12px; }
+.lp-problem-copy p:last-child { margin: 0; }
+.lp-problem-copy strong { color: var(--text-primary); }
+@media (max-width: 860px) { .lp-problem { grid-template-columns: minmax(0,1fr); } }
+
+/* ---- how it works: numbered cards, same card language as capabilities ---- */
+.lp-steps { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 18px; margin-top: 40px; }
+.lp-step-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px 20px; }
+.lp-step-num {
+  width: 40px; height: 40px; border-radius: 11px; background: var(--primary-light); color: var(--primary);
+  display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; margin-bottom: 16px;
+}
+.lp-step-card h3 { font-size: 15.5px; font-weight: 800; margin: 0 0 7px; letter-spacing: -.01em; }
+.lp-step-card p { color: var(--text-secondary); font-size: 14.5px; line-height: 1.6; margin: 0; }
+@media (max-width: 900px) { .lp-steps { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+@media (max-width: 560px) { .lp-steps { grid-template-columns: minmax(0,1fr); } }
+
+/* ---- who it's for: same card language as capabilities, 3-across ---- */
+.lp-roles { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 18px; margin-top: 40px; }
+.lp-role-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; }
+.lp-role-tag {
+  display: inline-flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 800;
+  letter-spacing: .06em; text-transform: uppercase; padding: 6px 12px; border-radius: 999px; margin-bottom: 18px;
+}
+.lp-role-card h3 { font-size: 18px; font-weight: 800; margin: 0 0 10px; letter-spacing: -.01em; }
+.lp-role-card > p { font-size: 14.5px; color: var(--text-secondary); line-height: 1.7; margin: 0 0 18px; }
+.lp-role-card ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 9px; }
+.lp-role-card ul li { font-size: 13.5px; color: var(--text-secondary); display: flex; align-items: flex-start; gap: 8px; line-height: 1.5; }
+.lp-role-card ul li::before { content: "\2192"; font-weight: 700; flex-shrink: 0; color: var(--primary); }
+@media (max-width: 860px) { .lp-roles { grid-template-columns: minmax(0,1fr); } }
 </style>
 {% endblock %}
 
@@ -286,6 +326,98 @@
         <h3>Role-based access</h3>
         <p>A health worker sees her own barangay, RHU personnel see the municipality, and the
            administrator sees totals but never a child's record. Every change is logged.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="lp-section" aria-label="Why this matters">
+  <div class="lp-wrap">
+    <div class="lp-problem">
+      <div class="lp-problem-stat">
+        <b>{{ coverage_rate }}%</b>
+        <span>Current immunization coverage in San Jacinto, against a 95% national target</span>
+      </div>
+      <div class="lp-problem-copy">
+        <h2>Children fall behind on their schedules &mdash; and no one knows until it's too late.</h2>
+        <p>Across San Jacinto's {{ barangay_count }} barangays, health workers track hundreds of children using
+           paper records. When a child misses a dose, <strong>the gap often goes undetected</strong> until the
+           window for catch-up has already closed.</p>
+        <p>ImmunoVision was built to fix exactly that &mdash; checking each child's history against all
+           {{ total_doses }} routine doses to flag risk before it becomes a missed vaccine.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="lp-section lp-section-tinted" aria-label="How it works">
+  <div class="lp-wrap">
+    <div class="lp-head">
+      <h2>How ImmunoVision works</h2>
+      <p>From paper records to proactive follow-up, in four steps.</p>
+    </div>
+    <div class="lp-steps">
+      <div class="lp-step-card">
+        <div class="lp-step-num">1</div>
+        <h3>Import records</h3>
+        <p>The RHU encodes or imports each child's immunization record into the system.</p>
+      </div>
+      <div class="lp-step-card">
+        <div class="lp-step-num">2</div>
+        <h3>Score each child</h3>
+        <p>ImmunoVision checks every child's vaccination history against the DOH EPI schedule.</p>
+      </div>
+      <div class="lp-step-card">
+        <div class="lp-step-num">3</div>
+        <h3>Flag at-risk children</h3>
+        <p>Children drifting off schedule surface on the dashboard before their catch-up window closes.</p>
+      </div>
+      <div class="lp-step-card">
+        <div class="lp-step-num">4</div>
+        <h3>Health workers act</h3>
+        <p>Barangay health workers follow up with flagged children and update the record.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="lp-section" aria-label="Who it's for">
+  <div class="lp-wrap">
+    <div class="lp-head">
+      <h2>Built for three kinds of users</h2>
+      <p>Every account sees exactly the view its role needs, nothing more.</p>
+    </div>
+    <div class="lp-roles">
+      <div class="lp-role-card">
+        <span class="lp-role-tag" style="background:var(--primary-light);color:var(--primary)">{{ icon('stethoscope', 13) }} RHU Personnel</span>
+        <h3>Full municipal view</h3>
+        <p>Monitor coverage across all {{ barangay_count }} barangays and act on what the data shows.</p>
+        <ul>
+          <li>Coverage analytics by barangay and vaccine</li>
+          <li>Vaccine inventory and stock alerts</li>
+          <li>Approve and manage barangay requests</li>
+          <li>Generate reports for the LGU</li>
+        </ul>
+      </div>
+      <div class="lp-role-card">
+        <span class="lp-role-tag" style="background:#ccfbf1;color:var(--teal)">{{ icon('user-round', 13) }} Barangay Health Workers</span>
+        <h3>Your barangay, clearly</h3>
+        <p>See exactly which children need a visit and what dose they're missing.</p>
+        <ul>
+          <li>At-risk children ranked by priority</li>
+          <li>Each child's full vaccination schedule</li>
+          <li>Submit vaccine requests to the RHU</li>
+        </ul>
+      </div>
+      <div class="lp-role-card">
+        <span class="lp-role-tag" style="background:#ede9fe;color:var(--violet)">{{ icon('users', 13) }} Community</span>
+        <h3>Public coverage data</h3>
+        <p>Check immunization coverage across San Jacinto without signing in.</p>
+        <ul>
+          <li>Coverage rates by barangay</li>
+          <li>Vaccine-by-vaccine breakdown</li>
+          <li>Coverage trends over time</li>
+        </ul>
       </div>
     </div>
   </div>
