@@ -109,22 +109,9 @@
 .lp-head h2 { font-size: clamp(24px, 3vw, 33px); letter-spacing: -.025em; font-weight: 800; margin: 0; }
 .lp-head p { color: var(--text-secondary); font-size: 15.5px; line-height: 1.65; margin: 12px 0 0; }
 
-/* Fixed three-across, so the two cards on the last row keep the same width as
-   the three above them rather than stretching. justify-content centres that
-   short final row. */
-.lp-grid {
-  display: grid; gap: 18px;
-}
-/* Six half-columns: three cards span two each on the first row, and the two on
-   the last row start at half-column 2 and 4, which centres them without
-   changing their width. */
-.lp-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-.lp-grid > * { grid-column: span 2; }
-.lp-grid > :nth-child(4) { grid-column: 2 / span 2; }
-.lp-grid > :nth-child(5) { grid-column: 4 / span 2; }
+.lp-grid { display: grid; gap: 18px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 @media (max-width: 980px) {
   .lp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .lp-grid > *, .lp-grid > :nth-child(4), .lp-grid > :nth-child(5) { grid-column: auto; }
 }
 @media (max-width: 640px) {
   .lp-grid { grid-template-columns: minmax(0, 1fr); }
@@ -317,12 +304,6 @@
         <p>Every child's full dose history against the EPI schedule, showing what was given,
            what is due, and what is overdue.</p>
       </div>
-      <div class="lp-card">
-        <div class="ic" style="background:var(--violet)">{{ icon('users', 20) }}</div>
-        <h3>Role-based access</h3>
-        <p>A health worker sees her own barangay, RHU personnel see the municipality, and the
-           administrator sees totals but never a child's record. Every change is logged.</p>
-      </div>
     </div>
   </div>
 </section>
@@ -370,29 +351,18 @@
 </section>
 
 <section class="lp-flow lp-section-tinted" aria-label="How it works">
-  <div class="lp-wrap lp-flow-inner">
-    <div class="lp-flow-text">
-      <div class="lp-flow-eyebrow">How it works</div>
+  <div class="lp-wrap">
+    <div class="lp-head">
+      <div class="lp-flow-eyebrow" style="justify-content:center;display:flex;">How it works</div>
       <h2>From paper records to proactive follow-up.</h2>
       <p>ImmunoVision checks every child's vaccination history against the DOH EPI schedule and surfaces
          who needs a visit &mdash; before the catch-up window closes.</p>
-      <div class="lp-chips">
-        <span class="lp-chip"><span class="n">1</span> Import records</span>
-        <span class="lp-chip"><span class="n">2</span> Score each child</span>
-        <span class="lp-chip"><span class="n">3</span> Flag at-risk children</span>
-        <span class="lp-chip"><span class="n">4</span> Health workers act</span>
-      </div>
     </div>
-    <div class="lp-flow-visual">
-      <div class="stat-card" style="padding:24px;">
-        <div class="card-title">Needs Follow-Up</div>
-        <div class="card-sub">Highest-risk children surface automatically</div>
-        <div class="insight" style="margin-top:14px;">
-          {{ icon('bar-chart', 15) }}
-          <span>Risk scoring runs on every record change, so a missed dose is flagged the same day it
-          falls behind schedule &mdash; not weeks later during a manual review.</span>
-        </div>
-      </div>
+    <div class="lp-chips" style="justify-content:center;">
+      <span class="lp-chip"><span class="n">1</span> Import records</span>
+      <span class="lp-chip"><span class="n">2</span> Score each child</span>
+      <span class="lp-chip"><span class="n">3</span> Flag at-risk children</span>
+      <span class="lp-chip"><span class="n">4</span> Health workers act</span>
     </div>
   </div>
 </section>
