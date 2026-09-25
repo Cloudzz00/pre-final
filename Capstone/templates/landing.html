@@ -389,6 +389,18 @@
             {% endfor %}
             </tbody>
           </table>
+          <div class="card-title" style="margin-top:20px;">Risk Distribution</div>
+          <div class="card-sub">By risk level across all children</div>
+          <div style="display:flex;height:10px;border-radius:999px;overflow:hidden;margin-top:12px;">
+            <div style="width:{{ dist.low_pct }}%;background:var(--green-light)"></div>
+            <div style="width:{{ dist.medium_pct }}%;background:var(--amber-light)"></div>
+            <div style="width:{{ dist.high_pct }}%;background:var(--red-light)"></div>
+          </div>
+          <div class="lp-legend">
+            <span><i style="background:var(--green-light)"></i>Low &middot; {{ dist.low_pct }}%</span>
+            <span><i style="background:var(--amber-light)"></i>Medium &middot; {{ dist.medium_pct }}%</span>
+            <span><i style="background:var(--red-light)"></i>High &middot; {{ dist.high_pct }}%</span>
+          </div>
         </div>
       </div>
     </div>

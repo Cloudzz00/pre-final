@@ -1295,6 +1295,7 @@ def index():
         # Lowest coverage first, so the barangays needing attention lead.
         by_barangay=sorted(coverage_by_barangay(), key=lambda r: r["coverage"]),
         trend=yearly_trend(),
+        dist=risk_distribution(),
         stats=stats,
         total_children=stats["total_children"], at_risk=stats["at_risk"],
         fully_immunized=stats["fully_immunized"], coverage_rate=stats["coverage_rate"],
