@@ -265,21 +265,7 @@
 .lp-scroll-block + .lp-scroll-block { border-top: 1px solid var(--border); }
 .lp-scroll-block .stat-grid { margin-bottom: 0; }
 
-/* ---- risk donut data labels: always-on percentage callouts joined to the
-   ring by a real curved line. Points and the bezier control point are
-   computed server-side (app.py: donut_callouts) - a CSS rotate trick can
-   fake a straight radial spoke, but not a curve, and two earlier rounds of
-   overlap bugs came from that trick's positioning being angle-dependent
-   in ways that are easy to get wrong. Plain (x, y) coordinates sidestep
-   all of that. ---- */
 .donut-wrap { position: relative; width: 150px; height: 150px; margin: 0 auto; }
-.donut-callout-svg { position: absolute; inset: -20px; width: calc(100% + 40px); height: calc(100% + 40px); overflow: visible; pointer-events: none; }
-.rlabel-bubble {
-  position: absolute; transform: translate(-50%, -50%);
-  color: #fff; font-weight: 800; font-size: 11.5px; letter-spacing: -.01em;
-  padding: 5px 12px; border-radius: 999px; white-space: nowrap;
-  box-shadow: 0 3px 8px rgba(15,23,42,.22);
-}
 
 /* ---- light-tinted closing section for "who it's for", so it still reads
    as a distinct beat from "why this matters" without going dark. ---- */
@@ -425,27 +411,17 @@
 <div class="lp-scroll-block">
   <div class="card-title">Risk Distribution</div>
   <div class="card-sub">By risk level across all children</div>
-  <div style="display:flex;flex-direction:column;align-items:center;margin-top:48px;">
+  <div style="display:flex;flex-direction:column;align-items:center;margin-top:14px;">
     <div class="donut-wrap">
       <div style="width:150px;height:150px;border-radius:50%;
            background:conic-gradient(var(--green-light) 0% {{ dist.low_pct }}%, var(--amber-light) {{ dist.low_pct }}% {{ dist.low_pct + dist.medium_pct }}%, var(--red-light) {{ dist.low_pct + dist.medium_pct }}% 100%);">
         <div style="position:absolute;inset:38px;border-radius:50%;background:var(--card-bg);"></div>
       </div>
-      <svg class="donut-callout-svg" viewBox="-20 -20 190 190">
-        {% for c in donut_callouts %}
-        <path d="M {{ c.dot[0] }},{{ c.dot[1] }} L {{ c.elbow[0] }},{{ c.elbow[1] }} L {{ c.line_end[0] }},{{ c.line_end[1] }}"
-              fill="none" stroke="{{ c.colour }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <circle cx="{{ c.dot[0] }}" cy="{{ c.dot[1] }}" r="5" fill="var(--card-bg)" stroke="{{ c.colour }}" stroke-width="3"/>
-        {% endfor %}
-      </svg>
-      {% for c in donut_callouts %}
-      <div class="rlabel-bubble" style="left:{{ c.anchor[0] }}px;top:{{ c.anchor[1] }}px;background:{{ c.colour }};">{{ c.pct }}%</div>
-      {% endfor %}
     </div>
     <div class="lp-legend" style="justify-content:center;margin-top:20px;">
-      <span><i style="background:var(--green-light)"></i>Not At-Risk / Low</span>
-      <span><i style="background:var(--amber-light)"></i>Medium Risk</span>
-      <span><i style="background:var(--red-light)"></i>High Risk</span>
+      <span><i style="background:var(--green-light)"></i>Not At-Risk / Low &middot; {{ dist.low_pct }}%</span>
+      <span><i style="background:var(--amber-light)"></i>Medium Risk &middot; {{ dist.medium_pct }}%</span>
+      <span><i style="background:var(--red-light)"></i>High Risk &middot; {{ dist.high_pct }}%</span>
     </div>
   </div>
 </div>

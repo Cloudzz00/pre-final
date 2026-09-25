@@ -12,7 +12,6 @@ import csv
 import hashlib
 import json
 import io
-import math
 import os
 import random
 from collections import Counter, defaultdict
@@ -612,47 +611,6 @@ def risk_distribution(barangay_id=None):
         "medium_pct": round(counts["Medium Risk"] / total * 100, 1), "medium_count": counts["Medium Risk"],
         "low_pct": round(counts["Low Risk"] / total * 100, 1), "low_count": counts["Low Risk"],
     }
-
-
-def donut_callouts(dist, center=75, ring_r=75, label_r=98, bubble_half_w=26, stub_len=13):
-    """Leader-line geometry for the landing page's risk donut.
-
-    Measured directly off the reference image (pixel-cropped and inspected)
-    rather than guessed: each connector is a plain two-segment elbow, not a
-    curve - a short horizontal stub out of the bubble's side, then a
-    straight diagonal down to a hollow dot sitting on the ring's own edge.
-    Two earlier rounds tried a smooth bezier bow and then a hooked one;
-    both were the wrong shape entirely, not just mispositioned.
-    """
-    segments = [
-        ("low", dist["low_pct"], "var(--green-light)"),
-        ("medium", dist["medium_pct"], "var(--amber-light)"),
-        ("high", dist["high_pct"], "var(--red-light)"),
-    ]
-    callouts = []
-    cursor = 0.0
-    for name, pct, colour in segments:
-        mid_pct = cursor + pct / 2
-        theta = math.radians(mid_pct / 100 * 360)
-        sin_t, cos_t = math.sin(theta), math.cos(theta)
-        dot = (center + ring_r * sin_t, center - ring_r * cos_t)
-        anchor = (center + label_r * sin_t, center - label_r * cos_t)
-        # The line's target: the bubble's near side, at the bubble's own
-        # vertical centre, so it always looks like it enters through the
-        # rounded cap rather than the flat edge.
-        towards_ring = -1 if anchor[0] >= center else 1
-        line_end = (anchor[0] + towards_ring * bubble_half_w, anchor[1])
-        # The elbow: a short horizontal stub continuing PAST line_end in the
-        # same outward direction (towards_ring) - not back towards the dot,
-        # which would fall inside the pill's own footprint and render
-        # hidden underneath it, invisible.
-        elbow = (line_end[0] + towards_ring * stub_len, line_end[1])
-        callouts.append({
-            "name": name, "pct": pct, "colour": colour,
-            "dot": dot, "anchor": anchor, "line_end": line_end, "elbow": elbow,
-        })
-        cursor += pct
-    return callouts
 
 
 # --- Dashboard filtering ----------------------------------------------------
@@ -1337,8 +1295,7 @@ def index():
         # Lowest coverage first, so the barangays needing attention lead.
         by_barangay=sorted(coverage_by_barangay(), key=lambda r: r["coverage"]),
         trend=yearly_trend(),
-        dist=(_dist := risk_distribution()),
-        donut_callouts=donut_callouts(_dist),
+        dist=risk_distribution(),
         stats=stats,
         total_children=stats["total_children"], at_risk=stats["at_risk"],
         fully_immunized=stats["fully_immunized"], coverage_rate=stats["coverage_rate"],
