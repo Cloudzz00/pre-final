@@ -242,12 +242,7 @@
 }
 .lp-frame-bar i { width: 9px; height: 9px; border-radius: 999px; background: var(--border-strong); display: block; }
 .lp-frame-bar .label { margin-left: 8px; font-size: 12px; color: var(--text-secondary); font-weight: 600; }
-.lp-frame-body { padding: 22px; }
-.lp-frame-body .stat-grid { grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
-.lp-frame-body .stat-card { padding: 14px; }
-.lp-frame-body .stat-icon { width: 34px; height: 34px; margin-bottom: 8px; }
-.lp-frame-body .stat-value { font-size: 20px; }
-.lp-frame-body .stat-label { font-size: 11.5px; }
+.lp-frame-body { padding: 26px; }
 
 /* ---- carousel: each slide is one complete, real dashboard card, shown
    whole rather than fragmented, auto-advancing sideways. ---- */
@@ -362,94 +357,103 @@
   </div>
 </section>
 
-<section class="lp-flow" aria-label="Why this matters">
-  <div class="lp-wrap lp-flow-inner">
-    <div class="lp-flow-visual">
-      <div class="lp-frame">
-        <div class="lp-frame-bar">
-          <i></i><i></i><i></i>
-          <span class="label">San Jacinto RHU &middot; Live Dashboard</span>
-        </div>
-        <div class="lp-frame-body">
-          <div class="lp-carousel">
-            <div class="lp-carousel-track" id="dashCarousel">
+<section class="lp-section" aria-label="Why this matters">
+  <div class="lp-wrap">
+    <div class="lp-head">
+      <h2>Children fall behind on their schedules &mdash; and no one knows until it's too late.</h2>
+      <p>Across San Jacinto's {{ barangay_count }} barangays, health workers track hundreds of children using
+         paper records. Coverage today sits at <b>{{ coverage_rate }}%</b>, well short of the 95% national target.
+         Here's the actual dashboard RHU personnel see every day.</p>
+    </div>
 
-              <div class="lp-slide">
-                <div class="stat-grid" style="grid-template-columns:repeat(2,minmax(0,1fr));">
-                  <div class="stat-card">
-                    <div class="stat-icon bg-blue">{{ icon('clock', 18) }}</div>
-                    <div class="stat-value">{{ total_children }}</div>
-                    <div class="stat-label">Total Children</div>
-                  </div>
-                  <div class="stat-card">
-                    <div class="stat-icon bg-green">{{ icon('check-circle', 18) }}</div>
-                    <div class="stat-value">{{ fully_immunized }}</div>
-                    <div class="stat-label">Fully Immunized</div>
-                  </div>
-                  <div class="stat-card">
-                    <div class="stat-icon bg-orange">{{ icon('alert-triangle', 18) }}</div>
-                    <div class="stat-value">{{ at_risk }}</div>
-                    <div class="stat-label">At-Risk Children</div>
-                  </div>
-                  <div class="stat-card">
-                    <div class="stat-icon bg-teal">{{ icon('activity', 18) }}</div>
-                    <div class="stat-value">{{ dist.high_count }}</div>
-                    <div class="stat-label">High Risk</div>
-                  </div>
+    <div class="lp-frame" style="max-width:1000px;margin:0 auto;">
+      <div class="lp-frame-bar">
+        <i></i><i></i><i></i>
+        <span class="label">San Jacinto RHU &middot; Live Dashboard</span>
+      </div>
+      <div class="lp-frame-body">
+        <div class="lp-carousel">
+          <div class="lp-carousel-track" id="dashCarousel">
+
+            {# Screen 1: the dashboard's actual top row, unmodified. #}
+            <div class="lp-slide">
+              <div class="stat-grid">
+                <div class="stat-card">
+                  <div class="stat-icon bg-blue">{{ icon('baby', 21) }}</div>
+                  <div class="stat-value">{{ total_children }}</div>
+                  <div class="stat-label">Total Children</div>
+                  <div class="stat-caption">All {{ barangay_count }} barangays</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-icon bg-green">{{ icon('check-circle', 21) }}</div>
+                  <div class="stat-value">{{ fully_immunized }}</div>
+                  <div class="stat-label">Fully Immunized</div>
+                  <div class="stat-caption">{{ coverage_rate }}% of enrolled</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-icon bg-orange">{{ icon('alert-triangle', 21) }}</div>
+                  <div class="stat-value">{{ at_risk }}</div>
+                  <div class="stat-label">At-Risk Children</div>
+                  <div class="stat-caption">need follow-up</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-icon bg-teal">{{ icon('activity', 21) }}</div>
+                  <div class="stat-value">{{ dist.high_count }}</div>
+                  <div class="stat-label">High Risk</div>
                 </div>
               </div>
-
-              <div class="lp-slide">
-                <div class="card-title">Coverage by Barangay</div>
-                <div class="card-sub">All {{ barangay_count }} barangays, lowest coverage first</div>
-                <table class="data-table plain-head compact" style="margin-top:6px;">
-                  <thead><tr><th>Barangay</th><th>Coverage</th></tr></thead>
-                  <tbody>
-                  {% for r in by_barangay[:6] %}
-                  <tr>
-                    <td>{{ r.barangay }}</td>
-                    <td><span class="progress-track"><span class="progress-fill {{ coverage_color(r.coverage, r.children) }}" style="width:{{ r.coverage }}%"></span></span>{{ r.coverage }}%</td>
-                  </tr>
-                  {% endfor %}
-                  </tbody>
-                </table>
+              <div class="split-2-1">
+                <div class="card card-pad">
+                  <div class="card-title">Coverage by Barangay</div>
+                  <div class="card-sub">All {{ barangay_count }} barangays, lowest coverage first</div>
+                  <div class="table-wrap" style="max-height:260px;margin-top:10px;">
+                    <table class="data-table plain-head compact">
+                      <thead><tr><th>Barangay</th><th>Children</th><th>Fully Imm.</th><th>At-Risk</th><th>Coverage</th></tr></thead>
+                      <tbody>
+                      {% for r in by_barangay %}
+                      <tr>
+                        <td>{{ r.barangay }}</td><td>{{ r.children }}</td><td>{{ r.fully_immunized }}</td><td>{{ r.at_risk }}</td>
+                        <td><span class="progress-track"><span class="progress-fill {{ coverage_color(r.coverage, r.children) }}" style="width:{{ r.coverage }}%"></span></span>{{ r.coverage }}%</td>
+                      </tr>
+                      {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div class="card card-pad">
+                  <div class="card-title">Risk Distribution</div>
+                  <div class="card-sub">By risk level across all children</div>
+                  <div class="chart-box" style="height:230px;"><canvas id="lpRiskChart"></canvas></div>
+                </div>
               </div>
-
-              <div class="lp-slide">
-                <div class="card-title">Risk Distribution</div>
-                <div class="card-sub">By risk level across all children</div>
-                <div class="chart-box" style="height:220px;margin-top:6px;"><canvas id="lpRiskChart"></canvas></div>
-              </div>
-
-              <div class="lp-slide">
-                <div class="card-title">Coverage by Vaccine</div>
-                <div class="card-sub">All {{ total_doses }} doses, in schedule order</div>
-                <div class="chart-box" style="height:220px;margin-top:6px;"><canvas id="lpVaccineChart"></canvas></div>
-              </div>
-
-              <div class="lp-slide">
-                <div class="card-title">Annual Coverage Trend</div>
-                <div class="card-sub">Coverage at each year end</div>
-                <div class="chart-box" style="height:220px;margin-top:6px;"><canvas id="lpTrendChart"></canvas></div>
-              </div>
-
             </div>
-            <div class="lp-dots" id="dashDots"></div>
+
+            {# Screen 2: the continuation - same grid, next two real cards. #}
+            <div class="lp-slide">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+                <div class="card card-pad">
+                  <div class="card-title">Coverage by Vaccine</div>
+                  <div class="card-sub">All {{ total_doses }} doses, in schedule order</div>
+                  <div class="chart-box" style="height:320px;"><canvas id="lpVaccineChart"></canvas></div>
+                </div>
+                <div class="card card-pad">
+                  <div class="card-title">Annual Coverage Trend</div>
+                  <div class="card-sub">Coverage at each year end</div>
+                  <div class="chart-box" style="height:320px;"><canvas id="lpTrendChart"></canvas></div>
+                </div>
+              </div>
+            </div>
+
           </div>
+          <div class="lp-dots" id="dashDots"></div>
         </div>
       </div>
     </div>
-    <div class="lp-flow-text">
-      <div class="lp-flow-eyebrow">The problem</div>
-      <h2>Children fall behind on their schedules &mdash; and no one knows until it's too late.</h2>
-      <p>Across San Jacinto's {{ barangay_count }} barangays, health workers track hundreds of children using
-         paper records. Coverage today sits at <span class="stat-inline">{{ coverage_rate }}%</span>, well short
-         of the 95% national target.</p>
-      <div class="insight">
-        {{ icon('alert-triangle', 15) }}
-        <span>{{ at_risk }} of {{ total_children }} children are currently flagged &mdash; the gap often goes
-        undetected until the window for catch-up has already closed.</span>
-      </div>
+
+    <div class="insight" style="max-width:1000px;margin:20px auto 0;">
+      {{ icon('alert-triangle', 15) }}
+      <span>{{ at_risk }} of {{ total_children }} children are currently flagged &mdash; the gap often goes
+      undetected until the window for catch-up has already closed.</span>
     </div>
   </div>
 </section>
