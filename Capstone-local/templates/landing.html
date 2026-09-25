@@ -409,15 +409,15 @@
 <div class="lp-scroll-block">
   <div class="card-title">Risk Distribution</div>
   <div class="card-sub">By risk level across all children</div>
-  <div style="display:flex;align-items:center;gap:22px;margin-top:14px;">
-    <div style="width:104px;height:104px;border-radius:50%;flex-shrink:0;position:relative;
+  <div style="display:flex;flex-direction:column;align-items:center;margin-top:14px;">
+    <div style="width:150px;height:150px;border-radius:50%;position:relative;
          background:conic-gradient(var(--green-light) 0% {{ dist.low_pct }}%, var(--amber-light) {{ dist.low_pct }}% {{ dist.low_pct + dist.medium_pct }}%, var(--red-light) {{ dist.low_pct + dist.medium_pct }}% 100%);">
-      <div style="position:absolute;inset:17px;border-radius:50%;background:var(--card-bg);"></div>
+      <div style="position:absolute;inset:24px;border-radius:50%;background:var(--card-bg);"></div>
     </div>
-    <div class="lp-legend" style="flex-direction:column;align-items:flex-start;gap:8px;margin:0;">
-      <span><i style="background:var(--green-light)"></i>Low &middot; {{ dist.low_pct }}%</span>
-      <span><i style="background:var(--amber-light)"></i>Medium &middot; {{ dist.medium_pct }}%</span>
-      <span><i style="background:var(--red-light)"></i>High &middot; {{ dist.high_pct }}%</span>
+    <div class="lp-legend" style="justify-content:center;margin-top:16px;">
+      <span><i style="background:var(--green-light)"></i>Not At-Risk / Low</span>
+      <span><i style="background:var(--amber-light)"></i>Medium Risk</span>
+      <span><i style="background:var(--red-light)"></i>High Risk</span>
     </div>
   </div>
 </div>
