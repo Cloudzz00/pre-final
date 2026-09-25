@@ -614,7 +614,7 @@ def risk_distribution(barangay_id=None):
     }
 
 
-def donut_callouts(dist, center=75, ring_r=75, label_r=116, bubble_half_w=28, stub_len=18):
+def donut_callouts(dist, center=75, ring_r=75, label_r=98, bubble_half_w=26, stub_len=13):
     """Leader-line geometry for the landing page's risk donut.
 
     Measured directly off the reference image (pixel-cropped and inspected)
