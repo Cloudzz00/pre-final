@@ -614,22 +614,15 @@ def risk_distribution(barangay_id=None):
     }
 
 
-def donut_callouts(dist, center=75, ring_r=75, label_r=116, curve_bulge=20, bubble_half_w=28):
+def donut_callouts(dist, center=75, ring_r=75, label_r=116, bubble_half_w=28, stub_len=18):
     """Leader-line geometry for the landing page's risk donut.
 
-    A straight radial line only looks right for the topmost label (see the
-    two rounds of overlap bugs this replaced) - everywhere else it needs an
-    actual curve, which means real (x, y) points and a quadratic bezier
-    control point, not a CSS rotate trick. One curve per segment, from the
-    dot on the ring's own edge out to the pill label, bowed sideways so it
-    reads as a drawn line rather than a straight spoke.
-
-    The curve targets the bubble's own side (vertically centred on it,
-    horizontally offset by bubble_half_w toward whichever side faces the
-    ring), not its true centre point - a line arriving from directly below
-    or above pokes into the pill's flat top/bottom edge instead of its
-    rounded cap, which is what made the topmost label look off-centre
-    while the side ones (already arriving roughly horizontally) looked fine.
+    Measured directly off the reference image (pixel-cropped and inspected)
+    rather than guessed: each connector is a plain two-segment elbow, not a
+    curve - a short horizontal stub out of the bubble's side, then a
+    straight diagonal down to a hollow dot sitting on the ring's own edge.
+    Two earlier rounds tried a smooth bezier bow and then a hooked one;
+    both were the wrong shape entirely, not just mispositioned.
     """
     segments = [
         ("low", dist["low_pct"], "var(--green-light)"),
@@ -647,20 +640,16 @@ def donut_callouts(dist, center=75, ring_r=75, label_r=116, curve_bulge=20, bubb
         # The line's target: the bubble's near side, at the bubble's own
         # vertical centre, so it always looks like it enters through the
         # rounded cap rather than the flat edge.
-        line_end = (anchor[0] - bubble_half_w if anchor[0] >= center else anchor[0] + bubble_half_w, anchor[1])
-        # A quadratic control point placed at the true midpoint bends the
-        # WHOLE line evenly. The reference instead has a small hook right at
-        # the dot and runs essentially straight after that, so the control
-        # point sits close to the dot end (30% of the way along), not in
-        # the middle, and the perpendicular offset is bigger to make that
-        # hook actually read as a hook.
-        dx, dy = line_end[0] - dot[0], line_end[1] - dot[1]
-        length = math.hypot(dx, dy) or 1
-        near_dot = (dot[0] + dx * 0.3, dot[1] + dy * 0.3)
-        control = (near_dot[0] - dy / length * curve_bulge, near_dot[1] + dx / length * curve_bulge)
+        towards_ring = -1 if anchor[0] >= center else 1
+        line_end = (anchor[0] + towards_ring * bubble_half_w, anchor[1])
+        # The elbow: a short horizontal stub continuing PAST line_end in the
+        # same outward direction (towards_ring) - not back towards the dot,
+        # which would fall inside the pill's own footprint and render
+        # hidden underneath it, invisible.
+        elbow = (line_end[0] + towards_ring * stub_len, line_end[1])
         callouts.append({
             "name": name, "pct": pct, "colour": colour,
-            "dot": dot, "anchor": anchor, "line_end": line_end, "control": control,
+            "dot": dot, "anchor": anchor, "line_end": line_end, "elbow": elbow,
         })
         cursor += pct
     return callouts
