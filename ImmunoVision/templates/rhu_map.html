@@ -1,0 +1,335 @@
+{% extends "layout_app.html" %}
+{% block title %}Municipality Map{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='js/vendor/leaflet/leaflet.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="pill-tabs" data-tabgroup="mapTabs">
+  <button class="pill-tab active" data-tab="heatmap">Coverage Heatmap</button>
+  <button class="pill-tab" data-tab="atrisk">At-Risk Distribution</button>
+  <button class="pill-tab" data-tab="density">Child Density</button>
+</div>
+
+<div class="map-stack">
+  {# Sits above the map as a compact strip: title, metrics and the coverage
+     bar all on one line, so it costs little vertical space before the map. #}
+  <div class="card card-pad detail-strip" id="selectPanel">
+    <div class="card-title mb-0" id="selectTitle">Barangay Detail</div>
+    <div id="selectHint" class="ds-body">
+      <span class="ds-empty">{{ icon('map-pin', 15) }} Click a barangay on the map to see its figures</span>
+    </div>
+    <a class="btn btn-outline btn-sm ds-link" href="{{ url_for('rhu.dashboard') }}#coverage-by-barangay">
+      {{ icon('bar-chart', 14) }} All barangays
+    </a>
+  </div>
+
+  <div class="card card-pad">
+    <div class="flex-between" style="margin-bottom:10px;">
+      <div>
+        <div class="card-title mb-0">San Jacinto, Pangasinan</div>
+        <div class="card-sub mb-0">Click a barangay to view details</div>
+      </div>
+      <div class="legend-row" id="mapLegend"></div>
+    </div>
+
+    {# Live tile map. If the tile server cannot be reached, this is hidden and
+       the offline SVG map below takes over, so the page always shows a usable
+       map even with no internet connection. #}
+    <div id="leafletMap" class="map-canvas"></div>
+
+    <div id="offlineMap" class="map-canvas" hidden>
+      <svg viewBox="0 0 1000 1000" width="100%" height="100%" preserveAspectRatio="xMidYMid meet"
+           role="img" aria-label="Map of San Jacinto, Pangasinan showing its 19 barangays">
+        <defs>
+          {# Diagonal hatch marks a barangay whose records are simulated. #}
+          <pattern id="simHatch" width="7" height="7" patternTransform="rotate(45)"
+                   patternUnits="userSpaceOnUse">
+            <line x1="0" y="0" x2="0" y2="7" stroke="#ffffff" stroke-width="3" opacity=".55"/>
+          </pattern>
+        </defs>
+        <g id="mapShapes"></g>
+        <g id="mapLabels"></g>
+        <g transform="translate(940,58)">
+          <path d="M0,-26 L8,8 L0,2 L-8,8 Z" fill="#94a3b8"/>
+          <text y="26" font-size="17" fill="#94a3b8" text-anchor="middle" font-weight="700">N</text>
+        </g>
+      </svg>
+    </div>
+
+    <div id="offlineNote" class="map-offline-note" hidden>
+      No internet connection &mdash; showing the built-in offline map.
+      Barangay boundaries and all figures are unaffected.
+    </div>
+    <div class="map-foot">
+      Barangay boundaries: Philippine Statistics Authority (PSGC 2023) &middot;
+      <span id="basemapCredit">Base map &copy; OpenStreetMap contributors</span>
+    </div>
+  </div>
+
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/vendor/leaflet/leaflet.js') }}"></script>
+<script>
+const DATA = {
+  heatmap: {{ heatmap|tojson }},
+  atrisk:  {{ at_risk|tojson }},
+  density: {{ density|tojson }}
+};
+const GEOJSON_URL = "{{ url_for('static', filename='data/san_jacinto_barangays.geojson') }}";
+const COLOR = { green:'#22c55e', teal:'#14b8a6', amber:'#f59e0b', red:'#ef4444', blue:'#3b82f6', none:'#cbd5e1' };
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+const selectPanel = document.getElementById('selectPanel');
+const selectHint  = document.getElementById('selectHint');
+let mode = 'heatmap';
+let activeName = null;
+
+const LEGENDS = {
+  heatmap: { title: 'Coverage rate',
+    items: [['#22c55e','\u226595% target'], ['#f59e0b','75\u201394%'], ['#ef4444','<75%']],
+    note: 'Hatched barangays hold simulated demo data, not RHU records.' },
+  atrisk:  { title: 'Share of children at risk',
+    items: [['#22c55e','<15%'], ['#f59e0b','15\u201329%'], ['#ef4444','\u226530%']] },
+  density: { title: 'Children registered',
+    items: [['#3b82f6','Count per barangay']] }
+};
+
+function renderLegend() {
+  const el = document.getElementById('mapLegend');
+  const lg = LEGENDS[mode];
+  el.innerHTML = `<span class="legend-title">${lg.title}</span>` + lg.items
+    .map(([c, label]) => `<span><span class="legend-dot" style="background:${c}"></span>${label}</span>`)
+    .join('')
+    // Hatching is not a colour, so it needs saying rather than a swatch.
+    + (lg.note ? `<span class="legend-note">${lg.note}</span>` : '');
+}
+
+function byName(m) {
+  const out = {};
+  DATA[m].forEach(x => out[x.barangay] = x);
+  return out;
+}
+
+function coverageClass(pct) {
+  // Same bands as the map legend and the barangay tables.
+  return pct >= 95 ? 'green' : pct >= 75 ? 'amber' : 'red';
+}
+
+/* Each figure is shown once, as its own labelled metric. The previous panel
+   printed coverage and the child count twice in two different phrasings. */
+/* The bar and its label follow the active tab: the strip previously always
+   showed coverage against the 95% target, so switching to At-Risk or Density
+   changed the map but not the panel describing the selected barangay. */
+function meterFor(m) {
+  const atRiskPct = m.children ? Math.round(m.at_risk / m.children * 100) : 0;
+  if (mode === 'atrisk') {
+    return { label: 'Share of children at risk', pct: atRiskPct,
+             cls: atRiskPct >= 30 ? 'red' : (atRiskPct >= 15 ? 'amber' : 'green'),
+             note: `${m.at_risk} of ${m.children}` };
+  }
+  if (mode === 'density') {
+    const max = Math.max(...DATA.density.map(x => x.children), 1);
+    return { label: 'Share of municipality', pct: Math.round(m.children / max * 100),
+             cls: 'blue', note: `largest is ${max}` };
+  }
+  return { label: 'Immunization coverage', pct: m.coverage,
+           cls: coverageClass(m.coverage), note: 'target 95%' };
+}
+
+function select(m) {
+  activeName = m.barangay;
+  document.getElementById('selectTitle').textContent = m.barangay;
+  const atRiskPct = m.children ? Math.round(m.at_risk / m.children * 100) : 0;
+  const meter = meterFor(m);
+  // The metric matching the active tab is emphasised.
+  const on = k => mode === k ? ' is-active' : '';
+  selectHint.innerHTML = `
+    <span class="ds-metric${on('density')}"><b>${m.children}</b> children</span>
+    <span class="ds-metric${on('heatmap')}"><b>${m.coverage}%</b> coverage</span>
+    <span class="ds-metric ${m.at_risk ? 'bad' : ''}${on('atrisk')}"><b>${m.at_risk}</b> at-risk (${atRiskPct}%)</span>
+    <span class="ds-meter">
+      <span class="ds-meter-label">${meter.label}</span>
+      <span class="progress-track"><span class="progress-fill ${meter.cls}" style="width:${meter.pct}%"></span></span>
+      <span class="ds-target">${meter.note}</span>
+    </span>
+  `;
+}
+
+/* ---------------------------------------------------------------
+   1. Live map: OpenStreetMap tiles with the PSA barangay polygons
+      drawn on top as a coloured, bordered overlay.
+   --------------------------------------------------------------- */
+let map = null, layer = null, tilesOK = false, offlineActive = false;
+
+function styleFor(name) {
+  const m = byName(mode)[name];
+  const isActive = name === activeName;
+  return {
+    // Every barangay carries a dark boundary so the administrative divisions
+    // read clearly against light and dark parts of the base map alike. The
+    // selected one is distinguished by a heavier line, not a different colour.
+    color: '#0f172a',
+    weight: isActive ? 3 : 1.6,
+    opacity: 1,
+    fillColor: m ? COLOR[m.color] : '#cbd5e1',
+    // Selection is shown by the darker, thicker outline. The fill stays
+    // translucent (and drops slightly) so the roads and landmarks underneath
+    // remain readable instead of being covered by a solid block of colour.
+    fillOpacity: isActive ? 0.6 : 0.5
+  };
+}
+
+function initLeaflet() {
+  // zoomSnap 0 allows fractional zoom, so fitBounds can size the municipality
+  // to fill the frame instead of stepping down to the next whole zoom level
+  // and leaving a wide empty margin around it.
+  map = L.map('leafletMap', { scrollWheelZoom: false, zoomSnap: 0, zoomDelta: 0.5 });
+
+  const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18, minZoom: 10,
+    attribution: '&copy; OpenStreetMap contributors'
+  });
+  tiles.once('load', () => { tilesOK = true; });
+  tiles.on('tileerror', () => { if (!tilesOK) goOffline(); });
+  tiles.addTo(map);
+
+  // If no tile has loaded within 4 seconds, assume there is no usable
+  // connection and switch to the offline map rather than showing a blank box.
+  setTimeout(() => { if (!tilesOK) goOffline(); }, 4000);
+
+  fetch(GEOJSON_URL)
+    .then(r => r.json())
+    .then(gj => {
+      layer = L.geoJSON(gj, {
+        style: f => styleFor(f.properties.name),
+        onEachFeature: (f, lyr) => {
+          const name = f.properties.name;
+          lyr.on('click', () => {
+            const m = byName(mode)[name];
+            if (m) { select(m); repaint(); }
+          });
+          lyr.on('mouseover', () => lyr.setStyle({ weight: 2.4, fillOpacity: 0.72 }));
+          lyr.on('mouseout',  () => lyr.setStyle(styleFor(name)));
+          lyr.bindTooltip(() => {
+            const m = byName(mode)[name];
+            return `<b>${name}</b><br>${m ? m.value + m.suffix : ''}`;
+          }, { sticky: true });
+        }
+      }).addTo(map);
+      // The container is measured before the card has finished laying out, so
+      // recalculate the size first - otherwise fitBounds zooms to a stale box
+      // and the municipality sits small in the middle of the frame.
+      map.invalidateSize();
+      map.fitBounds(layer.getBounds(), { padding: [8, 8] });
+      // Guarded: goOffline() destroys the map, and a later resize would then
+      // call invalidateSize() on null.
+      window.addEventListener('resize', () => {
+        if (!map || !layer) return;
+        map.invalidateSize();
+        map.fitBounds(layer.getBounds(), { padding: [8, 8] });
+      });
+    })
+    .catch(goOffline);
+}
+
+function repaint() {
+  if (layer) layer.setStyle(f => styleFor(f.properties.name));
+  if (offlineActive) renderOffline();
+}
+
+/* ---------------------------------------------------------------
+   2. Offline fallback: the self-contained SVG choropleth, which
+      needs no tiles, no network and no mapping service.
+   --------------------------------------------------------------- */
+const LABEL_MIN_AREA = 9000;
+
+function goOffline() {
+  if (offlineActive) return;
+  offlineActive = true;
+  document.getElementById('leafletMap').hidden = true;
+  document.getElementById('offlineMap').hidden = false;
+  document.getElementById('offlineNote').hidden = false;
+  document.getElementById('basemapCredit').textContent = 'Offline map';
+  if (map) { map.remove(); map = null; layer = null; }
+  renderOffline();
+}
+
+function renderOffline() {
+  const shapesG = document.getElementById('mapShapes');
+  const labelsG = document.getElementById('mapLabels');
+  shapesG.innerHTML = ''; labelsG.innerHTML = '';
+  DATA[mode].forEach(m => {
+    if (!m.d) return;
+    const path = document.createElementNS(SVG_NS, 'path');
+    path.setAttribute('d', m.d);
+    // Simulated barangays are hatched, so a demo figure is never read as a
+    // reported one.
+    path.setAttribute('class', 'bgy-shape'
+      + (m.barangay === activeName ? ' is-active' : '')
+      + (m.simulated ? ' is-simulated' : ''));
+    path.setAttribute('fill', COLOR[m.color]);
+    path.dataset.name = m.barangay;
+    path.addEventListener('click', () => { select(m); renderOffline(); });
+    const title = document.createElementNS(SVG_NS, 'title');
+    title.textContent = `${m.barangay} — ${m.value}${m.suffix}`;
+    path.appendChild(title);
+    shapesG.appendChild(path);
+
+    if (m.simulated) {
+      // Hatch drawn over the fill so the coverage colour stays readable.
+      const hatch = document.createElementNS(SVG_NS, 'path');
+      hatch.setAttribute('d', m.d);
+      hatch.setAttribute('fill', 'url(#simHatch)');
+      hatch.setAttribute('pointer-events', 'none');
+      shapesG.appendChild(hatch);
+    }
+
+    if (m.area >= LABEL_MIN_AREA) {
+      const nm = document.createElementNS(SVG_NS, 'text');
+      nm.setAttribute('class', 'bgy-name');
+      nm.setAttribute('x', m.cx); nm.setAttribute('y', m.cy - 4);
+      nm.textContent = m.barangay.split(' (')[0];
+      const vl = document.createElementNS(SVG_NS, 'text');
+      vl.setAttribute('class', 'bgy-value');
+      vl.setAttribute('x', m.cx); vl.setAttribute('y', m.cy + 15);
+      vl.textContent = m.value + m.suffix;
+      labelsG.appendChild(nm); labelsG.appendChild(vl);
+    } else {
+      const dot = document.createElementNS(SVG_NS, 'circle');
+      dot.setAttribute('class', 'bgy-dot');
+      dot.setAttribute('cx', m.cx); dot.setAttribute('cy', m.cy); dot.setAttribute('r', 5);
+      const t = document.createElementNS(SVG_NS, 'title');
+      t.textContent = `${m.barangay} — ${m.value}${m.suffix}`;
+      dot.appendChild(t);
+      dot.addEventListener('click', () => { select(m); renderOffline(); });
+      labelsG.appendChild(dot);
+    }
+  });
+}
+
+/* --------------------------- tabs --------------------------- */
+document.querySelectorAll('[data-tabgroup="mapTabs"] [data-tab]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-tabgroup="mapTabs"] [data-tab]')
+      .forEach(b => b.classList.toggle('active', b === btn));
+    mode = btn.getAttribute('data-tab');
+    if (activeName) {
+      const m = byName(mode)[activeName];
+      if (m) select(m);
+    }
+    renderLegend();
+    repaint();
+  });
+});
+
+renderLegend();
+if (typeof L === 'undefined') { goOffline(); } else { initLeaflet(); }
+
+
+</script>
+{% endblock %}

@@ -1,0 +1,333 @@
+{% extends "layout_app.html" %}
+{% from "_icons.html" import icon %}
+{% block content %}
+<div class="banner">
+  <div>
+    <h2>Good morning, {{ current_user.full_name.split(' ')[0] }}!</h2>
+    <p>Barangay {{ current_user.barangay.name }} · {{ (now.strftime('%B') ~ ' ' ~ now.day ~ ', ' ~ now.year) if now else '' }}</p>
+  </div>
+</div>
+<div class="stat-grid dashboard-stat-grid">
+  <div class="stat-card dashboard-stat"><div class="stat-icon bg-blue dashboard-stat-icon">{{ icon('baby', 21) }}</div><div><div class="stat-value">{{ stats.total_children }}</div><div class="stat-label">Total Registered Children</div><div class="stat-caption">All children in your barangay</div></div></div>
+  <div class="stat-card dashboard-stat"><div class="stat-icon bg-red dashboard-stat-icon">{{ icon('alert-triangle', 21) }}</div><div><div class="stat-value">{{ stats.at_risk }}</div><div class="stat-label">At-Risk Children</div><div class="stat-caption">Need closer monitoring</div></div></div>
+  <div class="stat-card dashboard-stat"><div class="stat-icon bg-green dashboard-stat-icon">{{ icon('check-circle', 21) }}</div><div><div class="stat-value">{{ stats.fully_immunized }}</div><div class="stat-label">Fully Immunized</div><div class="stat-caption">Completed all age-appropriate doses</div></div></div>
+  <div class="stat-card dashboard-stat"><div class="stat-icon bg-purple dashboard-stat-icon">{{ icon('activity', 21) }}</div><div><div class="stat-value">{{ stats.coverage_rate }}%</div><div class="stat-label">Coverage Rate</div><div class="stat-caption">Target: 95%</div></div></div>
+</div>
+
+<style>
+.dashboard-action-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(520px,1.45fr);gap:18px;margin:18px 0;align-items:stretch}
+.followup-card,.due-calendar-card{min-width:0}
+.followup-card .card-head,.due-calendar-card .card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.action-count{font-size:12px;font-weight:800;padding:6px 10px;border-radius:999px;background:#fff1f2;color:#dc2626;white-space:nowrap}
+.due-legend{display:flex;gap:12px;flex-wrap:wrap;align-items:center;font-size:11px;font-weight:700;color:var(--text-secondary)}
+.due-legend span{display:inline-flex;align-items:center;gap:5px}
+.due-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.due-dot.today{background:#2563eb}.due-dot.upcoming{background:#f59e0b}.due-dot.overdue{background:#ef4444}
+  .due-dot.scheduled{background:#16a34a}
+.due-layout{display:grid;grid-template-columns:minmax(250px,1fr) minmax(240px,.9fr);gap:14px;margin-top:14px}
+.calendar-panel{border:1px solid var(--border);border-radius:12px;padding:12px;background:#fff}
+.calendar-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.calendar-nav strong{font-size:15px;color:var(--text-primary)}
+.calendar-nav button{width:30px;height:30px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;color:var(--text-primary);font-size:16px}
+.calendar-nav button:hover{background:var(--slate-bg)}
+.calendar-week,.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.calendar-week div{text-align:center;font-size:10px;font-weight:800;color:var(--text-secondary);padding:4px 0}
+.cal-day{position:relative;min-height:34px;border:0;background:transparent;border-radius:8px;cursor:pointer;font-size:11px;color:var(--text-primary)}
+.cal-day:hover{background:#f1f5f9}.cal-day.muted{color:#cbd5e1}.cal-day.selected{background:#2563eb;color:#fff;font-weight:800}.cal-day.today:not(.selected){box-shadow:inset 0 0 0 1px #2563eb;font-weight:800}
+.cal-day .marks{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);display:flex;gap:2px}
+.cal-day .mark{width:4px;height:4px;border-radius:50%}.mark.today{background:#2563eb}.mark.upcoming{background:#f59e0b}.mark.overdue{background:#ef4444}.cal-day.selected .mark{background:#fff}
+.due-list{border:1px solid var(--border);border-radius:12px;background:#fff;overflow:hidden;display:flex;flex-direction:column;min-height:240px}
+.due-list-head{padding:12px 13px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.due-list-head strong{font-size:13px}.due-list-head span{font-size:10px;font-weight:800;color:var(--text-secondary)}
+.due-items{overflow:auto;max-height:260px}.due-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border)}
+.due-item:last-child{border-bottom:0}.due-child{min-width:0}.due-child a{font-size:12px;font-weight:800;color:var(--accent);text-decoration:none}.due-child a:hover{text-decoration:underline}.due-vaccine{font-size:11px;color:var(--text-secondary);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
+.due-status{font-size:9px;font-weight:800;padding:4px 7px;border-radius:999px;white-space:nowrap}.due-status.today{background:#dbeafe;color:#1d4ed8}.due-status.upcoming{background:#fef3c7;color:#b45309}.due-status.overdue{background:#fee2e2;color:#dc2626}.due-status.due{background:#e0f2fe;color:#0369a1}
+.due-empty{padding:28px 14px;text-align:center;color:var(--text-secondary);font-size:12px}
+@media(max-width:1100px){.dashboard-action-grid{grid-template-columns:1fr}.due-layout{grid-template-columns:1fr}}
+
+.dashboard-stat-grid{gap:14px}.dashboard-stat{display:flex;align-items:center;gap:13px;min-height:88px}.dashboard-stat-icon{width:42px;height:42px;min-width:42px;border-radius:12px;display:flex;align-items:center;justify-content:center}.dashboard-stat .stat-value{font-size:24px;line-height:1.05}.dashboard-stat .stat-label{font-size:12px;margin-top:5px}.dashboard-stat .stat-caption{font-size:10px;margin-top:3px;color:var(--text-secondary)}
+.dashboard-section-icon{width:34px;height:34px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;margin-right:9px;vertical-align:middle}.icon-red{background:#fee2e2;color:#dc2626}.icon-blue{background:#dbeafe;color:#2563eb}.icon-green{background:#dcfce7;color:#16a34a}.icon-purple{background:#ede9fe;color:#7c3aed}.icon-teal{background:#ccfbf1;color:#0f766e}
+.dashboard-card-title{display:flex;align-items:center}.dashboard-card-title .card-title{margin:0}.dashboard-card-title .card-sub{margin-left:43px}
+.followup-card{border-top:3px solid #ef4444}.due-calendar-card{border-top:3px solid #3b82f6}.followup-card .card-head,.due-calendar-card .card-head{padding-bottom:2px}.action-count{background:#fee2e2;color:#dc2626}
+.calendar-panel{background:#f8fbff}.cal-day.selected{box-shadow:0 3px 8px rgba(37,99,235,.18)}.due-list{background:#fff}.due-item:hover{background:#f8fafc}
+.split-2-1 .card:first-child{border-top:3px solid #2563eb}.split-2-1 .card:last-child{border-top:3px solid #22c55e}
+@media(max-width:900px){.dashboard-stat-grid{grid-template-columns:1fr 1fr}.dashboard-action-grid{grid-template-columns:1fr}.dashboard-card-title .card-sub{margin-left:0}}
+
+<style>
+.risk-distribution-card{min-height:100%}
+.risk-summary{display:flex;align-items:center;gap:18px;margin:14px 0 6px;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:#f8fafc}
+.risk-total{min-width:72px;text-align:center;border-right:1px solid var(--border);padding-right:14px}
+.risk-total strong{display:block;font-size:26px;line-height:1;color:var(--text-primary)}
+.risk-total span{display:block;font-size:10px;color:var(--text-secondary);margin-top:4px}
+.risk-legend{flex:1;display:grid;gap:7px}
+.risk-legend div{display:grid;grid-template-columns:9px 1fr auto;align-items:center;gap:7px;font-size:10.5px;color:var(--text-secondary)}
+.risk-legend b{color:var(--text-primary);font-size:11px}
+.risk-dot{width:8px;height:8px;border-radius:50%}.risk-dot.low{background:#22c55e}.risk-dot.high{background:#ef4444}.risk-dot.medium{background:#f59e0b}
+.risk-help{display:flex;gap:7px;align-items:flex-start;padding:9px 10px;margin:8px 0 4px;border-radius:9px;background:#f0fdf4;color:#475569;font-size:10.5px;line-height:1.45}
+.risk-help-icon{color:#16a34a;flex:none;margin-top:1px}
+.risk-chart-box{height:190px}
+@media(max-width:1100px){.risk-summary{gap:10px}.risk-total{min-width:60px;padding-right:10px}}
+</style>
+</style>
+
+<div class="dashboard-action-grid">
+  <div class="card card-pad followup-card">
+    <div class="card-head">
+      <div>
+        <div class="dashboard-card-title"><span class="dashboard-section-icon icon-red">{{ icon('alert-triangle', 18) }}</span><div class="card-title mb-0">Needs Follow-Up Checkup</div></div>
+        <div class="card-sub mb-0" style="margin-left:43px;">At-risk children under 12 months who need attention.</div>
+      </div>
+      <span class="action-count">{{ follow_up|length }} child{{ '' if follow_up|length == 1 else 'ren' }}</span>
+    </div>
+    <div class="table-wrap auto-height" style="margin-top:12px;">
+      <table class="data-table plain-head compact">
+        <thead><tr><th>Child</th><th>Birthdate</th><th>Missed</th><th>Risk</th></tr></thead>
+        <tbody>
+          {% for r in follow_up %}
+          <tr>
+            <td><a class="link" href="{{ url_for('bhw.child_record', child_id=r.child.id, from_dashboard=1) }}">{{ r.display_name }}</a></td>
+            <td>{{ r.child.date_of_birth.strftime('%Y-%m-%d') }}</td>
+            <td><b>{{ r.missed }}</b> of {{ r.due }}</td>
+            <td><span class="badge badge-{{ 'red' if r.tier == 'High Risk' else 'amber' }}">{{ r.risk_score }}%</span></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4"><div class="empty-state"><div class="ic">{{ icon('check-circle', 28) }}</div>
+            <div class="t">No children flagged at-risk</div></div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card card-pad due-calendar-card">
+    <div class="card-head">
+      <div>
+        <div class="dashboard-card-title"><span class="dashboard-section-icon icon-blue">{{ icon('calendar', 18) }}</span><div class="card-title mb-0">Vaccination Due Calendar</div></div>
+        <div class="card-sub mb-0" style="margin-left:43px;">See which children need vaccines on a specific date.</div>
+      </div>
+      <div class="due-legend">
+        <span><i class="due-dot today"></i>Due Today</span>
+        <span><i class="due-dot upcoming"></i>Upcoming</span>
+        <span><i class="due-dot overdue"></i>Overdue</span>
+        <span><i class="due-dot scheduled"></i>Scheduled Visit</span>
+      </div>
+    </div>
+    <div class="due-layout">
+      <div class="calendar-panel">
+        <div class="calendar-nav">
+          <button type="button" id="calPrev" aria-label="Previous month">‹</button>
+          <strong id="calMonth"></strong>
+          <button type="button" id="calNext" aria-label="Next month">›</button>
+        </div>
+        <div class="calendar-week">
+          <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+        </div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+      </div>
+      <div class="due-list">
+        <div class="due-list-head">
+          <strong id="dueListTitle">Due Today</strong>
+          <span id="dueListCount"></span>
+        </div>
+        <div class="due-items" id="dueItems"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COVERAGE + RISK -->
+
+<div class="split-2-1">
+  <div class="card card-pad">
+    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-blue">{{ icon('syringe', 18) }}</span><div class="card-title" style="font-size:18px;">Coverage by Vaccine</div></div>
+    <div class="card-sub" style="font-size:13px;margin-left:43px;">All 15 doses, in schedule order</div>
+    <div class="chart-box"><canvas id="vaccineChart"></canvas></div>
+    {% if insights.vaccine %}
+    <div class="insight">{{ icon('activity', 14) }}<span>{{ insights.vaccine }}</span></div>
+    {% endif %}
+  </div>
+
+  <div class="card card-pad risk-distribution-card">
+    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-green">{{ icon('shield', 18) }}</span><div class="card-title" style="font-size:18px;">How Children Are Doing</div></div>
+    <div class="card-sub" style="font-size:13px;margin-left:43px;">A quick look at which children are on track and which need a visit.</div>
+    <div class="risk-summary">
+      <div class="risk-total">
+        <strong>{{ risk_dist.low_count + risk_dist.high_count + risk_dist.medium_count }}</strong>
+        <span>Children</span>
+      </div>
+      <div class="risk-legend">
+        <div><span class="risk-dot low"></span><b>Not At-Risk</b><span>{{ risk_dist.low_count }} ({{ risk_dist.low_pct }}%)</span></div>
+        <div><span class="risk-dot high"></span><b>High Risk</b><span>{{ risk_dist.high_count }} ({{ risk_dist.high_pct }}%)</span></div>
+        <div><span class="risk-dot medium"></span><b>Medium Risk</b><span>{{ risk_dist.medium_count }} ({{ risk_dist.medium_pct }}%)</span></div>
+      </div>
+    </div>
+    <div class="risk-help">
+      <span class="risk-help-icon">{{ icon('info', 13) }}</span>
+      <span><b>How to read this:</b> Green means the child is currently not classified as at-risk. Yellow means closer monitoring may be needed. Red means higher risk and should be prioritized for follow-up.</span>
+    </div>
+    <div class="chart-box risk-chart-box"><canvas id="riskDonut"></canvas></div>
+  </div>
+</div>
+
+<!-- ANNUAL COVERAGE + VACCINE REQUESTS -->
+<div style="
+  display:grid;
+  grid-template-columns:minmax(0, 2fr) minmax(280px, 1fr);
+  gap:18px;
+  margin-top:18px;
+  align-items:stretch;
+">
+  <div class="card card-pad" style="display:flex;flex-direction:column;min-height:380px;">
+    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('activity', 18) }}</span><div class="card-title" style="font-size:18px;">Annual Coverage Trend</div></div>
+    <div class="card-sub" style="font-size:13px;margin-left:43px;">Coverage at each year end</div>
+    {# Labelled as simulated: the database holds a current snapshot, not
+       month-by-month history, so this series cannot be measured. #}
+    <div class="chart-box" style="flex:1;min-height:270px;"><canvas id="trendChart"></canvas></div>
+    {% if insights.trend %}
+    <div class="insight" style="font-size:13px;">{{ icon('activity', 14) }}<span>{{ insights.trend }}</span></div>
+    {% endif %}
+  </div>
+
+  <div class="card card-pad" style="display:flex;flex-direction:column;min-height:380px;">
+    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-teal">{{ icon('clipboard', 18) }}</span><div class="card-title" style="font-size:18px;">Vaccine Request Status</div></div>
+    <div class="card-sub" style="font-size:13px;margin-left:43px;">Barangay {{ current_user.barangay.name }}</div>
+
+    {% if pending_requests %}
+    <div style="margin-top:20px;padding:15px;border:1px solid var(--border);border-radius:12px;">
+      <div class="flex-between" style="gap:10px;">
+        <div>
+          <b style="font-size:15px;">{{ pending_requests.antigen.name }}</b><br>
+          <span class="text-muted" style="font-size:12px;line-height:1.6;">
+            {{ pending_requests.request_code }} · {{ pending_requests.quantity_requested }} vials · {{ pending_requests.requested_at.strftime('%Y-%m-%d') }}
+          </span>
+        </div>
+        <span class="badge badge-amber">Pending</span>
+      </div>
+    </div>
+    {% else %}
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:25px 15px;">
+      <img src="{{ url_for('static', filename='images/vaccine-protection.svg') }}"
+           alt="Vaccine protection"
+           style="width:175px;height:145px;object-fit:contain;margin-bottom:2px;">
+      <div style="font-size:16px;font-weight:700;margin-bottom:5px;">No Pending Requests</div>
+      <div class="text-muted" style="font-size:13px;line-height:1.5;max-width:250px;">
+        Your barangay currently has no pending vaccine requests.
+      </div>
+    </div>
+    {% endif %}
+
+    <a href="{{ url_for('bhw.requests') }}" class="btn btn-accent btn-block" style="margin-top:16px;font-size:14px;padding:11px 14px;">
+      + New Vaccine Request
+    </a>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/vendor/chart.umd.js') }}"></script>
+<script>Chart.defaults.maintainAspectRatio = false; Chart.defaults.responsive = true;</script>
+<script>
+new Chart(document.getElementById('vaccineChart'), {
+  type: 'bar',
+  data: { labels: {{ vaccine_labels|tojson }},
+    datasets: [{ data: [{% for r in by_vaccine %}{{ r.pct }},{% endfor %}], backgroundColor: {{ vaccine_colours|tojson }}, borderRadius: 5 }] },
+  options: { plugins: { legend: { display: false } },
+             scales: { y: { max: 100, ticks: { callback: v => v + '%' } },
+                       x: { ticks: { autoSkip: false, maxRotation: 60, minRotation: 45, font: { size: 10 } } } } }
+});
+const trendCounts = [{% for y, v, n in trend %}{{ n }},{% endfor %}];
+new Chart(document.getElementById('trendChart'), {
+  type: 'line',
+  data: { labels: [{% for y, v, n in trend %}{{ y|tojson }},{% endfor %}],
+    datasets: [
+      { label: 'Coverage %', data: [{% for y, v, n in trend %}{{ v }},{% endfor %}], borderColor: '#0d9488', backgroundColor: 'rgba(13,148,136,0.1)', fill: true, tension: 0.3, pointRadius: 5 },
+      { label: '95% Target', data: [{% for y, v, n in trend %}95,{% endfor %}], borderColor: '#94a3b8', borderDash: [6,6], pointRadius: 0 }
+    ] },
+  options: {
+    scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' } } },
+    plugins: { tooltip: { callbacks: {
+      afterLabel: c => c.datasetIndex === 0 ? trendCounts[c.dataIndex] + ' children enrolled' : ''
+    } } }
+  }
+});
+new Chart(document.getElementById('riskDonut'), {
+  type: 'doughnut',
+  data: { labels: ['Not At-Risk', 'High Risk', 'Medium Risk'],
+    datasets: [{ data: [{{ risk_dist.low_pct }}, {{ risk_dist.high_pct }}, {{ risk_dist.medium_pct }}], backgroundColor: ['#22c55e', '#ef4444', '#f59e0b'], borderWidth: 0 }] },
+  options: { plugins: {
+    legend: { position: 'bottom' },
+    tooltip: { callbacks: { label: c => `${c.label}: ${c.raw}%` } }
+  } }
+});
+
+const dueEvents = {{ due_calendar|tojson }};
+const childUrlTemplate = {{ url_for('bhw.child_record', child_id=0, from_dashboard=1)|tojson }};
+const eventByDate = {};
+dueEvents.forEach(e => {
+  if (!eventByDate[e.date]) eventByDate[e.date] = [];
+  eventByDate[e.date].push(e);
+});
+
+let calDate = new Date({{ now.year }}, {{ now.month - 1 }}, 1);
+let selectedDate = new Date({{ now.year }}, {{ now.month - 1 }}, {{ now.day }});
+
+function isoLocal(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function monthLabel(d) {
+  return d.toLocaleDateString('en-US', {month:'long', year:'numeric'});
+}
+function statusClass(status) {
+  return status === 'Due Today' ? 'today' : status === 'Upcoming' ? 'upcoming' : status === 'Overdue' ? 'overdue' : status === 'Scheduled' ? 'scheduled' : 'due';
+}
+function renderDueList() {
+  const key = isoLocal(selectedDate);
+  const items = eventByDate[key] || [];
+  document.getElementById('dueListTitle').textContent = selectedDate.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+  document.getElementById('dueListCount').textContent = `${items.length} child${items.length === 1 ? '' : 'ren'}`;
+  const box = document.getElementById('dueItems');
+  if (!items.length) {
+    box.innerHTML = '<div class="due-empty">No scheduled vaccines or visits for this date.</div>';
+    return;
+  }
+  box.innerHTML = items.map(e => {
+    const href = childUrlTemplate.replace('/0?', `/${e.child_id}?`);
+    return `<div class="due-item">
+      <div class="due-child"><a href="${href}">${e.child_name}</a><div class="due-vaccine">${e.vaccine}</div></div>
+      <span class="due-status ${statusClass(e.status)}">${e.status}</span>
+    </div>`;
+  }).join('');
+}
+function renderCalendar() {
+  document.getElementById('calMonth').textContent = monthLabel(calDate);
+  const grid = document.getElementById('calendarGrid');
+  const year = calDate.getFullYear(), month = calDate.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const prevDays = new Date(year, month, 0).getDate();
+  const cells = [];
+  for (let i=0; i<42; i++) {
+    const dayNum = i - firstDay + 1;
+    let d, muted = false;
+    if (dayNum < 1) { d = new Date(year, month - 1, prevDays + dayNum); muted = true; }
+    else if (dayNum > daysInMonth) { d = new Date(year, month + 1, dayNum - daysInMonth); muted = true; }
+    else { d = new Date(year, month, dayNum); }
+    const key = isoLocal(d), events = eventByDate[key] || [];
+    const isSelected = key === isoLocal(selectedDate), isToday = key === isoLocal(new Date());
+    const marks = [...new Set(events.map(e => statusClass(e.status)))].slice(0,3).map(c => `<i class="mark ${c}"></i>`).join('');
+    cells.push(`<button type="button" class="cal-day ${muted?'muted':''} ${isSelected?'selected':''} ${isToday?'today':''}" data-date="${key}">${d.getDate()}<span class="marks">${marks}</span></button>`);
+  }
+  grid.innerHTML = cells.join('');
+  grid.querySelectorAll('.cal-day').forEach(btn => btn.addEventListener('click', () => {
+    const [y,m,day] = btn.dataset.date.split('-').map(Number);
+    selectedDate = new Date(y,m-1,day);
+    renderCalendar(); renderDueList();
+  }));
+}
+document.getElementById('calPrev').addEventListener('click', () => { calDate.setMonth(calDate.getMonth()-1); renderCalendar(); });
+document.getElementById('calNext').addEventListener('click', () => { calDate.setMonth(calDate.getMonth()+1); renderCalendar(); });
+renderCalendar();
+renderDueList();
+</script>
+{% endblock %}

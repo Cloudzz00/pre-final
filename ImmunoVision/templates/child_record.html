@@ -1,0 +1,123 @@
+{% extends "layout_app.html" %}
+{% from "_icons.html" import icon %}
+{% block content %}
+
+<div class="page-head child-record-head">
+  <div>
+    <a class="link" style="font-size:15px;font-weight:650;" href="{{ back_url }}">&lsaquo; Back to {{ 'Dashboard' if request.args.get('from_dashboard') == '1' else 'Child Records' }}</a>
+    <h2 style="margin-top:5px;margin-bottom:3px;">{{ child.display_name }}</h2>
+    <div class="child-meta">{{ child.age_display }} &middot; {{ 'Male' if child.sex == 'M' else 'Female' }} &middot; born {{ child.date_of_birth.strftime('%b %d, %Y') }} &middot; {{ child.barangay.name }}</div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <a class="btn btn-primary btn-sm" href="{{ edit_url }}">{{ icon('pencil', 14) }} Edit Record</a>
+    <form method="post" action="{{ recompute_url }}" style="display:inline;">
+      <button class="btn btn-outline btn-sm">{{ icon('refresh', 14) }} Update Assessment</button>
+    </form>
+  </div>
+</div>
+
+{% set needs_follow_up = detail.risk and detail.risk.risk_label == 'At-Risk' %}
+<div class="followup-banner {{ 'followup-alert' if needs_follow_up else 'followup-ok' }}">
+  <div class="followup-icon">{{ icon('heart-pulse' if needs_follow_up else 'check-circle', 22) }}</div>
+  <div class="followup-copy">
+    <div class="followup-title">{{ 'Needs Follow-Up' if needs_follow_up else 'No Follow-Up Needed' }}</div>
+    <div class="followup-detail">
+      {% if needs_follow_up %}
+        This child needs a follow-up visit.
+        {% if detail.overdue_count %} {{ detail.overdue_count }} dose{{ '' if detail.overdue_count == 1 else 's' }} {{ 'is' if detail.overdue_count == 1 else 'are' }} overdue.{% endif %}
+      {% else %}
+        This child is on track — no follow-up visit needed right now.
+      {% endif %}
+    </div>
+  </div>
+  <div class="followup-score">
+    {% if detail.risk %}
+      <strong>{{ (detail.risk.risk_probability * 100)|round|int }}%</strong>
+      <span>Risk Level</span>
+    {% else %}
+      <strong>—</strong><span>Not assessed</span>
+    {% endif %}
+  </div>
+</div>
+
+<div class="stat-grid child-summary-grid">
+  <div class="stat-card">
+    <div class="stat-icon bg-blue">{{ icon('baby', 21) }}</div>
+    <div class="stat-value">{{ detail.given_count }}<span style="font-size:16px;color:var(--text-secondary);">/{{ detail.total_doses }}</span></div>
+    <div class="stat-label">Doses Given</div>
+    <div class="stat-caption">{{ 'Fully immunized' if detail.fully_immunized else detail.missed ~ ' missed of ' ~ detail.due ~ ' due' }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon {{ 'bg-red' if detail.overdue_count else 'bg-green' }}">{{ icon('clock', 21) }}</div>
+    <div class="stat-value">{{ detail.overdue_count }}</div>
+    <div class="stat-label">Overdue Doses</div>
+    <div class="stat-caption">{{ 'No overdue doses' if not detail.overdue_count else 'Needs a visit soon' }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon bg-blue">{{ icon('calendar', 21) }}</div>
+    <div class="stat-value" style="font-size:20px;">{{ detail.last_visit.strftime('%b %d, %Y') if detail.last_visit else '—' }}</div>
+    <div class="stat-label">Last Vaccination Visit</div>
+    <div class="stat-caption">{{ 'Most recent recorded visit' if detail.last_visit else 'No recorded visit' }}</div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card card-pad">
+    <div class="card-title">Vaccination Records</div>
+    <div class="card-sub">All {{ detail.total_doses }} scheduled doses. Doses marked "Given" without a date were recorded without a specific date.</div>
+    <div class="dose-list">
+      {% for d in detail.schedule %}
+      <div class="dose-row {{ d.status }}">
+        <span class="dot"></span>
+        <span class="dname">{{ d.name }}</span>
+        <span class="dnote">{{ d.note }}</span>
+        <span class="dstatus">
+          {% if d.status == 'given' %}{{ icon('check', 14) }} Given
+          {% elif d.status == 'overdue' %}{{ icon('alert-triangle', 14) }} Overdue
+          {% elif d.status == 'due' %}{{ icon('clock', 14) }} Due
+          {% else %}{{ icon('calendar', 14) }} Upcoming{% endif %}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div>
+    {% if detail.risk %}
+    <div class="card card-pad" style="margin-bottom:18px;">
+      <div class="card-title">Reasons for Follow-Up</div>
+      <div class="card-sub">
+        Assessed {{ detail.risk.computed_at.strftime('%b %d, %Y') }}
+      </div>
+      {% if detail.factors %}
+      <div class="factor-list">
+        {% for f in detail.factors %}
+        <div class="factor-row">
+          <div class="fname">{{ f.factor }}</div>
+          <div class="fdetail">{{ f.detail }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-muted" style="font-size:13px;">No contributing factors recorded.</p>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="card card-pad" style="margin-bottom:18px;">
+      <div class="card-title">Guardian &amp; Contact</div>
+      <div class="kv-list">
+        <div><span class="k">Guardian</span><span class="v">{{ child.guardian_name or '&mdash;'|safe }}</span></div>
+        <div><span class="k">Contact</span><span class="v">{{ child.guardian_contact or '&mdash;'|safe }}</span></div>
+        <div><span class="k">Address</span><span class="v">{{ child.address or '&mdash;'|safe }}</span></div>
+        <div><span class="k">Barangay</span><span class="v">{{ child.barangay.name }}</span></div>
+        <div><span class="k">Sex</span><span class="v">{{ 'Male' if child.sex == 'M' else 'Female' }}</span></div>
+        <div><span class="k">Registered</span><span class="v">{{ child.date_registered.strftime('%b %d, %Y') }}</span></div>
+        <div><span class="k">Last visit</span><span class="v">{{ detail.last_visit.strftime('%b %d, %Y') if detail.last_visit else 'No recorded visit' }}</span></div>
+      </div>
+    </div>
+
+
+  </div>
+</div>
+{% endblock %}

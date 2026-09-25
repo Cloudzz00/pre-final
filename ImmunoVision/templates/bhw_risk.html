@@ -1,0 +1,181 @@
+{% extends "layout_app.html" %}
+{% from "_icons.html" import icon %}
+{% block content %}
+{% set total_children = dist.high_count + dist.medium_count + dist.low_count %}
+{% set needs_visit = dist.high_count + dist.medium_count %}
+
+{# Summary cards — plain language only, no risk jargon #}
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-icon bg-red">{{ icon('alert-triangle', 21) }}</div>
+    <div class="stat-value">{{ dist.high_count }}</div>
+    <div class="stat-label">Visit Urgently</div>
+    <div class="stat-caption">Many missed doses</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon bg-orange">{{ icon('clock', 21) }}</div>
+    <div class="stat-value">{{ dist.medium_count }}</div>
+    <div class="stat-label">Visit Soon</div>
+    <div class="stat-caption">Some missed doses</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon bg-green">{{ icon('check-circle', 21) }}</div>
+    <div class="stat-value">{{ dist.low_count }}</div>
+    <div class="stat-label">On Track</div>
+    <div class="stat-caption">No follow-up needed</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon bg-blue">{{ icon('users', 21) }}</div>
+    <div class="stat-value">{{ total_children }}</div>
+    <div class="stat-label">Total Children</div>
+    <div class="stat-caption">In your barangay</div>
+  </div>
+</div>
+
+{# Main table — who to visit, why, and what they're missing #}
+<div class="card card-pad">
+  <div class="card-head" style="margin-bottom:12px;">
+    <div>
+      <div class="card-title">Children Who Need a Visit</div>
+      <div class="card-sub">
+        {{ needs_visit }} {{ 'child needs' if needs_visit == 1 else 'children need' }} a follow-up visit —
+        those marked <b>Visit Urgently</b> should be seen first.
+      </div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Child</th>
+          <th>Urgency</th>
+          <th>Missed Doses</th>
+          <th>Next Vaccine Due</th>
+          <th>Diseases If Not Vaccinated</th>
+          <th>Last Visit</th>
+          <th>What to Do</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for r in at_risk_rows %}
+        <tr>
+          <td>
+            <a class="link" href="{{ url_for('bhw.child_record', child_id=r.child.id) }}">
+              <b style="font-size:14px;">{{ r.child.display_name }}</b>
+            </a><br>
+            <span class="text-muted" style="font-size:12px;">
+              {{ 'Male' if r.child.sex=='M' else 'Female' }} · {{ r.child.age_display }}
+            </span>
+          </td>
+          <td>
+            <span class="badge badge-{{ 'red' if r.tier == 'High Risk' else 'amber' }}">
+              {{ 'Visit Urgently' if r.tier == 'High Risk' else 'Visit Soon' }}
+            </span>
+          </td>
+          <td>
+            <b>{{ r.missed }}</b>
+            <span class="text-muted" style="font-size:12px;"> of {{ r.due }} doses</span>
+          </td>
+          <td>
+            {% if r.next_dose %}
+              <b style="font-size:13px;">{{ r.next_dose.name }}</b>
+              {% if r.next_dose.overdue %}
+                <span class="badge badge-red" style="margin-left:4px;">Overdue</span>
+              {% endif %}
+            {% else %}
+              <span class="text-muted">All doses given</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if r.unprotected %}
+            <div class="disease-list">
+              {% for d in r.unprotected %}<span class="disease-tag" style="background:#fee2e2;color:#991b1b;">{{ d }}</span>{% endfor %}
+            </div>
+            {% else %}
+            <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {{ r.last_visit.strftime('%b %d, %Y') if r.last_visit else '—' }}
+          </td>
+          <td>
+            <button type="button"
+              class="btn btn-sm btn-{{ 'danger' if r.recommendation == 'Home Visit' else 'outline' }} schedule-visit-btn"
+              data-child-id="{{ r.child.id }}"
+              data-child-name="{{ r.child.display_name }}"
+              style="font-size:13px;white-space:nowrap;">
+              {{ icon('calendar', 13) }}
+              {% if r.child.next_visit_date %}
+                Rescheduled: {{ r.child.next_visit_date.strftime('%b %d') }}
+              {% else %}
+                {{ r.recommendation }}
+              {% endif %}
+            </button>
+          </td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="7">
+            <div class="empty-state">
+              <div class="ic">{{ icon('check-circle', 34) }}</div>
+              <div class="t">All children in your barangay are on track — no follow-up visits needed right now.</div>
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{# ── Schedule Visit Modal ── #}
+<div class="modal-scrim" id="scheduleVisitModal">
+  <div class="modal-box" style="max-width:400px;">
+    <div class="modal-head">
+      <h3>Schedule a Visit</h3>
+      <button class="modal-close" data-close-modal>×</button>
+    </div>
+    <form method="post" action="{{ url_for('bhw.schedule_visit') }}">
+      <div class="modal-body">
+        <input type="hidden" name="child_id" id="scheduleChildId">
+        <p style="font-size:14px;margin:0 0 16px;">
+          Setting a visit date for <b id="scheduleChildName"></b>.
+          It will appear on your dashboard calendar.
+        </p>
+        <div class="form-group">
+          <label style="font-size:13px;font-weight:700;">Visit Date</label>
+          <input type="date" name="visit_date" id="scheduleDate"
+                 class="form-control" required
+                 min="{{ today.isoformat() }}">
+        </div>
+        <p style="font-size:12px;color:var(--text-secondary);margin:10px 0 0;">
+          The visit will be automatically removed from the calendar once you
+          update this child's vaccination record.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" data-close-modal>Cancel</button>
+        <button type="submit" class="btn btn-primary">Save to Calendar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% block extra_js %}
+<script>
+// Use event delegation on the table so we catch all schedule buttons.
+// We populate the modal data before the global app.js handler opens it.
+document.addEventListener('click', function(e) {
+  var btn = e.target.closest('.schedule-visit-btn');
+  if (!btn) return;
+  document.getElementById('scheduleChildId').value = btn.getAttribute('data-child-id');
+  document.getElementById('scheduleChildName').textContent = btn.getAttribute('data-child-name');
+  document.getElementById('scheduleDate').value = '';
+  document.getElementById('scheduleVisitModal').classList.add('open');
+  e.stopPropagation();
+});
+</script>
+{% endblock %}

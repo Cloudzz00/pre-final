@@ -1,0 +1,523 @@
+{% extends "layout_app.html" %}
+{% from "_icons.html" import icon %}
+{% from "_brand.html" import brand_mark %}
+{% block content %}
+{% set report_types = [
+  ('coverage', 'trending-up', 'Vaccination Coverage', 'How many children have completed each vaccine'),
+  ('atrisk', 'alert-triangle', 'Children Who Need a Visit', 'Which children in your barangay need follow-up'),
+  ('barangay', 'map-pin', 'Barangay Overview', 'Overall immunization status of your barangay'),
+] %}
+{% set current = report_types|selectattr('0', 'equalto', report_type)|first %}
+{% set lowest = by_vaccine|min(attribute='pct') if by_vaccine else none %}
+
+<style>
+/* ── Layout ── */
+.bhw-report-page { display: flex; flex-direction: column; gap: 18px; }
+
+/* ── Page header ── */
+.report-hero { display: flex; justify-content: space-between; align-items: flex-end; gap: 18px; flex-wrap: wrap; }
+.report-hero h2 { margin: 0 0 3px; font-size: 22px; }
+.report-hero p { margin: 0; color: var(--text-secondary); font-size: 14px; }
+.report-period-pill {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 14px; border: 1px solid var(--border); background: #fff;
+  border-radius: 999px; color: var(--text-secondary); font-size: 13px; font-weight: 700;
+}
+
+/* ── Report type selector ── */
+.report-types { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.report-type-card {
+  display: flex; align-items: center; gap: 13px; padding: 15px 16px;
+  border: 1px solid var(--border); border-radius: 13px; background: #fff;
+  text-decoration: none; transition: .16s ease; box-shadow: var(--shadow-sm);
+}
+.report-type-card:hover { border-color: #b9c8e6; background: #f8fbff; transform: translateY(-1px); }
+.report-type-card.active { border-color: #8bb4ff; background: #edf5ff; box-shadow: 0 0 0 2px rgba(37,99,235,.06); }
+.report-type-card .ic {
+  width: 40px; height: 40px; border-radius: 11px; background: #f1f5f9;
+  color: #64748b; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.report-type-card.active .ic { background: #dbeafe; color: var(--primary); }
+.report-type-card .t { font-size: 14px; font-weight: 800; color: var(--text-primary); }
+.report-type-card .d { font-size: 12px; line-height: 1.4; color: var(--text-secondary); margin-top: 3px; }
+
+/* ── Toolbar ── */
+.report-toolbar {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px; flex-wrap: wrap; padding: 14px 16px;
+  background: #fff; border: 1px solid var(--border); border-radius: 13px;
+  box-shadow: var(--shadow-sm);
+}
+.toolbar-info { display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 13px; }
+.toolbar-info .badge {
+  width: 34px; height: 34px; border-radius: 9px; background: #eaf2ff;
+  color: var(--primary); display: flex; align-items: center; justify-content: center;
+}
+.toolbar-form { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.toolbar-form label { display: block; font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 5px; }
+.toolbar-form select { height: 40px; min-width: 160px; border-radius: 9px; font-size: 14px; }
+.toolbar-form .btn { height: 40px; font-size: 14px; }
+.report-actions { display: flex; gap: 8px; }
+.report-actions .btn { font-size: 13px; height: 40px; }
+
+/* ── Report document ── */
+.report-doc {
+  background: #fff; border: 1px solid var(--border); border-radius: 16px;
+  padding: 24px; box-shadow: var(--shadow-sm);
+}
+.report-doc-head {
+  display: flex; justify-content: space-between; gap: 20px;
+  padding-bottom: 18px; border-bottom: 1px solid var(--border);
+}
+.report-letterhead { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 7px; }
+.report-kicker {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 12px;
+  font-weight: 800; color: var(--primary); background: #eff6ff;
+  border-radius: 999px; padding: 5px 10px; margin-bottom: 10px;
+}
+.report-doc-title { font-size: 22px; font-weight: 850; margin: 0; letter-spacing: -.02em; }
+.report-doc-sub { margin: 5px 0 0; color: var(--text-secondary); font-size: 13px; }
+.generated-meta { color: var(--text-muted); font-size: 12px; text-align: right; white-space: nowrap; padding-top: 4px; }
+
+/* ── Summary cards ── */
+.report-summary { margin: 18px 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.summary-card {
+  border: 1px solid var(--border); border-radius: 13px; padding: 16px;
+  background: #fff; position: relative; overflow: hidden;
+}
+.summary-card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--primary); }
+.summary-card.green::before { background: #16a34a; }
+.summary-card.orange::before { background: #f59e0b; }
+.summary-card .summary-icon {
+  width: 32px; height: 32px; border-radius: 9px; display: flex; align-items: center;
+  justify-content: center; background: #eaf2ff; color: var(--primary); margin-bottom: 10px;
+}
+.summary-card.green .summary-icon { background: #dcfce7; color: #16a34a; }
+.summary-card.orange .summary-icon { background: #fef3c7; color: #d97706; }
+.summary-card .v { font-size: 28px; line-height: 1; font-weight: 850; letter-spacing: -.03em; }
+.summary-card .l { font-size: 13px; font-weight: 800; margin-top: 6px; }
+.summary-card .d { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+
+/* ── Insight banner ── */
+.report-insight {
+  display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px;
+  border-radius: 12px; background: #f0f7ff; border: 1px solid #d7e8ff; margin-bottom: 18px;
+}
+.report-insight.warn { background: #fff8ed; border-color: #fde6bf; }
+.report-insight .insight-icon {
+  width: 32px; height: 32px; border-radius: 9px; background: #dbeafe;
+  color: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.report-insight.warn .insight-icon { background: #fef3c7; color: #d97706; }
+.report-insight b { font-size: 13px; }
+.report-insight p { margin: 3px 0 0; font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+
+/* ── Section head ── */
+.report-section-head {
+  display: flex; justify-content: space-between; align-items: flex-end;
+  gap: 12px; margin-bottom: 12px; margin-top: 20px;
+}
+.report-section-title { display: flex; align-items: center; gap: 9px; font-size: 15px; font-weight: 850; }
+.section-icon {
+  width: 30px; height: 30px; border-radius: 8px; background: #e0f2fe;
+  color: #0284c7; display: flex; align-items: center; justify-content: center;
+}
+.section-icon.orange { background: #fff7ed; color: #ea580c; }
+.report-section-sub { color: var(--text-secondary); font-size: 12px; margin-top: 3px; }
+.report-target { font-size: 12px; font-weight: 800; color: var(--text-secondary); }
+
+/* ── Coverage table ── */
+.coverage-table-wrap { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.coverage-table { width: 100%; border-collapse: collapse; }
+.coverage-table th {
+  background: #f8fafc; color: var(--text-muted); font-size: 12px;
+  text-transform: uppercase; letter-spacing: .05em;
+  text-align: left; padding: 12px 14px;
+}
+.coverage-table td { padding: 12px 14px; border-top: 1px solid var(--border); font-size: 14px; }
+.coverage-table td:first-child { font-weight: 750; }
+.coverage-value { font-weight: 850; width: 75px; }
+.coverage-bar-cell { width: 42%; }
+.mini-track { height: 8px; background: #e8eef5; border-radius: 99px; overflow: hidden; }
+.mini-fill { height: 100%; border-radius: 99px; background: #14b8a6; }
+.status-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 800;
+}
+.status-good { color: #15803d; background: #dcfce7; }
+.status-warn { color: #b45309; background: #fef3c7; }
+.status-low { color: #dc2626; background: #fee2e2; }
+
+/* ── At-risk table ── */
+.child-name { font-weight: 800; color: var(--primary); text-decoration: none; font-size: 14px; }
+.child-name:hover { text-decoration: underline; }
+.risk-pill {
+  display: inline-flex; padding: 5px 10px; border-radius: 999px;
+  background: #fff7ed; color: #c2410c; font-size: 12px; font-weight: 800;
+}
+.missed-count { font-weight: 800; color: #b45309; font-size: 14px; }
+.child-report-btn { white-space: nowrap; }
+
+/* ── Barangay snapshot ── */
+.snapshot-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.snapshot-grid > div { border: 1px solid var(--border); border-radius: 12px; padding: 16px; background: #fff; }
+.snapshot-grid span { display: block; color: var(--text-muted); font-size: 12px; margin-bottom: 7px; }
+.snapshot-grid strong { font-size: 18px; font-weight: 800; }
+
+/* ── Chart ── */
+.chart-panel { margin-top: 18px; border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.chart-box { height: 320px; }
+
+/* ── Empty state ── */
+.empty-state {
+  display: flex; align-items: center; gap: 14px;
+  border: 1px solid var(--border); border-radius: 13px; padding: 20px; background: #fafcff;
+}
+.empty-state .empty-icon {
+  width: 44px; height: 44px; border-radius: 12px; background: #eaf2ff;
+  color: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.empty-state strong { font-size: 14px; }
+.empty-state p { margin: 5px 0 0; color: var(--text-secondary); font-size: 13px; }
+
+/* ── Data note ── */
+.data-note { font-size: 12px; color: var(--text-secondary); margin-top: 10px; }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .report-types { grid-template-columns: 1fr; }
+  .report-summary { grid-template-columns: 1fr; }
+  .snapshot-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 650px) {
+  .report-doc-head { flex-direction: column; }
+  .generated-meta { text-align: left; }
+  .coverage-bar-cell { display: none; }
+  .toolbar-form, .toolbar-form select { width: 100%; }
+  .toolbar-form .btn { width: 100%; }
+  .report-actions { width: 100%; }
+  .report-actions .btn { flex: 1; }
+  .report-types { grid-template-columns: 1fr; }
+  .snapshot-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ── Print ── */
+@media print {
+  .no-print { display: none !important; }
+  .bhw-report-page { gap: 0; }
+  .report-doc { border: 0; box-shadow: none; padding: 0; }
+  .report-types, .report-toolbar { display: none; }
+  .report-doc-head { padding-top: 0; }
+  .report-doc-title { font-size: 20px; }
+  .chart-panel { break-inside: avoid; }
+}
+</style>
+
+<div class="bhw-report-page">
+
+  {# ── Page header ── #}
+  <div class="report-hero">
+    <div>
+      <h2>Reports</h2>
+      <p>View vaccination coverage, follow-up cases, and barangay status.</p>
+    </div>
+    <div class="report-period-pill">{{ icon('map-pin', 13) }} {{ current_user.barangay.name if current_user.barangay else 'Unassigned' }}</div>
+  </div>
+
+  {# ── Report type selector ── #}
+  <div class="report-types no-print">
+    {% for key, icon_name, title, desc in report_types %}
+    <a href="{{ url_for('bhw.reports', type=key, period=selected_period) }}"
+       class="report-type-card {{ 'active' if report_type == key }}">
+      <div class="ic">{{ icon(icon_name, 18) }}</div>
+      <div>
+        <div class="t">{{ title }}</div>
+        <div class="d">{{ desc }}</div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+
+  {# ── Toolbar: period selector + actions ── #}
+  <div class="report-toolbar no-print">
+    <div class="toolbar-info">
+      <span class="badge">{{ icon('calendar', 16) }}</span>
+      <div>
+        <b>Reporting period</b><br>
+        <span>{{ as_of.strftime('%B %d, %Y') }}</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;">
+      <form method="get" action="{{ url_for('bhw.reports') }}" class="toolbar-form">
+        <input type="hidden" name="type" value="{{ report_type }}">
+        <div>
+          <label for="rptPeriod">Period</label>
+          <select class="form-control" id="rptPeriod" name="period">
+            {% for value, label in periods %}
+            <option value="{{ value }}" {% if selected_period == value or (not selected_period and loop.first) %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary">{{ icon('refresh-cw', 14) }} Update</button>
+      </form>
+      <div class="report-actions">
+        <button type="button" class="btn btn-primary" onclick="window.print()">{{ icon('printer', 14) }} Print</button>
+        <button type="button" class="btn btn-outline" onclick="window.print()">{{ icon('file-text', 14) }} PDF</button>
+        <a class="btn btn-outline" href="{{ url_for('bhw.export_report_csv', type=report_type, period=selected_period) }}">{{ icon('download', 14) }} Excel</a>
+      </div>
+    </div>
+  </div>
+
+  {# ── Report document ── #}
+  <main class="report-doc">
+
+    {# ── 1. Children Who Need a Visit ── #}
+    {% if report_type == 'atrisk' %}
+      <div class="report-section-head">
+        <div>
+          <div class="report-section-title">
+            <span class="section-icon orange">{{ icon('users', 16) }}</span>
+            Children Who Need a Visit
+          </div>
+          <div class="report-section-sub">
+            Children in your barangay who need a follow-up visit as of {{ as_of.strftime('%B %d, %Y') }}.
+          </div>
+        </div>
+      </div>
+      {% if at_risk_rows %}
+      <div class="coverage-table-wrap">
+        <table class="coverage-table">
+          <thead>
+            <tr>
+              <th>Child</th>
+              <th>Birthdate</th>
+              <th>Urgency</th>
+              <th>Missed Doses</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in at_risk_rows %}
+            <tr>
+              <td>
+                <a class="child-name" href="{{ url_for('bhw.child_followup_report', child_id=r.child.id) }}">
+                  {{ r.child.display_name }}
+                </a>
+              </td>
+              <td>{{ r.child.date_of_birth.strftime('%b %d, %Y') }}</td>
+              <td>
+                <span class="risk-pill">
+                  {{ 'Visit Urgently' if r.risk_score >= 70 else 'Visit Soon' }}
+                </span>
+              </td>
+              <td class="missed-count">{{ r.missed }}</td>
+              <td>
+                <a class="btn btn-outline btn-sm child-report-btn"
+                   href="{{ url_for('bhw.child_followup_report', child_id=r.child.id) }}">
+                  {{ icon('file-text', 13) }} View
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">{{ icon('check-circle', 22) }}</div>
+        <div>
+          <strong>No children currently need a visit.</strong>
+          <p>All children in your barangay are on track for this reporting period.</p>
+        </div>
+      </div>
+      {% endif %}
+
+    {# ── 2. Barangay Overview ── #}
+    {% elif report_type == 'barangay' %}
+      <div class="report-doc-head">
+        <div>
+          <div class="report-letterhead">{{ brand_mark(22, 6) }}<b style="color:var(--primary)">ImmunoVision</b></div>
+          <div class="report-kicker">{{ icon(current[1], 12) }} {{ current[2] }}</div>
+          <h1 class="report-doc-title">Barangay {{ current_user.barangay.name }} Overview</h1>
+          <p class="report-doc-sub">Overall immunization status · {{ as_of.strftime('%B %Y') }}</p>
+        </div>
+        <div class="generated-meta">{{ icon('clock', 12) }}<br>Generated {{ generated_at.strftime('%b %d, %Y %I:%M %p') }}</div>
+      </div>
+
+      <div class="report-insight">
+        <div class="insight-icon">{{ icon('map-pin', 16) }}</div>
+        <div>
+          <b>Barangay coverage</b>
+          <p>Your barangay has <b>{{ stats.coverage_rate }}%</b> overall vaccination coverage for the selected period.</p>
+        </div>
+      </div>
+
+      <div class="report-section-head">
+        <div>
+          <div class="report-section-title">
+            <span class="section-icon">{{ icon('bar-chart', 16) }}</span>
+            Barangay Snapshot
+          </div>
+          <div class="report-section-sub">Key figures for {{ current_user.barangay.name }}</div>
+        </div>
+      </div>
+      <div class="snapshot-grid">
+        <div><span>Barangay</span><strong>{{ current_user.barangay.name }}</strong></div>
+        <div><span>Coverage</span><strong>{{ stats.coverage_rate }}%</strong></div>
+        <div><span>Fully Vaccinated</span><strong>{{ stats.fully_immunized }}</strong></div>
+        <div><span>Need a Visit</span><strong>{{ stats.at_risk }}</strong></div>
+      </div>
+
+    {# ── 3. Vaccination Coverage ── #}
+    {% else %}
+      <div class="report-doc-head">
+        <div>
+          <div class="report-letterhead">{{ brand_mark(22, 6) }}<b style="color:var(--primary)">ImmunoVision</b></div>
+          <div class="report-kicker">{{ icon(current[1], 12) }} {{ current[2] }}</div>
+          <h1 class="report-doc-title">Vaccination Coverage Report</h1>
+          <p class="report-doc-sub">Barangay {{ current_user.barangay.name }} · {{ as_of.strftime('%B %Y') }}</p>
+        </div>
+        <div class="generated-meta">{{ icon('clock', 12) }}<br>Generated {{ generated_at.strftime('%b %d, %Y %I:%M %p') }}</div>
+      </div>
+
+      <div class="report-summary">
+        <div class="summary-card">
+          <div class="summary-icon">{{ icon('activity', 17) }}</div>
+          <div class="v" style="color:var(--primary)">{{ stats.coverage_rate }}%</div>
+          <div class="l">Vaccination Coverage</div>
+          <div class="d">Overall coverage against the 95% target</div>
+        </div>
+        <div class="summary-card green">
+          <div class="summary-icon">{{ icon('check-circle', 17) }}</div>
+          <div class="v" style="color:#16a34a">{{ stats.fully_immunized }}</div>
+          <div class="l">Fully Vaccinated</div>
+          <div class="d">Children who have completed all doses</div>
+        </div>
+        <div class="summary-card orange">
+          <div class="summary-icon">{{ icon('alert-triangle', 17) }}</div>
+          <div class="v" style="color:#d97706">{{ stats.at_risk }}</div>
+          <div class="l">Need a Visit</div>
+          <div class="d">Children flagged for follow-up</div>
+        </div>
+      </div>
+
+      <div class="report-section-head">
+        <div>
+          <div class="report-section-title">
+            <span class="section-icon">{{ icon('bar-chart', 16) }}</span>
+            Coverage by Vaccine
+          </div>
+          <div class="report-section-sub">Coverage for each scheduled dose</div>
+        </div>
+        <div class="report-target">Target: 95%</div>
+      </div>
+
+      <div class="coverage-table-wrap">
+        <table class="coverage-table">
+          <thead>
+            <tr>
+              <th>Vaccine / Dose</th>
+              <th>Coverage</th>
+              <th class="coverage-bar-cell">Progress</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in by_vaccine %}
+            <tr>
+              <td>{{ r.vaccine }}</td>
+              <td class="coverage-value">{{ r.pct }}%</td>
+              <td class="coverage-bar-cell">
+                <div class="mini-track">
+                  <div class="mini-fill vaccine-fill"
+                       data-pct="{{ r.pct }}" data-vaccine="{{ r.vaccine|e }}"
+                       style="width:{{ [r.pct, 100]|min }}%"></div>
+                </div>
+              </td>
+              <td>
+                {% if r.pct >= 95 %}
+                  <span class="status-pill status-good">{{ icon('check', 12) }} On Track</span>
+                {% elif r.pct >= 85 %}
+                  <span class="status-pill status-warn">{{ icon('alert-triangle', 12) }} Watch</span>
+                {% else %}
+                  <span class="status-pill status-low">{{ icon('alert-triangle', 12) }} Needs Attention</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="chart-panel">
+        <div class="report-section-head" style="margin-bottom:8px;">
+          <div class="report-section-title" style="font-size:14px;">Coverage Chart</div>
+        </div>
+        <div class="chart-box"><canvas id="reportChart"></canvas></div>
+      </div>
+    {% endif %}
+
+  </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if report_type == 'coverage' %}
+<script src="{{ url_for('static', filename='js/vendor/chart.umd.js') }}"></script>
+<script>
+Chart.defaults.maintainAspectRatio = false;
+Chart.defaults.responsive = true;
+const vaccineColors = {
+  'BCG': '#2563eb', 'Hepa B-BD': '#0ea5e9', 'DPT-Hib-HepB': '#0d9488',
+  'OPV': '#7c3aed', 'PCV': '#a855f7', 'IPV': '#4f46e5', 'MMR': '#0891b2'
+};
+const labels = {{ by_vaccine|map(attribute='vaccine')|list|tojson }};
+const doseColors = labels.map(name => {
+  const key = Object.keys(vaccineColors).find(k => name === k || name.startsWith(k + ' '));
+  return vaccineColors[key] || '#64748b';
+});
+document.querySelectorAll('.vaccine-fill').forEach((el, i) => el.style.background = doseColors[i]);
+new Chart(document.getElementById('reportChart'), {
+  type: 'bar',
+  data: {
+    labels: labels,
+    datasets: [{
+      data: [{% for r in by_vaccine %}{{ r.pct }}{% if not loop.last %},{% endif %}{% endfor %}],
+      backgroundColor: doseColors, borderRadius: 6, borderSkipped: false
+    }]
+  },
+  options: {
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.raw}% coverage` } }
+    },
+    scales: {
+      y: {
+        min: 0, max: 100,
+        ticks: { callback: v => v + '%', font: { size: 13 } },
+        title: { display: true, text: 'Coverage (%)', font: { size: 13 } }
+      },
+      x: {
+        ticks: {
+          autoSkip: false, maxRotation: 45, minRotation: 0,
+          font: { size: 12 }
+        }
+      }
+    }
+  }
+});
+</script>
+{% else %}
+<script>
+const vaccineColors = {
+  'BCG': '#2563eb', 'Hepa B-BD': '#0ea5e9', 'DPT-Hib-HepB': '#0d9488',
+  'OPV': '#7c3aed', 'PCV': '#a855f7', 'IPV': '#4f46e5', 'MMR': '#0891b2'
+};
+document.querySelectorAll('.vaccine-fill').forEach(el => {
+  const name = el.dataset.vaccine || '';
+  const key = Object.keys(vaccineColors).find(k => name === k || name.startsWith(k + ' '));
+  el.style.background = vaccineColors[key] || '#64748b';
+});
+</script>
+{% endif %}
+{% endblock %}
