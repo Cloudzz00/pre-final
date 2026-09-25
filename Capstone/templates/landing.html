@@ -242,19 +242,25 @@
 }
 .lp-frame-bar i { width: 9px; height: 9px; border-radius: 999px; background: var(--border-strong); display: block; }
 .lp-frame-bar .label { margin-left: 8px; font-size: 12px; color: var(--text-secondary); font-weight: 600; }
-.lp-frame-body { padding: 26px; }
-
-/* ---- carousel: each slide is one complete, real dashboard card, shown
-   whole rather than fragmented, auto-advancing sideways. ---- */
-.lp-carousel { overflow: hidden; }
-.lp-carousel-track { display: flex; transition: transform .6s cubic-bezier(.65,0,.35,1); }
-.lp-slide { flex: 0 0 100%; min-width: 0; }
-.lp-dots { display: flex; justify-content: center; gap: 7px; margin-top: 18px; }
-.lp-dots button {
-  width: 7px; height: 7px; border-radius: 999px; background: var(--border-strong);
-  border: none; padding: 0; cursor: pointer; transition: width .2s, background .2s;
+/* ---- scroll canvas: the real dashboard's own cards, stacked once, doubled,
+   and animated to drift continuously upward - at the halfway point the
+   second copy lines up exactly where the first began, so the loop is
+   seamless. Pausing on hover lets a visitor actually read a card. ---- */
+.lp-scrollcanvas { position: relative; height: 460px; overflow: hidden; }
+.lp-scrollcanvas::after {
+  content: ""; position: absolute; inset: auto 0 0 0; height: 56px; pointer-events: none;
+  background: linear-gradient(to bottom, rgba(255,255,255,0), var(--card-bg));
 }
-.lp-dots button.active { background: var(--primary); width: 20px; }
+.lp-scrollcanvas-track { animation: lp-scroll-y 38s linear infinite; }
+.lp-scrollcanvas:hover .lp-scrollcanvas-track { animation-play-state: paused; }
+@keyframes lp-scroll-y { from { transform: translateY(0); } to { transform: translateY(-50%); } }
+.lp-scroll-block { padding: 22px 26px; }
+.lp-scroll-block + .lp-scroll-block { border-top: 1px solid var(--border); }
+.lp-scroll-block .stat-grid { margin-bottom: 0; }
+.lp-scroll-block .stat-card { padding: 14px; }
+.lp-scroll-block .stat-icon { width: 32px; height: 32px; margin-bottom: 8px; }
+.lp-scroll-block .stat-value { font-size: 19px; }
+.lp-scroll-block .stat-label { font-size: 11px; }
 
 /* ---- light-tinted closing section for "who it's for", so it still reads
    as a distinct beat from "why this matters" without going dark. ---- */
@@ -357,103 +363,103 @@
   </div>
 </section>
 
-<section class="lp-section" aria-label="Why this matters">
-  <div class="lp-wrap">
-    <div class="lp-head">
-      <h2>Children fall behind on their schedules &mdash; and no one knows until it's too late.</h2>
-      <p>Across San Jacinto's {{ barangay_count }} barangays, health workers track hundreds of children using
-         paper records. Coverage today sits at <b>{{ coverage_rate }}%</b>, well short of the 95% national target.
-         Here's the actual dashboard RHU personnel see every day.</p>
+{% macro dash_snippet() %}
+<div class="lp-scroll-block">
+  <div class="stat-grid" style="grid-template-columns:repeat(2,minmax(0,1fr));">
+    <div class="stat-card">
+      <div class="stat-icon bg-blue">{{ icon('baby', 18) }}</div>
+      <div class="stat-value">{{ total_children }}</div>
+      <div class="stat-label">Total Children</div>
     </div>
+    <div class="stat-card">
+      <div class="stat-icon bg-green">{{ icon('check-circle', 18) }}</div>
+      <div class="stat-value">{{ fully_immunized }}</div>
+      <div class="stat-label">Fully Immunized</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon bg-orange">{{ icon('alert-triangle', 18) }}</div>
+      <div class="stat-value">{{ at_risk }}</div>
+      <div class="stat-label">At-Risk Children</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon bg-teal">{{ icon('activity', 18) }}</div>
+      <div class="stat-value">{{ dist.high_count }}</div>
+      <div class="stat-label">High Risk</div>
+    </div>
+  </div>
+</div>
+<div class="lp-scroll-block">
+  <div class="card-title">Coverage by Barangay</div>
+  <div class="card-sub">All {{ barangay_count }} barangays, lowest coverage first</div>
+  <table class="data-table plain-head compact" style="margin-top:8px;">
+    <thead><tr><th>Barangay</th><th>Children</th><th>At-Risk</th><th>Coverage</th></tr></thead>
+    <tbody>
+    {% for r in by_barangay %}
+    <tr>
+      <td>{{ r.barangay }}</td><td>{{ r.children }}</td><td>{{ r.at_risk }}</td>
+      <td><span class="progress-track"><span class="progress-fill {{ coverage_color(r.coverage, r.children) }}" style="width:{{ r.coverage }}%"></span></span>{{ r.coverage }}%</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="lp-scroll-block">
+  <div class="card-title">Risk Distribution</div>
+  <div class="card-sub">By risk level across all children</div>
+  <div style="display:flex;align-items:center;gap:22px;margin-top:14px;">
+    <div style="width:104px;height:104px;border-radius:50%;flex-shrink:0;position:relative;
+         background:conic-gradient(var(--green-light) 0% {{ dist.low_pct }}%, var(--amber-light) {{ dist.low_pct }}% {{ dist.low_pct + dist.medium_pct }}%, var(--red-light) {{ dist.low_pct + dist.medium_pct }}% 100%);">
+      <div style="position:absolute;inset:17px;border-radius:50%;background:var(--card-bg);"></div>
+    </div>
+    <div class="lp-legend" style="flex-direction:column;align-items:flex-start;gap:8px;margin:0;">
+      <span><i style="background:var(--green-light)"></i>Low &middot; {{ dist.low_pct }}%</span>
+      <span><i style="background:var(--amber-light)"></i>Medium &middot; {{ dist.medium_pct }}%</span>
+      <span><i style="background:var(--red-light)"></i>High &middot; {{ dist.high_pct }}%</span>
+    </div>
+  </div>
+</div>
+<div class="lp-scroll-block">
+  <div class="card-title">Coverage by Vaccine</div>
+  <div class="card-sub">All {{ total_doses }} doses, in schedule order</div>
+  <div style="margin-top:10px;">
+  {% for r in by_vaccine %}
+    <div style="display:flex;align-items:center;gap:10px;padding:5px 0;">
+      <span style="width:120px;font-size:11.5px;color:var(--text-secondary);flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.vaccine }}</span>
+      <span class="progress-track" style="flex:1;width:auto;"><span class="progress-fill" style="width:{{ r.pct }}%;background:{{ vaccine_colours[loop.index0] }}"></span></span>
+      <span style="font-size:12px;font-weight:700;width:34px;text-align:right;">{{ r.pct }}%</span>
+    </div>
+  {% endfor %}
+  </div>
+</div>
+{% endmacro %}
 
-    <div class="lp-frame" style="max-width:1000px;margin:0 auto;">
-      <div class="lp-frame-bar">
-        <i></i><i></i><i></i>
-        <span class="label">San Jacinto RHU &middot; Live Dashboard</span>
-      </div>
-      <div class="lp-frame-body">
-        <div class="lp-carousel">
-          <div class="lp-carousel-track" id="dashCarousel">
-
-            {# Screen 1: the dashboard's actual top row, unmodified. #}
-            <div class="lp-slide">
-              <div class="stat-grid">
-                <div class="stat-card">
-                  <div class="stat-icon bg-blue">{{ icon('baby', 21) }}</div>
-                  <div class="stat-value">{{ total_children }}</div>
-                  <div class="stat-label">Total Children</div>
-                  <div class="stat-caption">All {{ barangay_count }} barangays</div>
-                </div>
-                <div class="stat-card">
-                  <div class="stat-icon bg-green">{{ icon('check-circle', 21) }}</div>
-                  <div class="stat-value">{{ fully_immunized }}</div>
-                  <div class="stat-label">Fully Immunized</div>
-                  <div class="stat-caption">{{ coverage_rate }}% of enrolled</div>
-                </div>
-                <div class="stat-card">
-                  <div class="stat-icon bg-orange">{{ icon('alert-triangle', 21) }}</div>
-                  <div class="stat-value">{{ at_risk }}</div>
-                  <div class="stat-label">At-Risk Children</div>
-                  <div class="stat-caption">need follow-up</div>
-                </div>
-                <div class="stat-card">
-                  <div class="stat-icon bg-teal">{{ icon('activity', 21) }}</div>
-                  <div class="stat-value">{{ dist.high_count }}</div>
-                  <div class="stat-label">High Risk</div>
-                </div>
-              </div>
-              <div class="split-2-1">
-                <div class="card card-pad">
-                  <div class="card-title">Coverage by Barangay</div>
-                  <div class="card-sub">All {{ barangay_count }} barangays, lowest coverage first</div>
-                  <div class="table-wrap" style="max-height:260px;margin-top:10px;">
-                    <table class="data-table plain-head compact">
-                      <thead><tr><th>Barangay</th><th>Children</th><th>Fully Imm.</th><th>At-Risk</th><th>Coverage</th></tr></thead>
-                      <tbody>
-                      {% for r in by_barangay %}
-                      <tr>
-                        <td>{{ r.barangay }}</td><td>{{ r.children }}</td><td>{{ r.fully_immunized }}</td><td>{{ r.at_risk }}</td>
-                        <td><span class="progress-track"><span class="progress-fill {{ coverage_color(r.coverage, r.children) }}" style="width:{{ r.coverage }}%"></span></span>{{ r.coverage }}%</td>
-                      </tr>
-                      {% endfor %}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-                <div class="card card-pad">
-                  <div class="card-title">Risk Distribution</div>
-                  <div class="card-sub">By risk level across all children</div>
-                  <div class="chart-box" style="height:230px;"><canvas id="lpRiskChart"></canvas></div>
-                </div>
-              </div>
-            </div>
-
-            {# Screen 2: the continuation - same grid, next two real cards. #}
-            <div class="lp-slide">
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
-                <div class="card card-pad">
-                  <div class="card-title">Coverage by Vaccine</div>
-                  <div class="card-sub">All {{ total_doses }} doses, in schedule order</div>
-                  <div class="chart-box" style="height:320px;"><canvas id="lpVaccineChart"></canvas></div>
-                </div>
-                <div class="card card-pad">
-                  <div class="card-title">Annual Coverage Trend</div>
-                  <div class="card-sub">Coverage at each year end</div>
-                  <div class="chart-box" style="height:320px;"><canvas id="lpTrendChart"></canvas></div>
-                </div>
-              </div>
-            </div>
-
+<section class="lp-flow" aria-label="Why this matters">
+  <div class="lp-wrap lp-flow-inner">
+    <div class="lp-flow-visual">
+      <div class="lp-frame">
+        <div class="lp-frame-bar">
+          <i></i><i></i><i></i>
+          <span class="label">San Jacinto RHU &middot; Live Dashboard</span>
+        </div>
+        <div class="lp-scrollcanvas">
+          <div class="lp-scrollcanvas-track">
+            {{ dash_snippet() }}
+            {{ dash_snippet() }}
           </div>
-          <div class="lp-dots" id="dashDots"></div>
         </div>
       </div>
     </div>
-
-    <div class="insight" style="max-width:1000px;margin:20px auto 0;">
-      {{ icon('alert-triangle', 15) }}
-      <span>{{ at_risk }} of {{ total_children }} children are currently flagged &mdash; the gap often goes
-      undetected until the window for catch-up has already closed.</span>
+    <div class="lp-flow-text">
+      <div class="lp-flow-eyebrow">The problem</div>
+      <h2>Children fall behind on their schedules &mdash; and no one knows until it's too late.</h2>
+      <p>Across San Jacinto's {{ barangay_count }} barangays, health workers track hundreds of children using
+         paper records. Coverage today sits at <span class="stat-inline">{{ coverage_rate }}%</span>, well short
+         of the 95% national target.</p>
+      <div class="insight">
+        {{ icon('alert-triangle', 15) }}
+        <span>{{ at_risk }} of {{ total_children }} children are currently flagged &mdash; the gap often goes
+        undetected until the window for catch-up has already closed.</span>
+      </div>
     </div>
   </div>
 </section>
@@ -553,85 +559,6 @@
 </footer>
 
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script src="{{ url_for('static', filename='js/vendor/chart.umd.js') }}"></script>
-<script>
-Chart.defaults.maintainAspectRatio = false; Chart.defaults.responsive = true;
-
-new Chart(document.getElementById('lpRiskChart'), {
-  type: 'doughnut',
-  data: {
-    labels: ['Not At-Risk / Low', 'Medium Risk', 'High Risk'],
-    datasets: [{ data: [{{ dist.low_pct }}, {{ dist.medium_pct }}, {{ dist.high_pct }}],
-                 backgroundColor: ['#22c55e', '#f59e0b', '#ef4444'], borderWidth: 0 }]
-  },
-  options: { plugins: {
-    legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } },
-    tooltip: { callbacks: { label: c => `${c.label}: ${c.raw}%` } }
-  } }
-});
-
-new Chart(document.getElementById('lpVaccineChart'), {
-  type: 'bar',
-  data: {
-    labels: {{ vaccine_labels|tojson }},
-    datasets: [{ data: [{% for r in by_vaccine %}{{ r.pct }},{% endfor %}],
-                 backgroundColor: {{ vaccine_colours|tojson }}, borderRadius: 5 }]
-  },
-  options: { plugins: { legend: { display: false } },
-             scales: { y: { max: 100, ticks: { font: { size: 10 } } }, x: { ticks: { display: false } } } }
-});
-
-new Chart(document.getElementById('lpTrendChart'), {
-  type: 'line',
-  data: {
-    labels: [{% for y, v, n in trend %}{{ y|tojson }},{% endfor %}],
-    datasets: [
-      { label: 'Coverage %', data: [{% for y, v, n in trend %}{{ v }},{% endfor %}],
-        borderColor: '#0d9488', backgroundColor: 'rgba(13,148,136,0.1)', fill: true, tension: 0.3, pointRadius: 4 },
-      { label: '95% Target', data: [{% for y, v, n in trend %}95,{% endfor %}],
-        borderColor: '#94a3b8', borderDash: [6,6], pointRadius: 0 }
-    ]
-  },
-  options: {
-    scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%', font: { size: 10 } } } },
-    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } }
-  }
-});
-
-// Auto-advancing carousel: each slide is one complete dashboard card,
-// shown whole in turn rather than cramming everything into one view.
-(function () {
-  var track = document.getElementById('dashCarousel');
-  var dotsWrap = document.getElementById('dashDots');
-  if (!track || !dotsWrap) return;
-  var slides = track.children.length;
-  var index = 0;
-
-  for (var i = 0; i < slides; i++) {
-    var b = document.createElement('button');
-    b.setAttribute('aria-label', 'Show dashboard card ' + (i + 1));
-    if (i === 0) b.className = 'active';
-    b.addEventListener('click', function (n) { return function () { goTo(n); }; }(i));
-    dotsWrap.appendChild(b);
-  }
-  var dots = dotsWrap.querySelectorAll('button');
-
-  function goTo(n) {
-    index = n;
-    track.style.transform = 'translateX(-' + (index * 100) + '%)';
-    dots.forEach(function (d, i) { d.classList.toggle('active', i === index); });
-  }
-
-  var timer = setInterval(function () { goTo((index + 1) % slides); }, 4000);
-  track.closest('.lp-frame').addEventListener('mouseenter', function () { clearInterval(timer); });
-  track.closest('.lp-frame').addEventListener('mouseleave', function () {
-    timer = setInterval(function () { goTo((index + 1) % slides); }, 4000);
-  });
-})();
-</script>
 {% endblock %}
 
 
