@@ -279,10 +279,10 @@
    label near the sides that width runs straight toward the ring's edge.
    104px only cleared the height, so the wider bubbles (26.3%, 60.1%) cut
    into the ring while the top one (shortest approach) looked fine. */
-.rlabel { position: absolute; top: 50%; left: 50%; width: 0; height: 0; transform: rotate(var(--a)) translateY(-130px); }
-.rlabel-line { position: absolute; top: 0; left: 50%; width: 2px; height: 55px; background: var(--clr); transform: translateX(-50%); opacity: .55; }
+.rlabel { position: absolute; top: 50%; left: 50%; width: 0; height: 0; transform: rotate(var(--a)) translateY(-116px); }
+.rlabel-line { position: absolute; top: 0; left: 50%; width: 2px; height: 41px; background: var(--clr); transform: translateX(-50%); opacity: .55; }
 .rlabel-dot {
-  position: absolute; top: 55px; left: 50%; width: 8px; height: 8px; border-radius: 50%;
+  position: absolute; top: 41px; left: 50%; width: 8px; height: 8px; border-radius: 50%;
   background: var(--clr); transform: translate(-50%, -50%); box-shadow: 0 0 0 2.5px var(--card-bg);
 }
 .rlabel-content { position: absolute; top: 0; left: 0; transform: rotate(calc(-1 * var(--a))); }
@@ -437,11 +437,11 @@
 <div class="lp-scroll-block">
   <div class="card-title">Risk Distribution</div>
   <div class="card-sub">By risk level across all children</div>
-  <div style="display:flex;flex-direction:column;align-items:center;margin-top:62px;">
+  <div style="display:flex;flex-direction:column;align-items:center;margin-top:48px;">
     <div class="donut-wrap">
       <div style="width:150px;height:150px;border-radius:50%;
            background:conic-gradient(var(--green-light) 0% {{ dist.low_pct }}%, var(--amber-light) {{ dist.low_pct }}% {{ dist.low_pct + dist.medium_pct }}%, var(--red-light) {{ dist.low_pct + dist.medium_pct }}% 100%);">
-        <div style="position:absolute;inset:24px;border-radius:50%;background:var(--card-bg);"></div>
+        <div style="position:absolute;inset:38px;border-radius:50%;background:var(--card-bg);"></div>
       </div>
       {% set low_a = (dist.low_pct / 2) / 100 * 360 %}
       {% set med_a = (dist.low_pct + dist.medium_pct / 2) / 100 * 360 %}
