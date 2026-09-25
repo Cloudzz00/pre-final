@@ -245,17 +245,9 @@
 .lp-frame-body { padding: 22px; }
 .lp-frame-body .stat-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
 
-/* ---- dark closing band for "who it's for": the hero/footer's navy tone,
-   so the page has a real dark beat before the CTA instead of staying white
-   the whole way down. ---- */
-.lp-flow.dark { background: var(--navy-950); color: #fff; }
-.lp-flow.dark .lp-flow-eyebrow { color: #7dd3fc; }
-.lp-flow.dark .lp-flow-text h2 { color: #fff; }
-.lp-flow.dark .lp-flow-text p { color: #a7b8d4; }
-.lp-flow.dark .lp-role-row { border-top-color: rgba(255,255,255,.12); }
-.lp-flow.dark .lp-role-row p { color: #a7b8d4; }
-.lp-flow.dark .lp-chip { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.18); color: #fff; }
-.lp-flow.dark .lp-chip .n { background: rgba(255,255,255,.16); color: #fff; }
+/* ---- light-tinted closing section for "who it's for", so it still reads
+   as a distinct beat from "why this matters" without going dark. ---- */
+.lp-flow.tint-role { background: var(--slate-bg); }
 </style>
 {% endblock %}
 
@@ -432,12 +424,12 @@
   </div>
 </section>
 
-<section class="lp-flow dark" aria-label="Who it's for">
+<section class="lp-flow tint-role" aria-label="Who it's for">
   <div class="lp-wrap lp-flow-inner">
     <div class="lp-flow-visual">
       <div class="lp-roles-flat">
         <div class="lp-role-row">
-          <b class="tag" style="color:#7dd3fc">RHU Personnel</b>
+          <b class="tag" style="color:var(--primary)">RHU Personnel</b>
           <p>Monitor coverage across all {{ barangay_count }} barangays and act on what the data shows.</p>
           <div class="lp-chips">
             <span class="lp-chip">{{ icon('bar-chart', 13) }} Analytics</span>
@@ -446,7 +438,7 @@
           </div>
         </div>
         <div class="lp-role-row">
-          <b class="tag" style="color:#5eead4">Barangay Health Workers</b>
+          <b class="tag" style="color:var(--teal)">Barangay Health Workers</b>
           <p>See exactly which children need a visit and what dose they're missing.</p>
           <div class="lp-chips">
             <span class="lp-chip">{{ icon('alert-triangle', 13) }} At-risk list</span>
@@ -454,7 +446,7 @@
           </div>
         </div>
         <div class="lp-role-row">
-          <b class="tag" style="color:#c4b5fd">Community</b>
+          <b class="tag" style="color:var(--violet)">Community</b>
           <p>Check immunization coverage across San Jacinto without signing in.</p>
           <div class="lp-chips">
             <span class="lp-chip">{{ icon('map', 13) }} Coverage by barangay</span>
