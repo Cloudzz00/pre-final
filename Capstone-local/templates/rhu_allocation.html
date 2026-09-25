@@ -1,0 +1,130 @@
+{% extends "layout_app.html" %}
+{% from "_icons.html" import icon %}
+{% block content %}
+
+{% if not groups %}
+<div class="card card-pad">
+  <div class="card-title">No pending requests</div>
+  <div class="card-sub">
+    Allocation applies when barangays have requested stock and it has not yet
+    been approved. There is nothing to allocate right now.
+  </div>
+</div>
+{% else %}
+
+{# The method changes who gets what, so it is chosen here rather than fixed in
+   code. Rationing vaccines is the RHU's decision. #}
+<div class="filter-bar">
+  <span class="flabel">{{ icon('target', 14) }} METHOD</span>
+  <form method="get" style="display:contents;">
+    <select class="form-control select-sm" name="method" onchange="this.form.submit()"
+            aria-label="Allocation method" style="min-width:250px;">
+      {% for key, label in methods.items() %}
+      <option value="{{ key }}" {% if method == key %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </form>
+  <span class="text-muted" style="margin-left:auto;font-size:12.5px;">
+    {{ pending_count }} pending request{{ '' if pending_count == 1 else 's' }}
+  </span>
+</div>
+
+{% for g in groups %}
+<div class="card card-pad" style="margin-bottom:18px;">
+  <div class="flex-between" style="margin-bottom:4px;">
+    <div>
+      <div class="card-title mb-0">{{ g.antigen.name }}</div>
+      <div class="card-sub mb-0">
+        {{ g.requested }} vials requested &middot; {{ g.available }} in stock
+      </div>
+    </div>
+    {% if g.can_meet_all %}
+      <span class="badge badge-green">All requests can be met</span>
+    {% else %}
+      <span class="badge badge-red">{{ g.shortfall }} vials short</span>
+    {% endif %}
+  </div>
+
+  <div class="table-wrap auto-height" style="margin-top:14px;">
+    <table class="data-table compact">
+      <thead><tr>
+        <th>Barangay</th><th>Request</th><th>Priority</th><th>Coverage</th>
+        <th>Requested</th><th>Suggested</th><th>Short By</th>
+      </tr></thead>
+      <tbody>
+        {% for r in g.rows %}
+        <tr>
+          <td><b>{{ r.barangay }}</b></td>
+          <td><span class="text-muted">{{ r.code }}</span></td>
+          <td>
+            <span class="badge badge-{{ 'red' if r.priority == 'Urgent' else ('amber' if r.priority == 'High' else 'gray') }}">
+              {{ r.priority }}
+            </span>
+          </td>
+          <td>
+            {% if r.coverage is not none %}
+              <span class="badge badge-{{ coverage_color(r.coverage, 1) }}">{{ r.coverage }}%</span>
+            {% else %}<span class="text-muted">&mdash;</span>{% endif %}
+          </td>
+          <td>{{ r.requested }}</td>
+          <td>
+            <b style="font-size:14.5px;">{{ r.allocated }}</b>
+            {% if r.requested %}
+            <span class="text-muted" style="font-size:12px;">({{ r.share }}%)</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if r.short %}
+              <span class="badge badge-red">{{ r.short }}</span>
+            {% else %}
+              <span class="text-muted">&mdash;</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td><b>Total</b></td><td></td><td></td><td></td>
+          <td><b>{{ g.requested }}</b></td>
+          <td><b>{{ g.allocated }}</b></td>
+          <td>{% if g.shortfall %}<b>{{ g.shortfall }}</b>{% endif %}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+{% endfor %}
+
+<div class="card card-pad">
+  <div class="card-title">How Each Method Allocates</div>
+  <div class="card-sub">The system computes all three; the decision stays with the RHU</div>
+  <div class="method-list">
+    <div>
+      <b>Priority first, then proportional</b>
+      <p>Requests marked Urgent are filled first, then High, then Normal. Within
+         the same priority, the larger request is served first. Uses the urgency
+         the requesting health worker set.</p>
+    </div>
+    <div>
+      <b>Proportional to request</b>
+      <p>Every barangay receives the same share of what it asked for. Fair
+         between requesters, but takes no account of which barangay needs it
+         most.</p>
+    </div>
+    <div>
+      <b>Lowest coverage first</b>
+      <p>Barangays furthest below the 95% target are filled first. Closes
+         coverage gaps fastest, but a barangay that is performing well may
+         receive nothing.</p>
+    </div>
+    <div>
+      <b>What the suggestion will not do</b>
+      <p>No barangay is allocated more than it requested. Whole vials only, and
+         the totals always match the stock available: no vial is left
+         unassigned or double-counted.</p>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
