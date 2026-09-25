@@ -248,7 +248,7 @@
    second copy lines up exactly where the first began, so the loop is
    seamless. Pausing on hover lets a visitor actually read a card. Fades
    top and bottom so a card is never clipped mid-scroll without warning. ---- */
-.lp-scrollcanvas { position: relative; height: 460px; overflow: hidden; }
+.lp-scrollcanvas { position: relative; height: 340px; overflow: hidden; }
 .lp-scrollcanvas::after, .lp-scrollcanvas::before {
   content: ""; position: absolute; left: 0; right: 0; height: 56px; pointer-events: none; z-index: 1;
 }
@@ -463,6 +463,9 @@
         <span>{{ at_risk }} of {{ total_children }} children are currently flagged &mdash; the gap often goes
         undetected until the window for catch-up has already closed.</span>
       </div>
+      <a class="lp-btn" href="{{ url_for('auth.public_coverage') }}" style="margin-top:24px;">
+        See the full coverage dashboard <span class="lp-fwd">{{ icon('chevron-left', 15, 2.5) }}</span>
+      </a>
     </div>
   </div>
 </section>
