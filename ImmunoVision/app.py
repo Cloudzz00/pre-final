@@ -1252,6 +1252,36 @@ def _next_dose_for(child, vt_lookup):
     return None
 
 
+def _due_calendar(children, vt_lookup, days_behind=90, days_ahead=60):
+    """Every not-yet-administered dose falling within the given window,
+    one event per (child, dose), for the BHW dashboard's due-vaccines
+    calendar widget. Status buckets match the calendar's legend:
+    Overdue (past due), Due Today, Upcoming (within a week), Scheduled
+    (further out but still in the visible window)."""
+    today = date.today()
+    events = []
+    for child in children:
+        given = _doses_given(child.id)
+        for code, name, antigen, dose_no, rec_days in dp.VACCINE_SCHEDULE:
+            if given.get(vt_lookup[code].id) is not None:
+                continue
+            due_date = child.date_of_birth + timedelta(days=rec_days)
+            delta = (due_date - today).days
+            if delta < -days_behind or delta > days_ahead:
+                continue
+            if delta < 0:
+                status = "Overdue"
+            elif delta == 0:
+                status = "Due Today"
+            elif delta <= 7:
+                status = "Upcoming"
+            else:
+                status = "Scheduled"
+            events.append({"date": due_date.isoformat(), "child_id": child.id,
+                            "child_name": child.display_name, "vaccine": name, "status": status})
+    return events
+
+
 # ---------------------------------------------------------------------------
 # Auth blueprint
 # ---------------------------------------------------------------------------
@@ -1765,6 +1795,8 @@ def dashboard():
     by_vaccine = order_by_schedule(report_by_vaccine(bid, as_of) if as_of else coverage_by_vaccine(bid))
     trend = yearly_trend(bid)
     change = coverage_change(bid)
+    vt_lookup = {vt.code: vt for vt in VaccineType.query.all()}
+    due_calendar = _due_calendar(filtered_children(bid), vt_lookup)
     return render_template("bhw_dashboard.html", **_bhw_ctx(
         "dashboard", page_title="Dashboard", stats=stats_for(kids, as_of),
         risk_dist=risk_distribution_for(kids), now=datetime.now(),
@@ -1776,6 +1808,7 @@ def dashboard():
         vaccine_colours=vaccine_colours(by_vaccine), vaccine_labels=schedule_labels(by_vaccine),
         insights=chart_insights(by_vaccine, [], trend),
         total_in_barangay=len(filtered_children(bid, as_of=as_of)),
+        due_calendar=due_calendar,
         pending_requests=(VaccineRequest.query.filter_by(barangay_id=bid, status="pending")
                           .order_by(VaccineRequest.requested_at.desc()).first()),
     ))
