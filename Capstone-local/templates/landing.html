@@ -275,17 +275,19 @@
    "upward", which only points outward for the topmost label) - that's what
    made the other two overlap the ring while the top one looked fine. */
 .rlabel { position: absolute; top: 50%; left: 50%; width: 0; height: 0; transform: rotate(var(--a)) translateY(-104px); }
-.rlabel-line { position: absolute; top: 0; left: 50%; width: 2px; height: 24px; background: var(--clr); transform: translateX(-50%); }
+/* The line runs the full 104px-to-75px gap, so the dot lands exactly on the
+   ring's outer edge - the pointer genuinely touches its own slice. */
+.rlabel-line { position: absolute; top: 0; left: 50%; width: 2px; height: 29px; background: var(--clr); transform: translateX(-50%); opacity: .55; }
 .rlabel-dot {
-  position: absolute; top: 24px; left: 50%; width: 7px; height: 7px; border-radius: 50%;
-  background: var(--clr); transform: translate(-50%, -50%); box-shadow: 0 0 0 2px var(--card-bg);
+  position: absolute; top: 29px; left: 50%; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--clr); transform: translate(-50%, -50%); box-shadow: 0 0 0 2.5px var(--card-bg);
 }
 .rlabel-content { position: absolute; top: 0; left: 0; transform: rotate(calc(-1 * var(--a))); }
 .rlabel-bubble {
   position: absolute; transform: translate(-50%, -50%);
-  background: var(--clr); color: #fff; font-weight: 800; font-size: 11px;
+  background: var(--clr); color: #fff; font-weight: 800; font-size: 11.5px; letter-spacing: -.01em;
   padding: 4px 9px; border-radius: 6px; white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(15,23,42,.18);
+  box-shadow: 0 3px 8px rgba(15,23,42,.22);
 }
 
 /* ---- light-tinted closing section for "who it's for", so it still reads
