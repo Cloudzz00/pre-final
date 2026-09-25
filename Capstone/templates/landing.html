@@ -194,60 +194,43 @@
   box-shadow: 0 2px 12px rgba(0,0,0,.06);
 }
 
-/* ---- problem statement (stat + copy) ---- */
-.lp-problem { display: grid; grid-template-columns: minmax(0,.85fr) minmax(0,1.15fr); gap: 48px; align-items: center; }
-.lp-problem-stat {
-  background: var(--navy-950); color: #fff; border-radius: var(--radius-lg);
-  padding: 40px 32px; text-align: center;
+/* ---- narrative: sticky visual on the left, story scrolls past on the right.
+   No cards, no repeated tiles - one continuous two-column read. ---- */
+.lp-narrative { padding: 90px 0; border-top: 1px solid var(--border); }
+.lp-narrative-inner { display: grid; grid-template-columns: minmax(0,.95fr) minmax(0,1.05fr); gap: 72px; align-items: start; }
+.lp-narrative-visual { position: sticky; top: 96px; }
+.lp-narrative-visual .card { background: var(--slate-bg); border-radius: var(--radius-lg); padding: 28px; }
+.lp-narrative-visual svg { width: 100%; height: auto; display: block; }
+.lp-narrative-badge {
+  display: inline-flex; align-items: center; gap: 9px; margin-top: 18px;
+  font-size: 13px; font-weight: 700; color: var(--text-primary);
+  padding: 10px 16px; border-radius: 999px; background: var(--card-bg); border: 1px solid var(--border);
 }
-.lp-problem-stat b { display: block; font-size: clamp(48px,7vw,72px); font-weight: 900; letter-spacing: -.03em; color: var(--amber-light); line-height: 1; }
-.lp-problem-stat span { display: block; font-size: 13.5px; color: #94a3b8; margin-top: 10px; font-weight: 600; }
-.lp-problem-copy h2 { font-size: clamp(22px,2.8vw,28px); font-weight: 800; letter-spacing: -.02em; line-height: 1.3; margin: 0 0 16px; }
-.lp-problem-copy p { font-size: 15.5px; color: var(--text-secondary); line-height: 1.75; margin: 0 0 12px; }
-.lp-problem-copy p:last-child { margin: 0; }
-.lp-problem-copy strong { color: var(--text-primary); }
-@media (max-width: 860px) { .lp-problem { grid-template-columns: minmax(0,1fr); } }
+.lp-narrative-badge i { width: 8px; height: 8px; border-radius: 999px; background: var(--amber); flex-shrink: 0; transition: background .2s; }
 
-/* ---- how it works: a single connected timeline, no card boxes ---- */
-.lp-timeline { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 28px; margin-top: 44px; position: relative; }
-.lp-timeline::before {
-  content: ""; position: absolute; top: 20px; left: calc(12.5% + 20px); right: calc(12.5% + 20px);
-  height: 2px; background: var(--border);
-}
-.lp-tl-step { position: relative; }
-.lp-tl-num {
-  width: 40px; height: 40px; border-radius: 999px; background: var(--card-bg); color: var(--primary);
-  border: 2px solid var(--primary); display: flex; align-items: center; justify-content: center;
-  font-weight: 800; font-size: 15px; margin-bottom: 18px; position: relative; z-index: 1;
-}
-.lp-tl-step h3 { font-size: 15.5px; font-weight: 800; margin: 0 0 7px; letter-spacing: -.01em; }
-.lp-tl-step p { color: var(--text-secondary); font-size: 14.5px; line-height: 1.6; margin: 0; }
+.lp-nstep { padding: 64px 0; border-top: 1px solid var(--border); }
+.lp-nstep:first-child { border-top: none; padding-top: 0; }
+.lp-nstep-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--primary); margin-bottom: 14px; }
+.lp-nstep h2 { font-size: clamp(21px,2.4vw,27px); font-weight: 800; letter-spacing: -.02em; line-height: 1.3; margin: 0 0 16px; }
+.lp-nstep p { font-size: 15.5px; color: var(--text-secondary); line-height: 1.75; margin: 0 0 14px; }
+.lp-nstep p:last-child { margin: 0; }
+.lp-nstep strong { color: var(--text-primary); }
+.lp-nstep .stat-inline { font-weight: 900; color: var(--text-primary); font-size: 1.2em; }
+
+.lp-nsub { display: flex; gap: 20px; padding: 18px 0; }
+.lp-nsub-num { font-size: 32px; font-weight: 900; color: var(--border-strong); line-height: 1; flex-shrink: 0; width: 46px; }
+.lp-nsub h3 { font-size: 15px; font-weight: 800; margin: 0 0 5px; }
+.lp-nsub p { font-size: 14px; color: var(--text-secondary); margin: 0; line-height: 1.6; }
+
+.lp-nrole { padding: 18px 0; border-top: 1px solid var(--border); }
+.lp-nrole:first-child { border-top: none; padding-top: 0; }
+.lp-nrole b.tag { display: block; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 7px; }
+.lp-nrole p { margin: 0 0 7px; }
+.lp-nrole .caps { font-size: 12.5px; color: var(--text-muted); }
+
 @media (max-width: 900px) {
-  .lp-timeline { grid-template-columns: repeat(2, minmax(0,1fr)); row-gap: 36px; }
-  .lp-timeline::before { display: none; }
-}
-@media (max-width: 560px) { .lp-timeline { grid-template-columns: minmax(0,1fr); } }
-
-/* ---- who it's for: one panel, columns split by dividers, not separate cards ---- */
-.lp-roles {
-  display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); margin-top: 40px;
-  background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius);
-}
-.lp-role-col { padding: 32px 30px; border-left: 1px solid var(--border); }
-.lp-role-col:first-child { border-left: none; }
-.lp-role-tag {
-  display: inline-flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 800;
-  letter-spacing: .06em; text-transform: uppercase; padding: 6px 12px; border-radius: 999px; margin-bottom: 18px;
-}
-.lp-role-col h3 { font-size: 17px; font-weight: 800; margin: 0 0 10px; letter-spacing: -.01em; }
-.lp-role-col > p { font-size: 14px; color: var(--text-secondary); line-height: 1.7; margin: 0 0 18px; }
-.lp-role-col ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 9px; }
-.lp-role-col ul li { font-size: 13.5px; color: var(--text-secondary); display: flex; align-items: flex-start; gap: 8px; line-height: 1.5; }
-.lp-role-col ul li::before { content: "\2192"; font-weight: 700; flex-shrink: 0; color: var(--primary); }
-@media (max-width: 860px) {
-  .lp-roles { grid-template-columns: minmax(0,1fr); }
-  .lp-role-col { border-left: none; border-top: 1px solid var(--border); }
-  .lp-role-col:first-child { border-top: none; }
+  .lp-narrative-inner { grid-template-columns: minmax(0,1fr); gap: 8px; }
+  .lp-narrative-visual { position: static; margin-bottom: 8px; }
 }
 </style>
 {% endblock %}
@@ -347,93 +330,74 @@
   </div>
 </section>
 
-<section class="lp-section" aria-label="Why this matters">
-  <div class="lp-wrap">
-    <div class="lp-problem">
-      <div class="lp-problem-stat">
-        <b>{{ coverage_rate }}%</b>
-        <span>Current immunization coverage in San Jacinto, against a 95% national target</span>
+<section class="lp-narrative" aria-label="Why ImmunoVision, how it works, and who it's for">
+  <div class="lp-wrap lp-narrative-inner">
+    <div class="lp-narrative-visual">
+      <div class="card">
+        <svg viewBox="0 0 1000 1000" role="img"
+             aria-label="Map of San Jacinto's {{ barangay_count }} barangays shaded by immunization coverage.">
+          {% set fills = {'green': '#22c55e', 'amber': '#f59e0b', 'red': '#ef4444', 'none': '#cbd5e1'} %}
+          {% for b in map_shapes %}
+          <path d="{{ b.d }}" fill="{{ fills.get(b.color, '#94a3b8') }}" fill-opacity=".9"
+                stroke="#fff" stroke-width="3" stroke-linejoin="round">
+            <title>{{ b.barangay }}: {{ b.coverage }}%</title>
+          </path>
+          {% endfor %}
+        </svg>
       </div>
-      <div class="lp-problem-copy">
+      <div class="lp-narrative-badge" id="narrativeBadge"><i></i><span>{{ coverage_rate }}% current coverage &middot; 95% target</span></div>
+    </div>
+
+    <div class="lp-narrative-track">
+      <div class="lp-nstep" data-badge="{{ coverage_rate }}% current coverage &middot; 95% target" data-color="var(--amber)">
+        <div class="lp-nstep-eyebrow">The problem</div>
         <h2>Children fall behind on their schedules &mdash; and no one knows until it's too late.</h2>
         <p>Across San Jacinto's {{ barangay_count }} barangays, health workers track hundreds of children using
-           paper records. When a child misses a dose, <strong>the gap often goes undetected</strong> until the
-           window for catch-up has already closed.</p>
-        <p>ImmunoVision was built to fix exactly that &mdash; checking each child's history against all
-           {{ total_doses }} routine doses to flag risk before it becomes a missed vaccine.</p>
+           paper records. Coverage today sits at <span class="stat-inline">{{ coverage_rate }}%</span>, well short
+           of the 95% national target.</p>
+        <p>When a child misses a dose, <strong>the gap often goes undetected</strong> until the window for
+           catch-up has already closed.</p>
       </div>
-    </div>
-  </div>
-</section>
 
-<section class="lp-section lp-section-tinted" aria-label="How it works">
-  <div class="lp-wrap">
-    <div class="lp-head">
-      <h2>How ImmunoVision works</h2>
-      <p>From paper records to proactive follow-up, in four steps.</p>
-    </div>
-    <div class="lp-timeline">
-      <div class="lp-tl-step">
-        <div class="lp-tl-num">1</div>
-        <h3>Import records</h3>
-        <p>The RHU encodes or imports each child's immunization record into the system.</p>
+      <div class="lp-nstep" data-badge="A 4-step monitoring loop" data-color="var(--primary)">
+        <div class="lp-nstep-eyebrow">How it works</div>
+        <h2>From paper records to proactive follow-up.</h2>
+        <div class="lp-nsub">
+          <div class="lp-nsub-num">01</div>
+          <div><h3>Import records</h3><p>The RHU encodes or imports each child's immunization record into the system.</p></div>
+        </div>
+        <div class="lp-nsub">
+          <div class="lp-nsub-num">02</div>
+          <div><h3>Score each child</h3><p>ImmunoVision checks every child's vaccination history against the DOH EPI schedule.</p></div>
+        </div>
+        <div class="lp-nsub">
+          <div class="lp-nsub-num">03</div>
+          <div><h3>Flag at-risk children</h3><p>Children drifting off schedule surface on the dashboard before their catch-up window closes.</p></div>
+        </div>
+        <div class="lp-nsub">
+          <div class="lp-nsub-num">04</div>
+          <div><h3>Health workers act</h3><p>Barangay health workers follow up with flagged children and update the record.</p></div>
+        </div>
       </div>
-      <div class="lp-tl-step">
-        <div class="lp-tl-num">2</div>
-        <h3>Score each child</h3>
-        <p>ImmunoVision checks every child's vaccination history against the DOH EPI schedule.</p>
-      </div>
-      <div class="lp-tl-step">
-        <div class="lp-tl-num">3</div>
-        <h3>Flag at-risk children</h3>
-        <p>Children drifting off schedule surface on the dashboard before their catch-up window closes.</p>
-      </div>
-      <div class="lp-tl-step">
-        <div class="lp-tl-num">4</div>
-        <h3>Health workers act</h3>
-        <p>Barangay health workers follow up with flagged children and update the record.</p>
-      </div>
-    </div>
-  </div>
-</section>
 
-<section class="lp-section" aria-label="Who it's for">
-  <div class="lp-wrap">
-    <div class="lp-head">
-      <h2>Built for three kinds of users</h2>
-      <p>Every account sees exactly the view its role needs, nothing more.</p>
-    </div>
-    <div class="lp-roles">
-      <div class="lp-role-col">
-        <span class="lp-role-tag" style="background:var(--primary-light);color:var(--primary)">{{ icon('stethoscope', 13) }} RHU Personnel</span>
-        <h3>Full municipal view</h3>
-        <p>Monitor coverage across all {{ barangay_count }} barangays and act on what the data shows.</p>
-        <ul>
-          <li>Coverage analytics by barangay and vaccine</li>
-          <li>Vaccine inventory and stock alerts</li>
-          <li>Approve and manage barangay requests</li>
-          <li>Generate reports for the LGU</li>
-        </ul>
-      </div>
-      <div class="lp-role-col">
-        <span class="lp-role-tag" style="background:#ccfbf1;color:var(--teal)">{{ icon('user-round', 13) }} Barangay Health Workers</span>
-        <h3>Your barangay, clearly</h3>
-        <p>See exactly which children need a visit and what dose they're missing.</p>
-        <ul>
-          <li>At-risk children ranked by priority</li>
-          <li>Each child's full vaccination schedule</li>
-          <li>Submit vaccine requests to the RHU</li>
-        </ul>
-      </div>
-      <div class="lp-role-col">
-        <span class="lp-role-tag" style="background:#ede9fe;color:var(--violet)">{{ icon('users', 13) }} Community</span>
-        <h3>Public coverage data</h3>
-        <p>Check immunization coverage across San Jacinto without signing in.</p>
-        <ul>
-          <li>Coverage rates by barangay</li>
-          <li>Vaccine-by-vaccine breakdown</li>
-          <li>Coverage trends over time</li>
-        </ul>
+      <div class="lp-nstep" data-badge="3 account types, one system" data-color="var(--violet)">
+        <div class="lp-nstep-eyebrow">Who it's for</div>
+        <h2>Every account sees exactly the view its role needs.</h2>
+        <div class="lp-nrole">
+          <b class="tag" style="color:var(--primary)">RHU Personnel</b>
+          <p>Monitor coverage across all {{ barangay_count }} barangays and act on what the data shows.</p>
+          <div class="caps">Coverage analytics &middot; Vaccine inventory &middot; Request approvals &middot; LGU reports</div>
+        </div>
+        <div class="lp-nrole">
+          <b class="tag" style="color:var(--teal)">Barangay Health Workers</b>
+          <p>See exactly which children need a visit and what dose they're missing.</p>
+          <div class="caps">Prioritized at-risk list &middot; Full child schedules &middot; Vaccine requests</div>
+        </div>
+        <div class="lp-nrole">
+          <b class="tag" style="color:var(--violet)">Community</b>
+          <p>Check immunization coverage across San Jacinto without signing in.</p>
+          <div class="caps">Coverage by barangay &middot; Vaccine breakdown &middot; Trends over time</div>
+        </div>
       </div>
     </div>
   </div>
@@ -466,6 +430,25 @@
 </footer>
 
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var steps = document.querySelectorAll('.lp-nstep');
+  var badge = document.getElementById('narrativeBadge');
+  if (!steps.length || !badge || !('IntersectionObserver' in window)) return;
+  var label = badge.querySelector('span'), dot = badge.querySelector('i');
+  var obs = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (!e.isIntersecting) return;
+      label.innerHTML = e.target.dataset.badge;
+      dot.style.background = e.target.dataset.color;
+    });
+  }, { rootMargin: '-45% 0px -45% 0px', threshold: 0 });
+  steps.forEach(function (s) { obs.observe(s); });
+})();
+</script>
 {% endblock %}
 
 
