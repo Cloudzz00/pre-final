@@ -2,7 +2,6 @@
 {% from "_brand.html" import brand_mark %}
 {% from "_icons.html" import icon %}
 {% block title %}ImmunoVision{% endblock %}
-{% block meta_description %}Track immunization coverage across all {{ barangay_count }} barangays of San Jacinto, Pangasinan. Real-time dose tracking, at-risk flagging, and coverage analytics for RHU personnel and Barangay Health Workers.{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -65,7 +64,7 @@
 }
 .lp-hero::before {
   content: ""; position: absolute; inset: 0;
-  background-image: url('{{ url_for("static", filename="img/hero-vaccination.jpg") }}');
+  background-image: url('{{ url_for("static", filename="img/hero-vaccination.png") }}');
   background-size: cover; background-position: 62% 38%;
   opacity: .82;
 }
@@ -262,12 +261,6 @@
 .lp-scrollcanvas-track { animation: lp-scroll-y 38s linear infinite; }
 .lp-scrollcanvas:hover .lp-scrollcanvas-track { animation-play-state: paused; }
 @keyframes lp-scroll-y { from { transform: translateY(0); } to { transform: translateY(-50%); } }
-/* Continuous motion can trigger vestibular symptoms for some visitors -
-   respect the OS-level reduced-motion preference by freezing the track
-   on its first frame instead of looping it. */
-@media (prefers-reduced-motion: reduce) {
-  .lp-scrollcanvas-track { animation: none; }
-}
 .lp-scroll-block { padding: 22px 26px; }
 .lp-scroll-block + .lp-scroll-block { border-top: 1px solid var(--border); }
 .lp-scroll-block .stat-grid { margin-bottom: 0; }
@@ -287,8 +280,6 @@
     <div class="n">ImmunoVision</div>
     <div class="links">
       <a href="#capabilities">Capabilities</a>
-      <a href="#how-it-works">How it works</a>
-      <a href="#who-its-for">Who it's for</a>
       <a href="{{ url_for('auth.public_coverage') }}">Coverage</a>
       <a class="lp-btn" href="{{ url_for('auth.login') }}">Sign in</a>
     </div>
@@ -479,7 +470,7 @@
   </div>
 </section>
 
-<section class="lp-flow lp-section-tinted" id="how-it-works" aria-label="How it works">
+<section class="lp-flow lp-section-tinted" aria-label="How it works">
   <div class="lp-wrap lp-flow-inner">
     <div class="lp-flow-text">
       <div class="lp-flow-eyebrow">How it works</div>
@@ -507,7 +498,7 @@
   </div>
 </section>
 
-<section class="lp-flow tint-role" id="who-its-for" aria-label="Who it's for">
+<section class="lp-flow tint-role" aria-label="Who it's for">
   <div class="lp-wrap lp-flow-inner">
     <div class="lp-flow-visual">
       <div class="lp-roles-flat">
