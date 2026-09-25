@@ -265,6 +265,24 @@
 .lp-scroll-block + .lp-scroll-block { border-top: 1px solid var(--border); }
 .lp-scroll-block .stat-grid { margin-bottom: 0; }
 
+/* ---- risk donut data labels: always-on percentage callouts with a leader
+   line pointing back to the ring, positioned by rotating around the donut's
+   centre rather than trig, so the text itself stays upright at every angle. ---- */
+.donut-wrap { position: relative; width: 150px; height: 150px; margin: 0 auto; }
+.rlabel { position: absolute; top: 50%; left: 50%; width: 0; height: 0; transform: rotate(var(--a)) translateY(-92px); }
+.rlabel-line { position: absolute; top: 0; left: 50%; width: 2px; height: 17px; background: var(--clr); transform: translateX(-50%); }
+.rlabel-dot {
+  position: absolute; top: 17px; left: 50%; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--clr); transform: translate(-50%, -50%); box-shadow: 0 0 0 2px var(--card-bg);
+}
+.rlabel-content { position: absolute; top: 0; left: 0; transform: rotate(calc(-1 * var(--a))); }
+.rlabel-bubble {
+  position: absolute; transform: translate(-50%, -100%); margin-top: -6px;
+  background: var(--clr); color: #fff; font-weight: 800; font-size: 11px;
+  padding: 4px 9px; border-radius: 6px; white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(15,23,42,.18);
+}
+
 /* ---- light-tinted closing section for "who it's for", so it still reads
    as a distinct beat from "why this matters" without going dark. ---- */
 .lp-flow.tint-role { background: var(--slate-bg); }
@@ -409,12 +427,29 @@
 <div class="lp-scroll-block">
   <div class="card-title">Risk Distribution</div>
   <div class="card-sub">By risk level across all children</div>
-  <div style="display:flex;flex-direction:column;align-items:center;margin-top:14px;">
-    <div style="width:150px;height:150px;border-radius:50%;position:relative;
-         background:conic-gradient(var(--green-light) 0% {{ dist.low_pct }}%, var(--amber-light) {{ dist.low_pct }}% {{ dist.low_pct + dist.medium_pct }}%, var(--red-light) {{ dist.low_pct + dist.medium_pct }}% 100%);">
-      <div style="position:absolute;inset:24px;border-radius:50%;background:var(--card-bg);"></div>
+  <div style="display:flex;flex-direction:column;align-items:center;margin-top:38px;">
+    <div class="donut-wrap">
+      <div style="width:150px;height:150px;border-radius:50%;
+           background:conic-gradient(var(--green-light) 0% {{ dist.low_pct }}%, var(--amber-light) {{ dist.low_pct }}% {{ dist.low_pct + dist.medium_pct }}%, var(--red-light) {{ dist.low_pct + dist.medium_pct }}% 100%);">
+        <div style="position:absolute;inset:24px;border-radius:50%;background:var(--card-bg);"></div>
+      </div>
+      {% set low_a = (dist.low_pct / 2) / 100 * 360 %}
+      {% set med_a = (dist.low_pct + dist.medium_pct / 2) / 100 * 360 %}
+      {% set high_a = (dist.low_pct + dist.medium_pct + dist.high_pct / 2) / 100 * 360 %}
+      <div class="rlabel" style="--a:{{ low_a }}deg;--clr:var(--green-light);">
+        <div class="rlabel-line"></div><div class="rlabel-dot"></div>
+        <div class="rlabel-content"><div class="rlabel-bubble">{{ dist.low_pct }}%</div></div>
+      </div>
+      <div class="rlabel" style="--a:{{ med_a }}deg;--clr:var(--amber-light);">
+        <div class="rlabel-line"></div><div class="rlabel-dot"></div>
+        <div class="rlabel-content"><div class="rlabel-bubble">{{ dist.medium_pct }}%</div></div>
+      </div>
+      <div class="rlabel" style="--a:{{ high_a }}deg;--clr:var(--red-light);">
+        <div class="rlabel-line"></div><div class="rlabel-dot"></div>
+        <div class="rlabel-content"><div class="rlabel-bubble">{{ dist.high_pct }}%</div></div>
+      </div>
     </div>
-    <div class="lp-legend" style="justify-content:center;margin-top:16px;">
+    <div class="lp-legend" style="justify-content:center;margin-top:20px;">
       <span><i style="background:var(--green-light)"></i>Not At-Risk / Low</span>
       <span><i style="background:var(--amber-light)"></i>Medium Risk</span>
       <span><i style="background:var(--red-light)"></i>High Risk</span>
