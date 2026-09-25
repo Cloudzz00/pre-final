@@ -396,12 +396,16 @@
 <section class="lp-flow" aria-label="Why this matters">
   <div class="lp-wrap lp-flow-inner">
     <div class="lp-flow-visual">
-      <div class="stat-card" style="padding:24px; text-align:center;">
-        <div class="stat-value" style="font-size:48px;">{{ coverage_rate }}%</div>
-        <div class="stat-label">Coverage today, against a 95% target</div>
-        <div class="insight" style="margin-top:18px; text-align:left;">
-          {{ icon('alert-triangle', 15) }}
-          <span><strong>{{ at_risk }}</strong> of {{ total_children }} children are currently behind schedule.</span>
+      <div class="stat-grid" style="grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin:0;">
+        <div class="stat-card">
+          <div class="stat-icon bg-red">{{ icon('bar-chart', 18) }}</div>
+          <div class="stat-value">{{ coverage_rate }}%</div>
+          <div class="stat-label">Coverage (95% target)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon bg-orange">{{ icon('alert-triangle', 18) }}</div>
+          <div class="stat-value">{{ at_risk }}</div>
+          <div class="stat-label">Behind Schedule</div>
         </div>
       </div>
     </div>
