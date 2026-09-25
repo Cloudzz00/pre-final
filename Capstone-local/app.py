@@ -614,7 +614,7 @@ def risk_distribution(barangay_id=None):
     }
 
 
-def donut_callouts(dist, center=75, ring_r=75, label_r=116, curve_bulge=14, bubble_half_w=28):
+def donut_callouts(dist, center=75, ring_r=75, label_r=116, curve_bulge=20, bubble_half_w=28):
     """Leader-line geometry for the landing page's risk donut.
 
     A straight radial line only looks right for the topmost label (see the
@@ -648,12 +648,16 @@ def donut_callouts(dist, center=75, ring_r=75, label_r=116, curve_bulge=14, bubb
         # vertical centre, so it always looks like it enters through the
         # rounded cap rather than the flat edge.
         line_end = (anchor[0] - bubble_half_w if anchor[0] >= center else anchor[0] + bubble_half_w, anchor[1])
-        mid = ((dot[0] + line_end[0]) / 2, (dot[1] + line_end[1]) / 2)
-        # Bulge the control point perpendicular to the dot->line_end line so
-        # the curve bows to one side instead of running straight through it.
+        # A quadratic control point placed at the true midpoint bends the
+        # WHOLE line evenly. The reference instead has a small hook right at
+        # the dot and runs essentially straight after that, so the control
+        # point sits close to the dot end (30% of the way along), not in
+        # the middle, and the perpendicular offset is bigger to make that
+        # hook actually read as a hook.
         dx, dy = line_end[0] - dot[0], line_end[1] - dot[1]
         length = math.hypot(dx, dy) or 1
-        control = (mid[0] - dy / length * curve_bulge, mid[1] + dx / length * curve_bulge)
+        near_dot = (dot[0] + dx * 0.3, dot[1] + dy * 0.3)
+        control = (near_dot[0] - dy / length * curve_bulge, near_dot[1] + dx / length * curve_bulge)
         callouts.append({
             "name": name, "pct": pct, "colour": colour,
             "dot": dot, "anchor": anchor, "line_end": line_end, "control": control,
