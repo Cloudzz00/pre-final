@@ -323,49 +323,6 @@
   </div>
 </header>
 
-<section class="lp-section lp-section-tinted" id="capabilities">
-  <div class="lp-wrap">
-    <div class="lp-head">
-      <h2>Built for the RHU's workflow</h2>
-      <p>What the system does, matched to how immunization work already runs
-         in San Jacinto.</p>
-    </div>
-
-    <div class="lp-grid">
-      <div class="lp-card">
-        <div class="ic" style="background:var(--teal)">{{ icon('map', 20) }}</div>
-        <h3>Barangay coverage map</h3>
-        <p>All {{ barangay_count }} barangays drawn from PSA boundary data, shaded by coverage,
-           at-risk share, or child density. Works offline if there is no connection.</p>
-      </div>
-      <div class="lp-card">
-        <div class="ic" style="background:var(--violet)">{{ icon('package', 20) }}</div>
-        <h3>Vaccine inventory</h3>
-        <p>Batch-level stock with expiry tracking, reorder alerts, and the request workflow
-           between barangay health workers and the RHU.</p>
-      </div>
-      <div class="lp-card">
-        <div class="ic" style="background:var(--primary)">{{ icon('bar-chart', 20) }}</div>
-        <h3>Coverage analytics</h3>
-        <p>Coverage by barangay, by vaccine, and year on year. Filterable to any month and
-           exportable for LGU reporting.</p>
-      </div>
-      <div class="lp-card">
-        <div class="ic" style="background:var(--teal)">{{ icon('baby', 20) }}</div>
-        <h3>Child records</h3>
-        <p>Every child's full dose history against the EPI schedule, showing what was given,
-           what is due, and what is overdue.</p>
-      </div>
-      <div class="lp-card">
-        <div class="ic" style="background:var(--violet)">{{ icon('users', 20) }}</div>
-        <h3>Role-based access</h3>
-        <p>A health worker sees her own barangay, RHU personnel see the municipality, and the
-           administrator sees totals but never a child's record. Every change is logged.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
 {% macro dash_snippet() %}
 <div class="lp-scroll-block">
   <div class="stat-grid" style="grid-template-columns:repeat(2,minmax(0,1fr));">
@@ -444,8 +401,7 @@
         <div class="stat-label">Coverage today, against a 95% target</div>
         <div class="insight" style="margin-top:18px; text-align:left;">
           {{ icon('alert-triangle', 15) }}
-          <span>{{ at_risk }} of {{ total_children }} children are behind schedule right now &mdash; on paper
-          records, that gap often goes undetected until the window for catch-up has already closed.</span>
+          <span><strong>{{ at_risk }}</strong> of {{ total_children }} children are currently behind schedule.</span>
         </div>
       </div>
     </div>
@@ -453,8 +409,8 @@
       <div class="lp-flow-eyebrow">The problem</div>
       <h2>Children fall behind on their schedules &mdash; and no one knows until it's too late.</h2>
       <p>Across San Jacinto's {{ barangay_count }} barangays, health workers track hundreds of children using
-         paper records. Coverage today sits at <span class="stat-inline">{{ coverage_rate }}%</span>, well short
-         of the 95% national target.</p>
+         paper records &mdash; visits and doses logged by hand, with no way to see who is falling behind
+         until a manual review catches it, often after the catch-up window has already closed.</p>
       <a class="lp-btn" href="{{ url_for('auth.public_coverage') }}" style="margin-top:24px;">
         See the full coverage dashboard <span class="lp-fwd">{{ icon('chevron-left', 15, 2.5) }}</span>
       </a>
@@ -493,6 +449,49 @@
   </div>
 </section>
 
+<section class="lp-section" id="capabilities">
+  <div class="lp-wrap">
+    <div class="lp-head">
+      <h2>Built for the RHU's workflow</h2>
+      <p>What the system does, matched to how immunization work already runs
+         in San Jacinto.</p>
+    </div>
+
+    <div class="lp-grid">
+      <div class="lp-card">
+        <div class="ic" style="background:var(--teal)">{{ icon('map', 20) }}</div>
+        <h3>Barangay coverage map</h3>
+        <p>All {{ barangay_count }} barangays drawn from PSA boundary data, shaded by coverage,
+           at-risk share, or child density. Works offline if there is no connection.</p>
+      </div>
+      <div class="lp-card">
+        <div class="ic" style="background:var(--violet)">{{ icon('package', 20) }}</div>
+        <h3>Vaccine inventory</h3>
+        <p>Batch-level stock with expiry tracking, reorder alerts, and the request workflow
+           between barangay health workers and the RHU.</p>
+      </div>
+      <div class="lp-card">
+        <div class="ic" style="background:var(--primary)">{{ icon('bar-chart', 20) }}</div>
+        <h3>Coverage analytics</h3>
+        <p>Coverage by barangay, by vaccine, and year on year. Filterable to any month and
+           exportable for LGU reporting.</p>
+      </div>
+      <div class="lp-card">
+        <div class="ic" style="background:var(--teal)">{{ icon('baby', 20) }}</div>
+        <h3>Child records</h3>
+        <p>Every child's full dose history against the EPI schedule, showing what was given,
+           what is due, and what is overdue.</p>
+      </div>
+      <div class="lp-card">
+        <div class="ic" style="background:var(--violet)">{{ icon('users', 20) }}</div>
+        <h3>Role-based access</h3>
+        <p>A health worker sees her own barangay, RHU personnel see the municipality, and the
+           administrator sees totals but never a child's record. Every change is logged.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section class="lp-flow tint-role" aria-label="Who it's for">
   <div class="lp-wrap lp-flow-inner">
     <div class="lp-flow-visual">
@@ -515,7 +514,16 @@
           </div>
         </div>
         <div class="lp-role-row">
-          <b class="tag" style="color:var(--violet)">Community</b>
+          <b class="tag" style="color:var(--violet)">Administrator</b>
+          <p>Manage accounts and barangay assignments, and review the audit log &mdash; municipality-wide
+             totals only, never a child's record.</p>
+          <div class="lp-chips">
+            <span class="lp-chip">{{ icon('users', 13) }} User accounts</span>
+            <span class="lp-chip">{{ icon('map', 13) }} Barangay assignment</span>
+          </div>
+        </div>
+        <div class="lp-role-row">
+          <b class="tag" style="color:var(--text-secondary)">Community</b>
           <p>Check immunization coverage across San Jacinto without signing in.</p>
           <div class="lp-chips">
             <span class="lp-chip">{{ icon('map', 13) }} Coverage by barangay</span>
@@ -526,8 +534,9 @@
     <div class="lp-flow-text">
       <div class="lp-flow-eyebrow">Who it's for</div>
       <h2>Every account sees exactly the view its role needs.</h2>
-      <p>Three account types share the same system, scoped to what each one actually needs to act on
-         &mdash; a barangay, a municipality, or public numbers with no login at all.</p>
+      <p>Three account roles share the same system, each scoped to what it actually needs to act on
+         &mdash; a barangay, a municipality, or the system itself &mdash; and public coverage numbers
+         are open with no login at all.</p>
       <a class="lp-btn" href="{{ url_for('auth.login') }}">Sign in <span class="lp-fwd">{{ icon('chevron-left', 15, 2.5) }}</span></a>
     </div>
   </div>
