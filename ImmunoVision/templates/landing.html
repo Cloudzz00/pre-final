@@ -439,16 +439,13 @@
 <section class="lp-flow" aria-label="Why this matters">
   <div class="lp-wrap lp-flow-inner">
     <div class="lp-flow-visual">
-      <div class="lp-frame">
-        <div class="lp-frame-bar">
-          <i></i><i></i><i></i>
-          <span class="label">San Jacinto RHU &middot; Live Dashboard</span>
-        </div>
-        <div class="lp-scrollcanvas">
-          <div class="lp-scrollcanvas-track">
-            {{ dash_snippet() }}
-            {{ dash_snippet() }}
-          </div>
+      <div class="stat-card" style="padding:24px; text-align:center;">
+        <div class="stat-value" style="font-size:48px;">{{ coverage_rate }}%</div>
+        <div class="stat-label">Coverage today, against a 95% target</div>
+        <div class="insight" style="margin-top:18px; text-align:left;">
+          {{ icon('alert-triangle', 15) }}
+          <span>{{ at_risk }} of {{ total_children }} children are behind schedule right now &mdash; on paper
+          records, that gap often goes undetected until the window for catch-up has already closed.</span>
         </div>
       </div>
     </div>
@@ -458,11 +455,6 @@
       <p>Across San Jacinto's {{ barangay_count }} barangays, health workers track hundreds of children using
          paper records. Coverage today sits at <span class="stat-inline">{{ coverage_rate }}%</span>, well short
          of the 95% national target.</p>
-      <div class="insight">
-        {{ icon('alert-triangle', 15) }}
-        <span>{{ at_risk }} of {{ total_children }} children are currently flagged &mdash; the gap often goes
-        undetected until the window for catch-up has already closed.</span>
-      </div>
       <a class="lp-btn" href="{{ url_for('auth.public_coverage') }}" style="margin-top:24px;">
         See the full coverage dashboard <span class="lp-fwd">{{ icon('chevron-left', 15, 2.5) }}</span>
       </a>
@@ -485,13 +477,16 @@
       </div>
     </div>
     <div class="lp-flow-visual">
-      <div class="stat-card" style="padding:24px;">
-        <div class="card-title">Needs Follow-Up</div>
-        <div class="card-sub">Highest-risk children surface automatically</div>
-        <div class="insight" style="margin-top:14px;">
-          {{ icon('bar-chart', 15) }}
-          <span>Risk scoring runs on every record change, so a missed dose is flagged the same day it
-          falls behind schedule &mdash; not weeks later during a manual review.</span>
+      <div class="lp-frame">
+        <div class="lp-frame-bar">
+          <i></i><i></i><i></i>
+          <span class="label">San Jacinto RHU &middot; Live Dashboard</span>
+        </div>
+        <div class="lp-scrollcanvas">
+          <div class="lp-scrollcanvas-track">
+            {{ dash_snippet() }}
+            {{ dash_snippet() }}
+          </div>
         </div>
       </div>
     </div>
