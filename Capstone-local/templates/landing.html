@@ -265,30 +265,18 @@
 .lp-scroll-block + .lp-scroll-block { border-top: 1px solid var(--border); }
 .lp-scroll-block .stat-grid { margin-bottom: 0; }
 
-/* ---- risk donut data labels: always-on percentage callouts with a leader
-   line pointing back to the ring, positioned by rotating around the donut's
-   centre rather than trig, so the text itself stays upright at every angle. ---- */
+/* ---- risk donut data labels: always-on percentage callouts joined to the
+   ring by a real curved line. Points and the bezier control point are
+   computed server-side (app.py: donut_callouts) - a CSS rotate trick can
+   fake a straight radial spoke, but not a curve, and two earlier rounds of
+   overlap bugs came from that trick's positioning being angle-dependent
+   in ways that are easy to get wrong. Plain (x, y) coordinates sidestep
+   all of that. ---- */
 .donut-wrap { position: relative; width: 150px; height: 150px; margin: 0 auto; }
-/* Anchor sits 104px out (past the 75px ring edge). The line/dot extend back
-   toward the ring in this same rotated frame, so they're always genuinely
-   radial. The bubble is centred ON the anchor point itself (not offset
-   "upward", which only points outward for the topmost label) - that's what
-   made the other two overlap the ring while the top one looked fine. */
-/* 130px, not 104: the bubble is upright and pill-shaped, so its widest
-   dimension (not its height) is what has to clear the ring - and for a
-   label near the sides that width runs straight toward the ring's edge.
-   104px only cleared the height, so the wider bubbles (26.3%, 60.1%) cut
-   into the ring while the top one (shortest approach) looked fine. */
-.rlabel { position: absolute; top: 50%; left: 50%; width: 0; height: 0; transform: rotate(var(--a)) translateY(-116px); }
-.rlabel-line { position: absolute; top: 0; left: 50%; width: 2px; height: 41px; background: var(--clr); transform: translateX(-50%); opacity: .55; }
-.rlabel-dot {
-  position: absolute; top: 41px; left: 50%; width: 8px; height: 8px; border-radius: 50%;
-  background: var(--clr); transform: translate(-50%, -50%); box-shadow: 0 0 0 2.5px var(--card-bg);
-}
-.rlabel-content { position: absolute; top: 0; left: 0; transform: rotate(calc(-1 * var(--a))); }
+.donut-callout-svg { position: absolute; inset: -20px; width: calc(100% + 40px); height: calc(100% + 40px); overflow: visible; pointer-events: none; }
 .rlabel-bubble {
   position: absolute; transform: translate(-50%, -50%);
-  background: var(--clr); color: #fff; font-weight: 800; font-size: 11.5px; letter-spacing: -.01em;
+  color: #fff; font-weight: 800; font-size: 11.5px; letter-spacing: -.01em;
   padding: 5px 12px; border-radius: 999px; white-space: nowrap;
   box-shadow: 0 3px 8px rgba(15,23,42,.22);
 }
@@ -443,21 +431,16 @@
            background:conic-gradient(var(--green-light) 0% {{ dist.low_pct }}%, var(--amber-light) {{ dist.low_pct }}% {{ dist.low_pct + dist.medium_pct }}%, var(--red-light) {{ dist.low_pct + dist.medium_pct }}% 100%);">
         <div style="position:absolute;inset:38px;border-radius:50%;background:var(--card-bg);"></div>
       </div>
-      {% set low_a = (dist.low_pct / 2) / 100 * 360 %}
-      {% set med_a = (dist.low_pct + dist.medium_pct / 2) / 100 * 360 %}
-      {% set high_a = (dist.low_pct + dist.medium_pct + dist.high_pct / 2) / 100 * 360 %}
-      <div class="rlabel" style="--a:{{ low_a }}deg;--clr:var(--green-light);">
-        <div class="rlabel-line"></div><div class="rlabel-dot"></div>
-        <div class="rlabel-content"><div class="rlabel-bubble">{{ dist.low_pct }}%</div></div>
-      </div>
-      <div class="rlabel" style="--a:{{ med_a }}deg;--clr:var(--amber-light);">
-        <div class="rlabel-line"></div><div class="rlabel-dot"></div>
-        <div class="rlabel-content"><div class="rlabel-bubble">{{ dist.medium_pct }}%</div></div>
-      </div>
-      <div class="rlabel" style="--a:{{ high_a }}deg;--clr:var(--red-light);">
-        <div class="rlabel-line"></div><div class="rlabel-dot"></div>
-        <div class="rlabel-content"><div class="rlabel-bubble">{{ dist.high_pct }}%</div></div>
-      </div>
+      <svg class="donut-callout-svg" viewBox="-20 -20 190 190">
+        {% for c in donut_callouts %}
+        <path d="M {{ c.dot[0] }},{{ c.dot[1] }} Q {{ c.control[0] }},{{ c.control[1] }} {{ c.anchor[0] }},{{ c.anchor[1] }}"
+              fill="none" stroke="{{ c.colour }}" stroke-width="2" stroke-linecap="round" opacity=".6"/>
+        <circle cx="{{ c.dot[0] }}" cy="{{ c.dot[1] }}" r="4" fill="{{ c.colour }}" stroke="var(--card-bg)" stroke-width="2.5"/>
+        {% endfor %}
+      </svg>
+      {% for c in donut_callouts %}
+      <div class="rlabel-bubble" style="left:{{ c.anchor[0] }}px;top:{{ c.anchor[1] }}px;background:{{ c.colour }};">{{ c.pct }}%</div>
+      {% endfor %}
     </div>
     <div class="lp-legend" style="justify-content:center;margin-top:20px;">
       <span><i style="background:var(--green-light)"></i>Not At-Risk / Low</span>

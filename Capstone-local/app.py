@@ -12,6 +12,7 @@ import csv
 import hashlib
 import json
 import io
+import math
 import os
 import random
 from collections import Counter, defaultdict
@@ -611,6 +612,43 @@ def risk_distribution(barangay_id=None):
         "medium_pct": round(counts["Medium Risk"] / total * 100, 1), "medium_count": counts["Medium Risk"],
         "low_pct": round(counts["Low Risk"] / total * 100, 1), "low_count": counts["Low Risk"],
     }
+
+
+def donut_callouts(dist, center=75, ring_r=75, label_r=116, curve_bulge=14):
+    """Leader-line geometry for the landing page's risk donut.
+
+    A straight radial line only looks right for the topmost label (see the
+    two rounds of overlap bugs this replaced) - everywhere else it needs an
+    actual curve, which means real (x, y) points and a quadratic bezier
+    control point, not a CSS rotate trick. One curve per segment, from the
+    dot on the ring's own edge out to the pill label, bowed sideways so it
+    reads as a drawn line rather than a straight spoke.
+    """
+    segments = [
+        ("low", dist["low_pct"], "var(--green-light)"),
+        ("medium", dist["medium_pct"], "var(--amber-light)"),
+        ("high", dist["high_pct"], "var(--red-light)"),
+    ]
+    callouts = []
+    cursor = 0.0
+    for name, pct, colour in segments:
+        mid_pct = cursor + pct / 2
+        theta = math.radians(mid_pct / 100 * 360)
+        sin_t, cos_t = math.sin(theta), math.cos(theta)
+        dot = (center + ring_r * sin_t, center - ring_r * cos_t)
+        anchor = (center + label_r * sin_t, center - label_r * cos_t)
+        mid = ((dot[0] + anchor[0]) / 2, (dot[1] + anchor[1]) / 2)
+        # Bulge the control point perpendicular to the dot->anchor line so
+        # the curve bows to one side instead of running straight through it.
+        dx, dy = anchor[0] - dot[0], anchor[1] - dot[1]
+        length = math.hypot(dx, dy) or 1
+        control = (mid[0] - dy / length * curve_bulge, mid[1] + dx / length * curve_bulge)
+        callouts.append({
+            "name": name, "pct": pct, "colour": colour,
+            "dot": dot, "anchor": anchor, "control": control,
+        })
+        cursor += pct
+    return callouts
 
 
 # --- Dashboard filtering ----------------------------------------------------
@@ -1295,7 +1333,8 @@ def index():
         # Lowest coverage first, so the barangays needing attention lead.
         by_barangay=sorted(coverage_by_barangay(), key=lambda r: r["coverage"]),
         trend=yearly_trend(),
-        dist=risk_distribution(),
+        dist=(_dist := risk_distribution()),
+        donut_callouts=donut_callouts(_dist),
         stats=stats,
         total_children=stats["total_children"], at_risk=stats["at_risk"],
         fully_immunized=stats["fully_immunized"], coverage_rate=stats["coverage_rate"],
