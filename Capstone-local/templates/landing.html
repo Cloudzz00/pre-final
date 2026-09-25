@@ -242,14 +242,30 @@
 }
 .lp-frame-bar i { width: 9px; height: 9px; border-radius: 999px; background: var(--border-strong); display: block; }
 .lp-frame-bar .label { margin-left: 8px; font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+.lp-frame-bar .live {
+  margin-left: auto; display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 700; color: var(--green);
+}
+.lp-frame-bar .live i {
+  width: 6px; height: 6px; background: var(--green-light);
+  animation: lp-pulse 1.6s ease-in-out infinite;
+}
+@keyframes lp-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
 /* ---- scroll canvas: the real dashboard's own cards, stacked once, doubled,
    and animated to drift continuously upward - at the halfway point the
    second copy lines up exactly where the first began, so the loop is
-   seamless. Pausing on hover lets a visitor actually read a card. ---- */
+   seamless. Pausing on hover lets a visitor actually read a card. Fades
+   top and bottom so a card is never clipped mid-scroll without warning. ---- */
 .lp-scrollcanvas { position: relative; height: 460px; overflow: hidden; }
+.lp-scrollcanvas::after, .lp-scrollcanvas::before {
+  content: ""; position: absolute; left: 0; right: 0; height: 56px; pointer-events: none; z-index: 1;
+}
+.lp-scrollcanvas::before {
+  top: 0; background: linear-gradient(to top, rgba(255,255,255,0), var(--card-bg));
+}
 .lp-scrollcanvas::after {
-  content: ""; position: absolute; inset: auto 0 0 0; height: 56px; pointer-events: none;
-  background: linear-gradient(to bottom, rgba(255,255,255,0), var(--card-bg));
+  bottom: 0; background: linear-gradient(to bottom, rgba(255,255,255,0), var(--card-bg));
 }
 .lp-scrollcanvas-track { animation: lp-scroll-y 38s linear infinite; }
 .lp-scrollcanvas:hover .lp-scrollcanvas-track { animation-play-state: paused; }
@@ -436,6 +452,7 @@
         <div class="lp-frame-bar">
           <i></i><i></i><i></i>
           <span class="label">San Jacinto RHU &middot; Live Dashboard</span>
+          <span class="live"><i></i>Auto-updating</span>
         </div>
         <div class="lp-scrollcanvas">
           <div class="lp-scrollcanvas-track">
