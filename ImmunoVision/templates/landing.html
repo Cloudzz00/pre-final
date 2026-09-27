@@ -109,22 +109,14 @@
 .lp-head h2 { font-size: clamp(24px, 3vw, 33px); letter-spacing: -.025em; font-weight: 800; margin: 0; }
 .lp-head p { color: var(--text-secondary); font-size: 15.5px; line-height: 1.65; margin: 12px 0 0; }
 
-/* Fixed three-across, so the two cards on the last row keep the same width as
-   the three above them rather than stretching. justify-content centres that
-   short final row. */
+/* Three-across, two rows - six cards divide evenly so no centering trick
+   is needed for a short last row. */
 .lp-grid {
   display: grid; gap: 18px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
-/* Six half-columns: three cards span two each on the first row, and the two on
-   the last row start at half-column 2 and 4, which centres them without
-   changing their width. */
-.lp-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-.lp-grid > * { grid-column: span 2; }
-.lp-grid > :nth-child(4) { grid-column: 2 / span 2; }
-.lp-grid > :nth-child(5) { grid-column: 4 / span 2; }
 @media (max-width: 980px) {
   .lp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .lp-grid > *, .lp-grid > :nth-child(4), .lp-grid > :nth-child(5) { grid-column: auto; }
 }
 @media (max-width: 640px) {
   .lp-grid { grid-template-columns: minmax(0, 1fr); }
@@ -506,7 +498,7 @@
             <div class="lp-step-card">
               <div class="ic" style="background:var(--primary)">{{ icon('clipboard', 20) }}</div>
               <div class="lp-step-num">Step 1</div>
-              <h3>Import records</h3>
+              <h3>Register each child</h3>
               <p>A child's paper immunization record is entered once, with their full dose history
                  against the DOH schedule.</p>
             </div>
@@ -568,6 +560,12 @@
         <h3>Vaccine inventory</h3>
         <p>Batch-level stock with expiry tracking, reorder alerts, and the request workflow
            between barangay health workers and the RHU.</p>
+      </div>
+      <div class="lp-card">
+        <div class="ic" style="background:var(--orange)">{{ icon('trending-up', 20) }}</div>
+        <h3>Vaccine forecast &amp; allocation</h3>
+        <p>Projects future dose demand from the registry and expected births, and splits
+           limited stock fairly across barangay requests when supply falls short.</p>
       </div>
       <div class="lp-card">
         <div class="ic" style="background:var(--primary)">{{ icon('bar-chart', 20) }}</div>
