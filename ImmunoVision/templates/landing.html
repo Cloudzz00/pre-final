@@ -303,7 +303,11 @@
 .lp-steps-viewport { overflow: hidden; border-radius: var(--radius); }
 .lp-steps-track { display: flex; transition: transform .35s ease; }
 .lp-step-card { flex: 0 0 100%; background: var(--card-bg); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 22px; min-height: 168px; }
+  border-radius: var(--radius); padding: 22px; min-height: 168px; position: relative; overflow: hidden; }
+/* Each step's own icon, enlarged and faded, bleeding off the corner as a
+   background - ties the card to its feature without a fake screenshot. */
+.lp-step-bg { position: absolute; right: -20px; bottom: -20px; opacity: .07; pointer-events: none; line-height: 0; }
+.lp-step-content { position: relative; z-index: 1; }
 .lp-step-card .ic {
   width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center;
   justify-content: center; margin-bottom: 12px; color: #fff;
@@ -504,32 +508,44 @@
         <div class="lp-steps-viewport">
           <div class="lp-steps-track">
             <div class="lp-step-card">
-              <div class="ic" style="background:var(--primary)">{{ icon('clipboard', 20) }}</div>
-              <div class="lp-step-num">Step 1</div>
-              <h3>Import records</h3>
-              <p>A child's paper immunization record is entered once, with their full dose history
-                 against the DOH schedule.</p>
+              <div class="lp-step-bg" style="color:var(--primary)">{{ icon('clipboard', 130, 1.5) }}</div>
+              <div class="lp-step-content">
+                <div class="ic" style="background:var(--primary)">{{ icon('clipboard', 20) }}</div>
+                <div class="lp-step-num">Step 1</div>
+                <h3>Import records</h3>
+                <p>A child's paper immunization record is entered once, with their full dose history
+                   against the DOH schedule.</p>
+              </div>
             </div>
             <div class="lp-step-card">
-              <div class="ic" style="background:var(--teal)">{{ icon('activity', 20) }}</div>
-              <div class="lp-step-num">Step 2</div>
-              <h3>Score each child</h3>
-              <p>Missed doses, delays, and time since the last visit are weighed against the schedule
-                 to calculate a risk score.</p>
+              <div class="lp-step-bg" style="color:var(--teal)">{{ icon('activity', 130, 1.5) }}</div>
+              <div class="lp-step-content">
+                <div class="ic" style="background:var(--teal)">{{ icon('activity', 20) }}</div>
+                <div class="lp-step-num">Step 2</div>
+                <h3>Score each child</h3>
+                <p>Missed doses, delays, and time since the last visit are weighed against the schedule
+                   to calculate a risk score.</p>
+              </div>
             </div>
             <div class="lp-step-card">
-              <div class="ic" style="background:var(--orange)">{{ icon('alert-triangle', 20) }}</div>
-              <div class="lp-step-num">Step 3</div>
-              <h3>Flag at-risk children</h3>
-              <p>Children over the risk threshold are labeled At-Risk automatically and surfaced across
-                 the dashboard &mdash; not buried in a spreadsheet.</p>
+              <div class="lp-step-bg" style="color:var(--orange)">{{ icon('alert-triangle', 130, 1.5) }}</div>
+              <div class="lp-step-content">
+                <div class="ic" style="background:var(--orange)">{{ icon('alert-triangle', 20) }}</div>
+                <div class="lp-step-num">Step 3</div>
+                <h3>Flag at-risk children</h3>
+                <p>Children over the risk threshold are labeled At-Risk automatically and surfaced across
+                   the dashboard &mdash; not buried in a spreadsheet.</p>
+              </div>
             </div>
             <div class="lp-step-card">
-              <div class="ic" style="background:var(--violet)">{{ icon('stethoscope', 20) }}</div>
-              <div class="lp-step-num">Step 4</div>
-              <h3>Health workers act</h3>
-              <p>Barangay health workers see exactly who in their barangay needs a visit and which dose
-                 is due.</p>
+              <div class="lp-step-bg" style="color:var(--violet)">{{ icon('stethoscope', 130, 1.5) }}</div>
+              <div class="lp-step-content">
+                <div class="ic" style="background:var(--violet)">{{ icon('stethoscope', 20) }}</div>
+                <div class="lp-step-num">Step 4</div>
+                <h3>Health workers act</h3>
+                <p>Barangay health workers see exactly who in their barangay needs a visit and which dose
+                   is due.</p>
+              </div>
             </div>
           </div>
         </div>
