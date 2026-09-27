@@ -208,6 +208,20 @@
 .lp-flow-text .stat-inline { font-weight: 900; color: var(--text-primary); font-size: 1.15em; }
 .lp-flow .stat-grid { margin: 0; }
 
+/* Coverage-vs-target bar under the "why this matters" stat cards: makes the
+   gap something you see, using the app's own progress-track/fill component
+   (see style.css) rather than a second restatement of the same number. */
+.lp-gapbar {
+  margin-top: 14px; background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px 20px;
+}
+.lp-gapbar-head {
+  display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 700;
+  color: var(--text-secondary); margin-bottom: 12px;
+}
+.lp-gapbar-track { position: relative; }
+.lp-gapbar-marker { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--navy-950); border-radius: 1px; }
+
 .lp-chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
 .lp-chip {
   display: inline-flex; align-items: center; gap: 9px;
@@ -433,6 +447,18 @@
           <div class="stat-icon bg-orange">{{ icon('alert-triangle', 18) }}</div>
           <div class="stat-value">{{ at_risk }}</div>
           <div class="stat-label">Behind Schedule</div>
+        </div>
+      </div>
+      <div class="lp-gapbar">
+        <div class="lp-gapbar-head">
+          <span>Coverage today</span>
+          <span>Target 95%</span>
+        </div>
+        <div class="lp-gapbar-track">
+          <span class="progress-track bgy-bar">
+            <span class="progress-fill red" style="width:{{ coverage_rate }}%"></span>
+          </span>
+          <span class="lp-gapbar-marker" style="left:95%"></span>
         </div>
       </div>
     </div>
