@@ -523,21 +523,27 @@
             <p>A child's paper immunization record is entered once, with their full dose history
                against the DOH schedule.</p>
           </div>
-          <div class="lp-step-card" data-index="1">
+          <div class="lp-step-card lp-step-card--bg" data-index="1">
+            <div class="lp-step-bgimg" style="background-image:url('{{ url_for('static', filename='img/landing/step2-score.png') }}')"></div>
+            <div class="lp-step-bgtint"></div>
             <div class="ic" style="background:var(--teal)">{{ icon('activity', 20) }}</div>
             <div class="lp-step-num">Step 2</div>
             <h3>Score each child</h3>
             <p>Missed doses, delays, and time since the last visit are weighed against the schedule
                to calculate a risk score.</p>
           </div>
-          <div class="lp-step-card" data-index="2">
+          <div class="lp-step-card lp-step-card--bg" data-index="2">
+            <div class="lp-step-bgimg" style="background-image:url('{{ url_for('static', filename='img/landing/step3-flagged.png') }}')"></div>
+            <div class="lp-step-bgtint"></div>
             <div class="ic" style="background:var(--orange)">{{ icon('alert-triangle', 20) }}</div>
             <div class="lp-step-num">Step 3</div>
             <h3>Flag at-risk children</h3>
             <p>Children over the risk threshold are labeled At-Risk automatically and surfaced across
                the dashboard &mdash; not buried in a spreadsheet.</p>
           </div>
-          <div class="lp-step-card" data-index="3">
+          <div class="lp-step-card lp-step-card--bg" data-index="3">
+            <div class="lp-step-bgimg" style="background-image:url('{{ url_for('static', filename='img/landing/step4-act.png') }}')"></div>
+            <div class="lp-step-bgtint"></div>
             <div class="ic" style="background:var(--violet)">{{ icon('stethoscope', 20) }}</div>
             <div class="lp-step-num">Step 4</div>
             <h3>Health workers act</h3>
