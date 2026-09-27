@@ -305,23 +305,19 @@
 .lp-step-card[data-offset="3"] { transform: rotate(7deg) translate(20px, -42px); z-index: 1; opacity: .55; }
 .lp-step-card:not([data-offset="0"]) { pointer-events: none; }
 /* A real screenshot of the screen each step describes, sharp (not
-   blurred) so it is actually readable - but only in a "window" below the
-   text. The tint fades from solid (behind the icon/heading/paragraph, so
-   they stay legible with nothing competing underneath) to clear (the
-   bottom third, where the real screenshot shows through plainly). */
+   blurred) and visible right behind the text, at a light even tint so it
+   reads as the actual product rather than a hidden layer. A soft white
+   text-shadow keeps the foreground legible over whatever sits behind it. */
 .lp-step-bgimg {
   position: absolute; inset: 0; background-size: cover; background-position: top center;
   background-repeat: no-repeat; border-radius: inherit;
 }
-.lp-step-bgtint {
-  position: absolute; inset: 0; border-radius: inherit;
-  background: linear-gradient(to bottom,
-    rgba(255,255,255,.97) 0%, rgba(255,255,255,.97) 54%,
-    rgba(255,255,255,.55) 66%, rgba(255,255,255,.06) 82%, rgba(255,255,255,.03) 100%);
-}
-.lp-step-card--bg .ic, .lp-step-card--bg .lp-step-num, .lp-step-card--bg h3, .lp-step-card--bg p {
+.lp-step-bgtint { position: absolute; inset: 0; border-radius: inherit; background: rgba(255,255,255,.4); }
+.lp-step-card--bg .lp-step-num, .lp-step-card--bg h3, .lp-step-card--bg p {
   position: relative; z-index: 1;
+  text-shadow: 0 0 1px #fff, 0 1px 3px rgba(255,255,255,.9), 0 0 10px rgba(255,255,255,.85);
 }
+.lp-step-card--bg .ic { position: relative; z-index: 1; box-shadow: 0 0 0 4px rgba(255,255,255,.55); }
 .lp-step-card .ic {
   width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center;
   justify-content: center; margin-bottom: 12px; color: #fff;
