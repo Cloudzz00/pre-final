@@ -302,31 +302,12 @@
    than a plain number circle, so the sequence reads as graphical. ---- */
 .lp-steps-viewport { overflow: hidden; border-radius: var(--radius); }
 .lp-steps-track { display: flex; transition: transform .35s ease; }
-.lp-step-card { flex: 0 0 100%; background: var(--card-bg); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 22px; min-height: 168px; position: relative; overflow: hidden; }
-/* A faded peek at the real screen each step describes (registration form,
-   scoring weights, at-risk badges, due-calendar legend) rather than a
-   generic icon - see the per-step comments below for which real template
-   or module each one mirrors. */
-.lp-step-bg { position: absolute; right: 16px; bottom: 16px; width: 128px; opacity: .55; pointer-events: none; }
-.lp-step-content { position: relative; z-index: 1; max-width: 62%; }
-
-.lp-mini-form { display: flex; flex-direction: column; gap: 6px; }
-.lp-mini-field label { display: block; font-size: 8px; font-weight: 700; color: var(--text-muted); margin-bottom: 2px; text-transform: uppercase; letter-spacing: .03em; }
-.lp-mini-input { display: block; height: 13px; border-radius: 4px; background: var(--slate-bg); border: 1px solid var(--border); }
-
-.lp-mini-bars { display: flex; flex-direction: column; gap: 8px; }
-.lp-mini-bar-row span:first-child { display: block; font-size: 8px; font-weight: 700; color: var(--text-muted); margin-bottom: 2px; }
-.lp-mini-track { display: block; width: 100%; height: 5px; border-radius: 999px; background: var(--slate-bg); overflow: hidden; }
-.lp-mini-fill { display: block; height: 100%; background: var(--teal); border-radius: 999px; }
-
-.lp-mini-list { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
-.lp-mini-row { display: flex; align-items: center; gap: 6px; }
-.lp-mini-name { width: 40px; height: 8px; border-radius: 4px; background: var(--slate-bg); }
-.lp-mini-list .badge { font-size: 8px; padding: 2px 7px; white-space: nowrap; }
-
-.lp-mini-cal { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-.lp-mini-cal i { width: 10px; height: 10px; border-radius: 50%; display: block; }
+.lp-step-card {
+  flex: 0 0 100%; background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 22px; min-height: 168px;
+  display: flex; align-items: center; gap: 20px;
+}
+.lp-step-content { flex: 1 1 56%; min-width: 0; }
 .lp-step-card .ic {
   width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center;
   justify-content: center; margin-bottom: 12px; color: #fff;
@@ -337,6 +318,40 @@
 }
 .lp-step-card h3 { font-size: 15px; font-weight: 800; margin: 0 0 6px; letter-spacing: -.01em; }
 .lp-step-card p { font-size: 13.5px; color: var(--text-secondary); line-height: 1.6; margin: 0; }
+
+/* A small, plain "screenshot window" of the real screen each step
+   describes (registration form, scoring weights, at-risk badges,
+   due-calendar legend) - flat, bordered, no gradients or shadows, same
+   traffic-light bar already used by the live dashboard preview elsewhere
+   on this page. See the per-step comments below for which real template
+   or module each one mirrors. */
+.lp-step-preview { flex: 0 0 38%; }
+.lp-mini-window { background: var(--slate-bg); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.lp-mini-window-bar { display: flex; gap: 4px; padding: 6px 9px; background: var(--card-bg); border-bottom: 1px solid var(--border); }
+.lp-mini-window-bar i { width: 5px; height: 5px; border-radius: 999px; background: var(--border-strong); display: block; }
+.lp-mini-window-body { padding: 12px; }
+
+.lp-mini-form { display: flex; flex-direction: column; gap: 7px; }
+.lp-mini-field label { display: block; font-size: 8.5px; font-weight: 700; color: var(--text-muted); margin-bottom: 3px; text-transform: uppercase; letter-spacing: .03em; }
+.lp-mini-input { display: block; height: 14px; border-radius: 4px; background: var(--card-bg); border: 1px solid var(--border); }
+
+.lp-mini-bars { display: flex; flex-direction: column; gap: 9px; }
+.lp-mini-bar-row span:first-child { display: block; font-size: 8.5px; font-weight: 700; color: var(--text-muted); margin-bottom: 3px; }
+.lp-mini-track { display: block; width: 100%; height: 5px; border-radius: 999px; background: var(--card-bg); border: 1px solid var(--border); overflow: hidden; }
+.lp-mini-fill { display: block; height: 100%; background: var(--teal); border-radius: 999px; }
+
+.lp-mini-list { display: flex; flex-direction: column; gap: 8px; }
+.lp-mini-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.lp-mini-name { width: 36px; height: 8px; border-radius: 4px; background: var(--card-bg); border: 1px solid var(--border); }
+.lp-mini-list .badge { font-size: 8px; padding: 2px 7px; white-space: nowrap; }
+
+.lp-mini-cal { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+.lp-mini-cal i { width: 10px; height: 10px; border-radius: 999px; display: block; }
+
+@media (max-width: 640px) {
+  .lp-step-card { flex-direction: column; align-items: stretch; }
+  .lp-step-preview { flex: 0 0 auto; }
+}
 .lp-steps-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
 .lp-steps-dots { display: flex; align-items: center; gap: 6px; }
 .lp-steps-dot { width: 7px; height: 7px; padding: 0; border: none; border-radius: 999px; background: var(--border-strong); cursor: pointer; }
@@ -527,14 +542,6 @@
         <div class="lp-steps-viewport">
           <div class="lp-steps-track">
             <div class="lp-step-card">
-              {# Peek at the real registration form (see register_child_modal.html). #}
-              <div class="lp-step-bg">
-                <div class="lp-mini-form">
-                  <div class="lp-mini-field"><label>Full Name</label><span class="lp-mini-input"></span></div>
-                  <div class="lp-mini-field"><label>Date of Birth</label><span class="lp-mini-input"></span></div>
-                  <div class="lp-mini-field"><label>Barangay</label><span class="lp-mini-input"></span></div>
-                </div>
-              </div>
               <div class="lp-step-content">
                 <div class="ic" style="background:var(--primary)">{{ icon('clipboard', 20) }}</div>
                 <div class="lp-step-num">Step 1</div>
@@ -542,16 +549,21 @@
                 <p>A child's paper immunization record is entered once, with their full dose history
                    against the DOH schedule.</p>
               </div>
-            </div>
-            <div class="lp-step-card">
-              {# The real weights the scorer uses (see SCORING_RULES in data_processor.py). #}
-              <div class="lp-step-bg">
-                <div class="lp-mini-bars">
-                  <div class="lp-mini-bar-row"><span>Missed Doses</span><span class="lp-mini-track"><span class="lp-mini-fill" style="width:34%"></span></span></div>
-                  <div class="lp-mini-bar-row"><span>Completion Rate</span><span class="lp-mini-track"><span class="lp-mini-fill" style="width:24%"></span></span></div>
-                  <div class="lp-mini-bar-row"><span>Days Since Visit</span><span class="lp-mini-track"><span class="lp-mini-fill" style="width:16%"></span></span></div>
+              {# Peek at the real registration form (see register_child_modal.html). #}
+              <div class="lp-step-preview">
+                <div class="lp-mini-window">
+                  <div class="lp-mini-window-bar"><i></i><i></i><i></i></div>
+                  <div class="lp-mini-window-body">
+                    <div class="lp-mini-form">
+                      <div class="lp-mini-field"><label>Full Name</label><span class="lp-mini-input"></span></div>
+                      <div class="lp-mini-field"><label>Date of Birth</label><span class="lp-mini-input"></span></div>
+                      <div class="lp-mini-field"><label>Barangay</label><span class="lp-mini-input"></span></div>
+                    </div>
+                  </div>
                 </div>
               </div>
+            </div>
+            <div class="lp-step-card">
               <div class="lp-step-content">
                 <div class="ic" style="background:var(--teal)">{{ icon('activity', 20) }}</div>
                 <div class="lp-step-num">Step 2</div>
@@ -559,15 +571,21 @@
                 <p>Missed doses, delays, and time since the last visit are weighed against the schedule
                    to calculate a risk score.</p>
               </div>
-            </div>
-            <div class="lp-step-card">
-              {# The same urgency badges shown on the real at-risk list (see bhw_risk.html). #}
-              <div class="lp-step-bg">
-                <div class="lp-mini-list">
-                  <div class="lp-mini-row"><span class="lp-mini-name"></span><span class="badge badge-red">Visit Urgently</span></div>
-                  <div class="lp-mini-row"><span class="lp-mini-name"></span><span class="badge badge-amber">Visit Soon</span></div>
+              {# The real weights the scorer uses (see SCORING_RULES in data_processor.py). #}
+              <div class="lp-step-preview">
+                <div class="lp-mini-window">
+                  <div class="lp-mini-window-bar"><i></i><i></i><i></i></div>
+                  <div class="lp-mini-window-body">
+                    <div class="lp-mini-bars">
+                      <div class="lp-mini-bar-row"><span>Missed Doses</span><span class="lp-mini-track"><span class="lp-mini-fill" style="width:34%"></span></span></div>
+                      <div class="lp-mini-bar-row"><span>Completion Rate</span><span class="lp-mini-track"><span class="lp-mini-fill" style="width:24%"></span></span></div>
+                      <div class="lp-mini-bar-row"><span>Days Since Visit</span><span class="lp-mini-track"><span class="lp-mini-fill" style="width:16%"></span></span></div>
+                    </div>
+                  </div>
                 </div>
               </div>
+            </div>
+            <div class="lp-step-card">
               <div class="lp-step-content">
                 <div class="ic" style="background:var(--orange)">{{ icon('alert-triangle', 20) }}</div>
                 <div class="lp-step-num">Step 3</div>
@@ -575,23 +593,40 @@
                 <p>Children over the risk threshold are labeled At-Risk automatically and surfaced across
                    the dashboard &mdash; not buried in a spreadsheet.</p>
               </div>
-            </div>
-            <div class="lp-step-card">
-              {# The due-calendar's own legend colors (see bhw_dashboard.html). #}
-              <div class="lp-step-bg">
-                <div class="lp-mini-cal">
-                  <i style="background:#16a34a"></i><i style="background:#16a34a"></i><i style="background:#2563eb"></i>
-                  <i style="background:#f59e0b"></i><i style="background:#16a34a"></i><i style="background:#ef4444"></i>
-                  <i style="background:#2563eb"></i><i style="background:#16a34a"></i><i style="background:#f59e0b"></i>
-                  <i style="background:#16a34a"></i><i style="background:#ef4444"></i><i style="background:#16a34a"></i>
+              {# The same urgency badges shown on the real at-risk list (see bhw_risk.html). #}
+              <div class="lp-step-preview">
+                <div class="lp-mini-window">
+                  <div class="lp-mini-window-bar"><i></i><i></i><i></i></div>
+                  <div class="lp-mini-window-body">
+                    <div class="lp-mini-list">
+                      <div class="lp-mini-row"><span class="lp-mini-name"></span><span class="badge badge-red">Visit Urgently</span></div>
+                      <div class="lp-mini-row"><span class="lp-mini-name"></span><span class="badge badge-amber">Visit Soon</span></div>
+                    </div>
+                  </div>
                 </div>
               </div>
+            </div>
+            <div class="lp-step-card">
               <div class="lp-step-content">
                 <div class="ic" style="background:var(--violet)">{{ icon('stethoscope', 20) }}</div>
                 <div class="lp-step-num">Step 4</div>
                 <h3>Health workers act</h3>
                 <p>Barangay health workers see exactly who in their barangay needs a visit and which dose
                    is due.</p>
+              </div>
+              {# The due-calendar's own legend colors (see bhw_dashboard.html). #}
+              <div class="lp-step-preview">
+                <div class="lp-mini-window">
+                  <div class="lp-mini-window-bar"><i></i><i></i><i></i></div>
+                  <div class="lp-mini-window-body">
+                    <div class="lp-mini-cal">
+                      <i style="background:#16a34a"></i><i style="background:#16a34a"></i><i style="background:#2563eb"></i>
+                      <i style="background:#f59e0b"></i><i style="background:#16a34a"></i><i style="background:#ef4444"></i>
+                      <i style="background:#2563eb"></i><i style="background:#16a34a"></i><i style="background:#f59e0b"></i>
+                      <i style="background:#16a34a"></i><i style="background:#ef4444"></i><i style="background:#16a34a"></i>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
