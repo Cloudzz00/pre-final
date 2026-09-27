@@ -233,11 +233,20 @@
   display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0;
 }
 
-.lp-roles-flat { margin-top: 8px; }
-.lp-role-row { padding: 20px 0; border-top: 1px solid var(--border); }
-.lp-role-row:first-child { border-top: none; padding-top: 0; }
-.lp-role-row b.tag { display: block; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 8px; }
-.lp-role-row p { font-size: 14.5px; color: var(--text-secondary); margin: 0 0 10px; line-height: 1.65; }
+/* Who it's for: a 2x2 card grid rather than a stacked list, so four roles
+   stay roughly as tall as the text column next to it instead of running
+   well past it. Same icon-square language as the capabilities cards. */
+.lp-roles-grid { margin-top: 8px; display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; }
+.lp-role-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+.lp-role-card .ic {
+  width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center;
+  justify-content: center; color: #fff; margin-bottom: 10px;
+}
+.lp-role-card b.tag { display: block; font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 6px; }
+.lp-role-card p { font-size: 13px; color: var(--text-secondary); margin: 0 0 10px; line-height: 1.55; }
+.lp-role-card .lp-chips { gap: 6px; }
+.lp-role-card .lp-chip { padding: 6px 10px 6px 8px; font-size: 12px; }
+@media (max-width: 560px) { .lp-roles-grid { grid-template-columns: minmax(0,1fr); } }
 
 @media (max-width: 900px) {
   .lp-flow-inner { grid-template-columns: minmax(0,1fr); gap: 28px; }
@@ -608,38 +617,39 @@
 <section class="lp-flow tint-role" aria-label="Who it's for">
   <div class="lp-wrap lp-flow-inner">
     <div class="lp-flow-visual">
-      <div class="lp-roles-flat">
-        <div class="lp-role-row">
+      <div class="lp-roles-grid">
+        <div class="lp-role-card">
+          <div class="ic" style="background:var(--primary)">{{ icon('bar-chart', 18) }}</div>
           <b class="tag" style="color:var(--primary)">RHU Personnel</b>
           <p>Monitor coverage across all {{ barangay_count }} barangays and act on what the data shows.</p>
           <div class="lp-chips">
-            <span class="lp-chip">{{ icon('bar-chart', 13) }} Analytics</span>
             <span class="lp-chip">{{ icon('package', 13) }} Inventory</span>
             <span class="lp-chip">{{ icon('check', 13) }} Requests</span>
           </div>
         </div>
-        <div class="lp-role-row">
+        <div class="lp-role-card">
+          <div class="ic" style="background:var(--teal)">{{ icon('baby', 18) }}</div>
           <b class="tag" style="color:var(--teal)">Barangay Health Workers</b>
           <p>See exactly which children need a visit and what dose they're missing.</p>
           <div class="lp-chips">
             <span class="lp-chip">{{ icon('alert-triangle', 13) }} At-risk list</span>
-            <span class="lp-chip">{{ icon('baby', 13) }} Child schedules</span>
           </div>
         </div>
-        <div class="lp-role-row">
+        <div class="lp-role-card">
+          <div class="ic" style="background:var(--violet)">{{ icon('users', 18) }}</div>
           <b class="tag" style="color:var(--violet)">Administrator</b>
-          <p>Manage accounts and barangay assignments, and review the audit log &mdash; municipality-wide
+          <p>Manage accounts and barangay assignments, review the audit log &mdash; municipality-wide
              totals only, never a child's record.</p>
           <div class="lp-chips">
-            <span class="lp-chip">{{ icon('users', 13) }} User accounts</span>
-            <span class="lp-chip">{{ icon('map', 13) }} Barangay assignment</span>
+            <span class="lp-chip">{{ icon('map', 13) }} Assignments</span>
           </div>
         </div>
-        <div class="lp-role-row">
+        <div class="lp-role-card">
+          <div class="ic" style="background:var(--text-secondary)">{{ icon('globe', 18) }}</div>
           <b class="tag" style="color:var(--text-secondary)">Community</b>
           <p>Check immunization coverage across San Jacinto without signing in.</p>
           <div class="lp-chips">
-            <span class="lp-chip">{{ icon('map', 13) }} Coverage by barangay</span>
+            <span class="lp-chip">{{ icon('map', 13) }} Coverage</span>
           </div>
         </div>
       </div>
