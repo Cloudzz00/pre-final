@@ -85,7 +85,7 @@
         <tbody>
           {% for r in follow_up %}
           <tr>
-            <td><a class="link" href="{{ url_for('bhw.child_record', child_id=r.child.id, from_dashboard=1) }}">{{ r.display_name }}</a></td>
+            <td><a class="link" href="{{ url_for('bhw.child_record', child_id=r.child.id, from_dashboard=1) }}">{{ r.child.display_name }}</a></td>
             <td>{{ r.child.date_of_birth.strftime('%Y-%m-%d') }}</td>
             <td><b>{{ r.missed }}</b> of {{ r.due }}</td>
             <td><span class="badge badge-{{ 'red' if r.tier == 'High Risk' else 'amber' }}">{{ r.risk_score }}%</span></td>

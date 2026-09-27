@@ -752,6 +752,8 @@ _REFERENCE_NOT_AT_RISK = {
 
 
 def _describe(key, feats):
+    if key == "weighted_doses_missed":
+        return f"Missed doses weighted by vaccine importance: {feats['weighted_doses_missed']:.1f}"
     if key == "doses_missed":
         return f"{int(feats['doses_missed'])} dose(s) missed beyond the grace period"
     if key == "doses_delayed":
