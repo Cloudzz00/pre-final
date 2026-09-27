@@ -304,10 +304,29 @@
 .lp-steps-track { display: flex; transition: transform .35s ease; }
 .lp-step-card { flex: 0 0 100%; background: var(--card-bg); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 22px; min-height: 168px; position: relative; overflow: hidden; }
-/* Each step's own icon, enlarged and faded, bleeding off the corner as a
-   background - ties the card to its feature without a fake screenshot. */
-.lp-step-bg { position: absolute; right: -20px; bottom: -20px; opacity: .07; pointer-events: none; line-height: 0; }
-.lp-step-content { position: relative; z-index: 1; }
+/* A faded peek at the real screen each step describes (registration form,
+   scoring weights, at-risk badges, due-calendar legend) rather than a
+   generic icon - see the per-step comments below for which real template
+   or module each one mirrors. */
+.lp-step-bg { position: absolute; right: 16px; bottom: 16px; width: 128px; opacity: .55; pointer-events: none; }
+.lp-step-content { position: relative; z-index: 1; max-width: 62%; }
+
+.lp-mini-form { display: flex; flex-direction: column; gap: 6px; }
+.lp-mini-field label { display: block; font-size: 8px; font-weight: 700; color: var(--text-muted); margin-bottom: 2px; text-transform: uppercase; letter-spacing: .03em; }
+.lp-mini-input { display: block; height: 13px; border-radius: 4px; background: var(--slate-bg); border: 1px solid var(--border); }
+
+.lp-mini-bars { display: flex; flex-direction: column; gap: 8px; }
+.lp-mini-bar-row span:first-child { display: block; font-size: 8px; font-weight: 700; color: var(--text-muted); margin-bottom: 2px; }
+.lp-mini-track { display: block; width: 100%; height: 5px; border-radius: 999px; background: var(--slate-bg); overflow: hidden; }
+.lp-mini-fill { display: block; height: 100%; background: var(--teal); border-radius: 999px; }
+
+.lp-mini-list { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+.lp-mini-row { display: flex; align-items: center; gap: 6px; }
+.lp-mini-name { width: 40px; height: 8px; border-radius: 4px; background: var(--slate-bg); }
+.lp-mini-list .badge { font-size: 8px; padding: 2px 7px; white-space: nowrap; }
+
+.lp-mini-cal { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.lp-mini-cal i { width: 10px; height: 10px; border-radius: 50%; display: block; }
 .lp-step-card .ic {
   width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center;
   justify-content: center; margin-bottom: 12px; color: #fff;
@@ -508,7 +527,14 @@
         <div class="lp-steps-viewport">
           <div class="lp-steps-track">
             <div class="lp-step-card">
-              <div class="lp-step-bg" style="color:var(--primary)">{{ icon('clipboard', 130, 1.5) }}</div>
+              {# Peek at the real registration form (see register_child_modal.html). #}
+              <div class="lp-step-bg">
+                <div class="lp-mini-form">
+                  <div class="lp-mini-field"><label>Full Name</label><span class="lp-mini-input"></span></div>
+                  <div class="lp-mini-field"><label>Date of Birth</label><span class="lp-mini-input"></span></div>
+                  <div class="lp-mini-field"><label>Barangay</label><span class="lp-mini-input"></span></div>
+                </div>
+              </div>
               <div class="lp-step-content">
                 <div class="ic" style="background:var(--primary)">{{ icon('clipboard', 20) }}</div>
                 <div class="lp-step-num">Step 1</div>
@@ -518,7 +544,14 @@
               </div>
             </div>
             <div class="lp-step-card">
-              <div class="lp-step-bg" style="color:var(--teal)">{{ icon('activity', 130, 1.5) }}</div>
+              {# The real weights the scorer uses (see SCORING_RULES in data_processor.py). #}
+              <div class="lp-step-bg">
+                <div class="lp-mini-bars">
+                  <div class="lp-mini-bar-row"><span>Missed Doses</span><span class="lp-mini-track"><span class="lp-mini-fill" style="width:34%"></span></span></div>
+                  <div class="lp-mini-bar-row"><span>Completion Rate</span><span class="lp-mini-track"><span class="lp-mini-fill" style="width:24%"></span></span></div>
+                  <div class="lp-mini-bar-row"><span>Days Since Visit</span><span class="lp-mini-track"><span class="lp-mini-fill" style="width:16%"></span></span></div>
+                </div>
+              </div>
               <div class="lp-step-content">
                 <div class="ic" style="background:var(--teal)">{{ icon('activity', 20) }}</div>
                 <div class="lp-step-num">Step 2</div>
@@ -528,7 +561,13 @@
               </div>
             </div>
             <div class="lp-step-card">
-              <div class="lp-step-bg" style="color:var(--orange)">{{ icon('alert-triangle', 130, 1.5) }}</div>
+              {# The same urgency badges shown on the real at-risk list (see bhw_risk.html). #}
+              <div class="lp-step-bg">
+                <div class="lp-mini-list">
+                  <div class="lp-mini-row"><span class="lp-mini-name"></span><span class="badge badge-red">Visit Urgently</span></div>
+                  <div class="lp-mini-row"><span class="lp-mini-name"></span><span class="badge badge-amber">Visit Soon</span></div>
+                </div>
+              </div>
               <div class="lp-step-content">
                 <div class="ic" style="background:var(--orange)">{{ icon('alert-triangle', 20) }}</div>
                 <div class="lp-step-num">Step 3</div>
@@ -538,7 +577,15 @@
               </div>
             </div>
             <div class="lp-step-card">
-              <div class="lp-step-bg" style="color:var(--violet)">{{ icon('stethoscope', 130, 1.5) }}</div>
+              {# The due-calendar's own legend colors (see bhw_dashboard.html). #}
+              <div class="lp-step-bg">
+                <div class="lp-mini-cal">
+                  <i style="background:#16a34a"></i><i style="background:#16a34a"></i><i style="background:#2563eb"></i>
+                  <i style="background:#f59e0b"></i><i style="background:#16a34a"></i><i style="background:#ef4444"></i>
+                  <i style="background:#2563eb"></i><i style="background:#16a34a"></i><i style="background:#f59e0b"></i>
+                  <i style="background:#16a34a"></i><i style="background:#ef4444"></i><i style="background:#16a34a"></i>
+                </div>
+              </div>
               <div class="lp-step-content">
                 <div class="ic" style="background:var(--violet)">{{ icon('stethoscope', 20) }}</div>
                 <div class="lp-step-num">Step 4</div>
