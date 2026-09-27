@@ -304,10 +304,10 @@
 .lp-steps-track { display: flex; transition: transform .35s ease; }
 .lp-step-card {
   flex: 0 0 100%; background: var(--card-bg); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 22px; min-height: 168px;
-  display: flex; align-items: center; gap: 20px;
+  border-radius: var(--radius); padding: 24px;
+  display: flex; align-items: center; gap: 22px;
 }
-.lp-step-content { flex: 1 1 56%; min-width: 0; }
+.lp-step-content { flex: 1 1 46%; min-width: 0; }
 .lp-step-card .ic {
   width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center;
   justify-content: center; margin-bottom: 12px; color: #fff;
@@ -319,34 +319,26 @@
 .lp-step-card h3 { font-size: 15px; font-weight: 800; margin: 0 0 6px; letter-spacing: -.01em; }
 .lp-step-card p { font-size: 13.5px; color: var(--text-secondary); line-height: 1.6; margin: 0; }
 
-/* A small, plain "screenshot window" of the real screen each step
-   describes (registration form, scoring weights, at-risk badges,
-   due-calendar legend) - flat, bordered, no gradients or shadows, same
-   traffic-light bar already used by the live dashboard preview elsewhere
-   on this page. See the per-step comments below for which real template
-   or module each one mirrors. */
-.lp-step-preview { flex: 0 0 38%; }
-.lp-mini-window { background: var(--slate-bg); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-.lp-mini-window-bar { display: flex; gap: 4px; padding: 6px 9px; background: var(--card-bg); border-bottom: 1px solid var(--border); }
-.lp-mini-window-bar i { width: 5px; height: 5px; border-radius: 999px; background: var(--border-strong); display: block; }
-.lp-mini-window-body { padding: 12px; }
-
-.lp-mini-form { display: flex; flex-direction: column; gap: 7px; }
-.lp-mini-field label { display: block; font-size: 8.5px; font-weight: 700; color: var(--text-muted); margin-bottom: 3px; text-transform: uppercase; letter-spacing: .03em; }
-.lp-mini-input { display: block; height: 14px; border-radius: 4px; background: var(--card-bg); border: 1px solid var(--border); }
-
-.lp-mini-bars { display: flex; flex-direction: column; gap: 9px; }
-.lp-mini-bar-row span:first-child { display: block; font-size: 8.5px; font-weight: 700; color: var(--text-muted); margin-bottom: 3px; }
-.lp-mini-track { display: block; width: 100%; height: 5px; border-radius: 999px; background: var(--card-bg); border: 1px solid var(--border); overflow: hidden; }
-.lp-mini-fill { display: block; height: 100%; background: var(--teal); border-radius: 999px; }
-
-.lp-mini-list { display: flex; flex-direction: column; gap: 8px; }
-.lp-mini-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
-.lp-mini-name { width: 36px; height: 8px; border-radius: 4px; background: var(--card-bg); border: 1px solid var(--border); }
-.lp-mini-list .badge { font-size: 8px; padding: 2px 7px; white-space: nowrap; }
-
-.lp-mini-cal { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
-.lp-mini-cal i { width: 10px; height: 10px; border-radius: 999px; display: block; }
+/* A real, sized-up preview of the screen each step describes, built from
+   the app's own components (.data-table.compact, .badge, .progress-track/
+   .progress-fill, .stat-* - see style.css) rather than invented mockup
+   shapes, so it reads as a cropped piece of the actual product instead of
+   decoration. Roughly half the card, same as the "See it in action" and
+   capabilities previews elsewhere on this page. */
+.lp-step-preview { flex: 0 0 50%; min-width: 0; }
+.lp-preview-card { background: var(--slate-bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+.lp-preview-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.lp-preview-title { font-size: 13.5px; font-weight: 800; color: var(--text-primary); }
+.lp-preview-sub { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }
+.lp-preview-card table.data-table { background: var(--card-bg); border-radius: 6px; overflow: hidden; }
+.lp-preview-card table.data-table thead th { font-size: 10.5px; }
+.lp-preview-card table.data-table tbody td { font-size: 11.5px; }
+.lp-preview-card .badge { font-size: 10px; padding: 3px 8px; }
+.lp-preview-factors { display: flex; flex-direction: column; gap: 10px; }
+.lp-preview-factor span:first-child { display: block; font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; }
+.lp-preview-summary { display: flex; gap: 14px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.lp-preview-summary div { font-size: 10.5px; color: var(--text-secondary); }
+.lp-preview-summary b { display: block; font-size: 15px; color: var(--text-primary); }
 
 @media (max-width: 640px) {
   .lp-step-card { flex-direction: column; align-items: stretch; }
@@ -549,17 +541,25 @@
                 <p>A child's paper immunization record is entered once, with their full dose history
                    against the DOH schedule.</p>
               </div>
-              {# Peek at the real registration form (see register_child_modal.html). #}
+              {# A real child's dose history, the way it appears on their record
+                 (see the child profile page and VACCINE_SCHEDULE in data_processor.py). #}
               <div class="lp-step-preview">
-                <div class="lp-mini-window">
-                  <div class="lp-mini-window-bar"><i></i><i></i><i></i></div>
-                  <div class="lp-mini-window-body">
-                    <div class="lp-mini-form">
-                      <div class="lp-mini-field"><label>Full Name</label><span class="lp-mini-input"></span></div>
-                      <div class="lp-mini-field"><label>Date of Birth</label><span class="lp-mini-input"></span></div>
-                      <div class="lp-mini-field"><label>Barangay</label><span class="lp-mini-input"></span></div>
+                <div class="lp-preview-card">
+                  <div class="lp-preview-head">
+                    <div>
+                      <div class="lp-preview-title">Maria Santos</div>
+                      <div class="lp-preview-sub">San Roque &middot; Female &middot; 1y 2m</div>
                     </div>
                   </div>
+                  <table class="data-table plain-head compact">
+                    <thead><tr><th>Vaccine</th><th>Dose</th><th>Status</th></tr></thead>
+                    <tbody>
+                      <tr><td>BCG</td><td>1</td><td><span class="badge badge-green">Completed</span></td></tr>
+                      <tr><td>DPT-Hib-HepB</td><td>1</td><td><span class="badge badge-green">Completed</span></td></tr>
+                      <tr><td>DPT-Hib-HepB</td><td>2</td><td><span class="badge badge-green">Completed</span></td></tr>
+                      <tr><td>DPT-Hib-HepB</td><td>3</td><td><span class="badge badge-amber">Due</span></td></tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
@@ -571,16 +571,20 @@
                 <p>Missed doses, delays, and time since the last visit are weighed against the schedule
                    to calculate a risk score.</p>
               </div>
-              {# The real weights the scorer uses (see SCORING_RULES in data_processor.py). #}
+              {# The real weighted rules the scorer uses (see SCORING_RULES in
+                 data_processor.py: weighted_doses_missed, completion_rate,
+                 days_since_last_dose, avg_delay_days). #}
               <div class="lp-step-preview">
-                <div class="lp-mini-window">
-                  <div class="lp-mini-window-bar"><i></i><i></i><i></i></div>
-                  <div class="lp-mini-window-body">
-                    <div class="lp-mini-bars">
-                      <div class="lp-mini-bar-row"><span>Missed Doses</span><span class="lp-mini-track"><span class="lp-mini-fill" style="width:34%"></span></span></div>
-                      <div class="lp-mini-bar-row"><span>Completion Rate</span><span class="lp-mini-track"><span class="lp-mini-fill" style="width:24%"></span></span></div>
-                      <div class="lp-mini-bar-row"><span>Days Since Visit</span><span class="lp-mini-track"><span class="lp-mini-fill" style="width:16%"></span></span></div>
-                    </div>
+                <div class="lp-preview-card">
+                  <div class="lp-preview-head">
+                    <div class="lp-preview-title">Risk Assessment</div>
+                    <span class="badge badge-amber">Medium Risk</span>
+                  </div>
+                  <div class="lp-preview-factors">
+                    <div class="lp-preview-factor"><span>Missed Doses</span><span class="progress-track bgy-bar"><span class="progress-fill amber" style="width:60%"></span></span></div>
+                    <div class="lp-preview-factor"><span>Completion Rate</span><span class="progress-track bgy-bar"><span class="progress-fill teal" style="width:72%"></span></span></div>
+                    <div class="lp-preview-factor"><span>Days Since Last Visit</span><span class="progress-track bgy-bar"><span class="progress-fill red" style="width:45%"></span></span></div>
+                    <div class="lp-preview-factor"><span>Delayed Doses</span><span class="progress-track bgy-bar"><span class="progress-fill amber" style="width:30%"></span></span></div>
                   </div>
                 </div>
               </div>
@@ -593,15 +597,25 @@
                 <p>Children over the risk threshold are labeled At-Risk automatically and surfaced across
                    the dashboard &mdash; not buried in a spreadsheet.</p>
               </div>
-              {# The same urgency badges shown on the real at-risk list (see bhw_risk.html). #}
+              {# The same table and urgency badges shown on the real at-risk
+                 list (see bhw_risk.html: badge-red "Visit Urgently", badge-amber
+                 "Visit Soon", badge-green "On Track"). #}
               <div class="lp-step-preview">
-                <div class="lp-mini-window">
-                  <div class="lp-mini-window-bar"><i></i><i></i><i></i></div>
-                  <div class="lp-mini-window-body">
-                    <div class="lp-mini-list">
-                      <div class="lp-mini-row"><span class="lp-mini-name"></span><span class="badge badge-red">Visit Urgently</span></div>
-                      <div class="lp-mini-row"><span class="lp-mini-name"></span><span class="badge badge-amber">Visit Soon</span></div>
-                    </div>
+                <div class="lp-preview-card">
+                  <div class="lp-preview-head">
+                    <div class="lp-preview-title">At-Risk Children</div>
+                  </div>
+                  <table class="data-table plain-head compact">
+                    <thead><tr><th>Child</th><th>Barangay</th><th>Status</th></tr></thead>
+                    <tbody>
+                      <tr><td>Maria Santos</td><td>San Roque</td><td><span class="badge badge-red">At-Risk</span></td></tr>
+                      <tr><td>Juan Dela Cruz</td><td>Bolo</td><td><span class="badge badge-amber">Visit Soon</span></td></tr>
+                      <tr><td>Ana Reyes</td><td>Santa Cruz</td><td><span class="badge badge-green">On Track</span></td></tr>
+                    </tbody>
+                  </table>
+                  <div class="lp-preview-summary">
+                    <div><b>{{ at_risk }}</b>At-Risk</div>
+                    <div><b>{{ dist.medium_count if dist else '—' }}</b>Visit Soon</div>
                   </div>
                 </div>
               </div>
@@ -614,18 +628,23 @@
                 <p>Barangay health workers see exactly who in their barangay needs a visit and which dose
                    is due.</p>
               </div>
-              {# The due-calendar's own legend colors (see bhw_dashboard.html). #}
+              {# The real BHW follow-up view (see bhw_risk.html: "Children Who
+                 Need a Visit", the due-vaccines calendar in bhw_dashboard.html). #}
               <div class="lp-step-preview">
-                <div class="lp-mini-window">
-                  <div class="lp-mini-window-bar"><i></i><i></i><i></i></div>
-                  <div class="lp-mini-window-body">
-                    <div class="lp-mini-cal">
-                      <i style="background:#16a34a"></i><i style="background:#16a34a"></i><i style="background:#2563eb"></i>
-                      <i style="background:#f59e0b"></i><i style="background:#16a34a"></i><i style="background:#ef4444"></i>
-                      <i style="background:#2563eb"></i><i style="background:#16a34a"></i><i style="background:#f59e0b"></i>
-                      <i style="background:#16a34a"></i><i style="background:#ef4444"></i><i style="background:#16a34a"></i>
+                <div class="lp-preview-card">
+                  <div class="lp-preview-head">
+                    <div>
+                      <div class="lp-preview-title">San Roque</div>
+                      <div class="lp-preview-sub">Children Needing Follow-Up</div>
                     </div>
                   </div>
+                  <table class="data-table plain-head compact">
+                    <thead><tr><th>Child</th><th>Due Dose</th><th>Status</th></tr></thead>
+                    <tbody>
+                      <tr><td>Maria Santos</td><td>DPT-Hib-HepB 3</td><td><span class="badge badge-red">Overdue</span></td></tr>
+                      <tr><td>Carlo Ramos</td><td>MMR 1</td><td><span class="badge badge-amber">Due</span></td></tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
