@@ -230,8 +230,8 @@
   .lp-flow-inner .lp-flow-visual { order: -1; }
 }
 
-/* ---- device-frame panel: gives "why this matters" its own identity as a
-   peek at the live dashboard, rather than another plain content block. ---- */
+/* ---- device-frame panel: a peek at the live dashboard, rather than
+   another plain content block. ---- */
 .lp-frame {
   border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden;
   background: var(--card-bg); box-shadow: 0 16px 40px rgba(15,23,42,.10);
@@ -242,6 +242,9 @@
 }
 .lp-frame-bar i { width: 9px; height: 9px; border-radius: 999px; background: var(--border-strong); display: block; }
 .lp-frame-bar .label { margin-left: 8px; font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+/* Standalone "see it in action" placement: narrower and centered, since it
+   no longer sits in a two-column .lp-flow-visual slot. */
+.lp-preview-frame { max-width: 640px; margin: 0 auto; }
 
 /* ---- scroll canvas: the real dashboard's own cards, stacked once, doubled,
    and animated to drift continuously upward - at the halfway point the
@@ -271,7 +274,6 @@
 
 /* ---- step carousel: the "how it works" 1-4 sequence, one step in view at
    a time so each gets room for a real sentence instead of a bare label. ---- */
-.lp-steps { margin-top: 22px; }
 .lp-steps-viewport { overflow: hidden; border-radius: var(--radius); }
 .lp-steps-track { display: flex; transition: transform .35s ease; }
 .lp-step-card { flex: 0 0 100%; background: var(--card-bg); border: 1px solid var(--border);
@@ -454,7 +456,8 @@
       <h2>From paper records to proactive follow-up.</h2>
       <p>ImmunoVision checks every child's vaccination history against the DOH EPI schedule and surfaces
          who needs a visit &mdash; before the catch-up window closes.</p>
-
+    </div>
+    <div class="lp-flow-visual">
       <div class="lp-steps" id="lp-steps">
         <div class="lp-steps-viewport">
           <div class="lp-steps-track">
@@ -493,20 +496,6 @@
             <button type="button" class="lp-steps-dot" data-index="3" aria-label="Go to step 4"></button>
           </div>
           <button type="button" class="lp-steps-arrow next" data-dir="1" aria-label="Next step">{{ icon('chevron-left', 15, 2.5) }}</button>
-        </div>
-      </div>
-    </div>
-    <div class="lp-flow-visual">
-      <div class="lp-frame">
-        <div class="lp-frame-bar">
-          <i></i><i></i><i></i>
-          <span class="label">San Jacinto RHU &middot; Live Dashboard</span>
-        </div>
-        <div class="lp-scrollcanvas">
-          <div class="lp-scrollcanvas-track">
-            {{ dash_snippet() }}
-            {{ dash_snippet() }}
-          </div>
         </div>
       </div>
     </div>
@@ -551,6 +540,29 @@
         <h3>Role-based access</h3>
         <p>A health worker sees her own barangay, RHU personnel see the municipality, and the
            administrator sees totals but never a child's record. Every change is logged.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="lp-section lp-section-tinted" aria-label="See it in action">
+  <div class="lp-wrap">
+    <div class="lp-head">
+      <h2>See it in action</h2>
+      <p>The same live dashboard RHU personnel and barangay health workers sign in to every day.</p>
+    </div>
+    <div class="lp-preview-frame">
+      <div class="lp-frame">
+        <div class="lp-frame-bar">
+          <i></i><i></i><i></i>
+          <span class="label">San Jacinto RHU &middot; Live Dashboard</span>
+        </div>
+        <div class="lp-scrollcanvas">
+          <div class="lp-scrollcanvas-track">
+            {{ dash_snippet() }}
+            {{ dash_snippet() }}
+          </div>
+        </div>
       </div>
     </div>
   </div>
