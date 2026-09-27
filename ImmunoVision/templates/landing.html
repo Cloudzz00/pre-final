@@ -268,6 +268,31 @@
 /* ---- light-tinted closing section for "who it's for", so it still reads
    as a distinct beat from "why this matters" without going dark. ---- */
 .lp-flow.tint-role { background: var(--slate-bg); }
+
+/* ---- step carousel: the "how it works" 1-4 sequence, one step in view at
+   a time so each gets room for a real sentence instead of a bare label. ---- */
+.lp-steps { margin-top: 22px; }
+.lp-steps-viewport { overflow: hidden; border-radius: var(--radius); }
+.lp-steps-track { display: flex; transition: transform .35s ease; }
+.lp-step-card { flex: 0 0 100%; background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px 22px; min-height: 108px; }
+.lp-step-num {
+  width: 26px; height: 26px; border-radius: 999px; background: var(--primary-light); color: var(--primary);
+  display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12.5px; margin-bottom: 10px;
+}
+.lp-step-card h3 { font-size: 15px; font-weight: 800; margin: 0 0 6px; letter-spacing: -.01em; }
+.lp-step-card p { font-size: 13.5px; color: var(--text-secondary); line-height: 1.6; margin: 0; }
+.lp-steps-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
+.lp-steps-dots { display: flex; align-items: center; gap: 6px; }
+.lp-steps-dot { width: 7px; height: 7px; padding: 0; border: none; border-radius: 999px; background: var(--border-strong); cursor: pointer; }
+.lp-steps-dot.is-active { width: 18px; background: var(--primary); transition: width .2s; }
+.lp-steps-arrow {
+  width: 32px; height: 32px; border-radius: 999px; border: 1px solid var(--border); background: var(--card-bg);
+  display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-primary); padding: 0;
+}
+.lp-steps-arrow:hover { background: var(--slate-bg); }
+.lp-steps-arrow svg { display: block; }
+.lp-steps-arrow.next { transform: rotate(180deg); }
 </style>
 {% endblock %}
 
@@ -429,11 +454,46 @@
       <h2>From paper records to proactive follow-up.</h2>
       <p>ImmunoVision checks every child's vaccination history against the DOH EPI schedule and surfaces
          who needs a visit &mdash; before the catch-up window closes.</p>
-      <div class="lp-chips">
-        <span class="lp-chip"><span class="n">1</span> Import records</span>
-        <span class="lp-chip"><span class="n">2</span> Score each child</span>
-        <span class="lp-chip"><span class="n">3</span> Flag at-risk children</span>
-        <span class="lp-chip"><span class="n">4</span> Health workers act</span>
+
+      <div class="lp-steps" id="lp-steps">
+        <div class="lp-steps-viewport">
+          <div class="lp-steps-track">
+            <div class="lp-step-card">
+              <div class="lp-step-num">1</div>
+              <h3>Import records</h3>
+              <p>A child's paper immunization record is entered once, with their full dose history
+                 against the DOH schedule.</p>
+            </div>
+            <div class="lp-step-card">
+              <div class="lp-step-num">2</div>
+              <h3>Score each child</h3>
+              <p>Missed doses, delays, and time since the last visit are weighed against the schedule
+                 to calculate a risk score.</p>
+            </div>
+            <div class="lp-step-card">
+              <div class="lp-step-num">3</div>
+              <h3>Flag at-risk children</h3>
+              <p>Children over the risk threshold are labeled At-Risk automatically and surfaced across
+                 the dashboard &mdash; not buried in a spreadsheet.</p>
+            </div>
+            <div class="lp-step-card">
+              <div class="lp-step-num">4</div>
+              <h3>Health workers act</h3>
+              <p>Barangay health workers see exactly who in their barangay needs a visit and which dose
+                 is due.</p>
+            </div>
+          </div>
+        </div>
+        <div class="lp-steps-nav">
+          <button type="button" class="lp-steps-arrow prev" data-dir="-1" aria-label="Previous step">{{ icon('chevron-left', 15, 2.5) }}</button>
+          <div class="lp-steps-dots">
+            <button type="button" class="lp-steps-dot is-active" data-index="0" aria-label="Go to step 1"></button>
+            <button type="button" class="lp-steps-dot" data-index="1" aria-label="Go to step 2"></button>
+            <button type="button" class="lp-steps-dot" data-index="2" aria-label="Go to step 3"></button>
+            <button type="button" class="lp-steps-dot" data-index="3" aria-label="Go to step 4"></button>
+          </div>
+          <button type="button" class="lp-steps-arrow next" data-dir="1" aria-label="Next step">{{ icon('chevron-left', 15, 2.5) }}</button>
+        </div>
       </div>
     </div>
     <div class="lp-flow-visual">
@@ -573,6 +633,32 @@
 </footer>
 
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var root = document.getElementById('lp-steps');
+  if (!root) return;
+  var track = root.querySelector('.lp-steps-track');
+  var cards = root.querySelectorAll('.lp-step-card');
+  var dots = root.querySelectorAll('.lp-steps-dot');
+  var index = 0;
+
+  function go(i) {
+    index = (i + cards.length) % cards.length;
+    track.style.transform = 'translateX(-' + (index * 100) + '%)';
+    dots.forEach(function (d, di) { d.classList.toggle('is-active', di === index); });
+  }
+
+  root.querySelectorAll('.lp-steps-arrow').forEach(function (btn) {
+    btn.addEventListener('click', function () { go(index + parseInt(btn.dataset.dir, 10)); });
+  });
+  dots.forEach(function (d) {
+    d.addEventListener('click', function () { go(parseInt(d.dataset.index, 10)); });
+  });
+})();
+</script>
 {% endblock %}
 
 
