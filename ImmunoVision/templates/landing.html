@@ -287,14 +287,21 @@
 .lp-flow.tint-role { background: var(--slate-bg); }
 
 /* ---- step carousel: the "how it works" 1-4 sequence, one step in view at
-   a time so each gets room for a real sentence instead of a bare label. ---- */
+   a time, auto-advancing (pauses on hover, same as the scroll canvas) so
+   each gets room for a real sentence instead of a bare label. Each step
+   gets the same icon-square treatment as the capabilities cards, rather
+   than a plain number circle, so the sequence reads as graphical. ---- */
 .lp-steps-viewport { overflow: hidden; border-radius: var(--radius); }
 .lp-steps-track { display: flex; transition: transform .35s ease; }
 .lp-step-card { flex: 0 0 100%; background: var(--card-bg); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 20px 22px; min-height: 108px; }
+  border-radius: var(--radius); padding: 22px; min-height: 168px; }
+.lp-step-card .ic {
+  width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center;
+  justify-content: center; margin-bottom: 12px; color: #fff;
+}
 .lp-step-num {
-  width: 26px; height: 26px; border-radius: 999px; background: var(--primary-light); color: var(--primary);
-  display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12.5px; margin-bottom: 10px;
+  font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--primary); margin-bottom: 4px;
 }
 .lp-step-card h3 { font-size: 15px; font-weight: 800; margin: 0 0 6px; letter-spacing: -.01em; }
 .lp-step-card p { font-size: 13.5px; color: var(--text-secondary); line-height: 1.6; margin: 0; }
@@ -488,25 +495,29 @@
         <div class="lp-steps-viewport">
           <div class="lp-steps-track">
             <div class="lp-step-card">
-              <div class="lp-step-num">1</div>
+              <div class="ic" style="background:var(--primary)">{{ icon('clipboard', 20) }}</div>
+              <div class="lp-step-num">Step 1</div>
               <h3>Import records</h3>
               <p>A child's paper immunization record is entered once, with their full dose history
                  against the DOH schedule.</p>
             </div>
             <div class="lp-step-card">
-              <div class="lp-step-num">2</div>
+              <div class="ic" style="background:var(--teal)">{{ icon('activity', 20) }}</div>
+              <div class="lp-step-num">Step 2</div>
               <h3>Score each child</h3>
               <p>Missed doses, delays, and time since the last visit are weighed against the schedule
                  to calculate a risk score.</p>
             </div>
             <div class="lp-step-card">
-              <div class="lp-step-num">3</div>
+              <div class="ic" style="background:var(--orange)">{{ icon('alert-triangle', 20) }}</div>
+              <div class="lp-step-num">Step 3</div>
               <h3>Flag at-risk children</h3>
               <p>Children over the risk threshold are labeled At-Risk automatically and surfaced across
                  the dashboard &mdash; not buried in a spreadsheet.</p>
             </div>
             <div class="lp-step-card">
-              <div class="lp-step-num">4</div>
+              <div class="ic" style="background:var(--violet)">{{ icon('stethoscope', 20) }}</div>
+              <div class="lp-step-num">Step 4</div>
               <h3>Health workers act</h3>
               <p>Barangay health workers see exactly who in their barangay needs a visit and which dose
                  is due.</p>
@@ -681,7 +692,7 @@
   var track = root.querySelector('.lp-steps-track');
   var cards = root.querySelectorAll('.lp-step-card');
   var dots = root.querySelectorAll('.lp-steps-dot');
-  var index = 0;
+  var index = 0, timer = null;
 
   function go(i) {
     index = (i + cards.length) % cards.length;
@@ -689,12 +700,20 @@
     dots.forEach(function (d, di) { d.classList.toggle('is-active', di === index); });
   }
 
+  function restart() {
+    if (timer) clearInterval(timer);
+    timer = setInterval(function () { go(index + 1); }, 4000);
+  }
+
   root.querySelectorAll('.lp-steps-arrow').forEach(function (btn) {
-    btn.addEventListener('click', function () { go(index + parseInt(btn.dataset.dir, 10)); });
+    btn.addEventListener('click', function () { go(index + parseInt(btn.dataset.dir, 10)); restart(); });
   });
   dots.forEach(function (d) {
-    d.addEventListener('click', function () { go(parseInt(d.dataset.index, 10)); });
+    d.addEventListener('click', function () { go(parseInt(d.dataset.index, 10)); restart(); });
   });
+  root.addEventListener('mouseenter', function () { if (timer) clearInterval(timer); });
+  root.addEventListener('mouseleave', restart);
+  restart();
 })();
 </script>
 {% endblock %}
