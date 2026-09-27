@@ -293,7 +293,7 @@
    behind it at a slight rotation, same restrained white-card/thin-border
    language as the rest of the page - no colour block, no illustrated
    chrome, just depth. ---- */
-.lp-steps-stack { position: relative; min-height: 236px; margin: 44px 16px 26px; }
+.lp-steps-stack { position: relative; min-height: 320px; margin: 44px 16px 26px; }
 .lp-step-card {
   position: absolute; inset: 0; background: var(--card-bg); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 22px; box-shadow: 0 1px 2px rgba(15,23,42,.05);
@@ -304,15 +304,21 @@
 .lp-step-card[data-offset="2"] { transform: rotate(-6deg) translate(-12px, -30px); z-index: 2; opacity: .72; }
 .lp-step-card[data-offset="3"] { transform: rotate(7deg) translate(20px, -42px); z-index: 1; opacity: .55; }
 .lp-step-card:not([data-offset="0"]) { pointer-events: none; }
-/* Step 1 only: a real screenshot of the registration form, faded behind
-   the text - the other three cards stay plain. Blurred so it reads as
-   texture (visible at a glance) rather than a second block of competing,
-   readable text fighting the foreground copy. */
+/* A real screenshot of the screen each step describes, sharp (not
+   blurred) so it is actually readable - but only in a "window" below the
+   text. The tint fades from solid (behind the icon/heading/paragraph, so
+   they stay legible with nothing competing underneath) to clear (the
+   bottom third, where the real screenshot shows through plainly). */
 .lp-step-bgimg {
-  position: absolute; inset: -6px; background-size: cover; background-position: top left;
-  background-repeat: no-repeat; filter: blur(3px); border-radius: inherit;
+  position: absolute; inset: 0; background-size: cover; background-position: top center;
+  background-repeat: no-repeat; border-radius: inherit;
 }
-.lp-step-bgtint { position: absolute; inset: 0; background: rgba(255,255,255,.6); border-radius: inherit; }
+.lp-step-bgtint {
+  position: absolute; inset: 0; border-radius: inherit;
+  background: linear-gradient(to bottom,
+    rgba(255,255,255,.97) 0%, rgba(255,255,255,.97) 54%,
+    rgba(255,255,255,.55) 66%, rgba(255,255,255,.06) 82%, rgba(255,255,255,.03) 100%);
+}
 .lp-step-card--bg .ic, .lp-step-card--bg .lp-step-num, .lp-step-card--bg h3, .lp-step-card--bg p {
   position: relative; z-index: 1;
 }
@@ -524,7 +530,7 @@
                against the DOH schedule.</p>
           </div>
           <div class="lp-step-card lp-step-card--bg" data-index="1">
-            <div class="lp-step-bgimg" style="background-image:url('{{ url_for('static', filename='img/landing/step2-score.png') }}')"></div>
+            <div class="lp-step-bgimg" style="background-image:url('{{ url_for('static', filename='img/landing/step2-score.png') }}'); background-position:top left;"></div>
             <div class="lp-step-bgtint"></div>
             <div class="ic" style="background:var(--teal)">{{ icon('activity', 20) }}</div>
             <div class="lp-step-num">Step 2</div>
