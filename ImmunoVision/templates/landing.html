@@ -304,6 +304,12 @@
 .lp-step-card[data-offset="2"] { transform: rotate(-6deg) translate(-12px, -30px); z-index: 2; opacity: .72; }
 .lp-step-card[data-offset="3"] { transform: rotate(7deg) translate(20px, -42px); z-index: 1; opacity: .55; }
 .lp-step-card:not([data-offset="0"]) { pointer-events: none; }
+/* Step 1 only: a real screenshot of the registration form, faded behind
+   the text as a light texture rather than a competing panel - the other
+   three cards stay plain. */
+.lp-step-card--bg { background-size: cover; background-position: top left; background-repeat: no-repeat; }
+.lp-step-card--bg::before { content: ""; position: absolute; inset: 0; background: rgba(255,255,255,.88); border-radius: inherit; }
+.lp-step-card--bg > * { position: relative; z-index: 1; }
 .lp-step-card .ic {
   width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center;
   justify-content: center; margin-bottom: 12px; color: #fff;
@@ -502,7 +508,7 @@
     <div class="lp-flow-visual">
       <div class="lp-steps" id="lp-steps">
         <div class="lp-steps-stack">
-          <div class="lp-step-card" data-index="0">
+          <div class="lp-step-card lp-step-card--bg" data-index="0" style="background-image:url('{{ url_for('static', filename='img/landing/step1-register-form.png') }}')">
             <div class="ic" style="background:var(--primary)">{{ icon('clipboard', 20) }}</div>
             <div class="lp-step-num">Step 1</div>
             <h3>Register each child</h3>
