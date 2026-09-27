@@ -302,12 +302,8 @@
    than a plain number circle, so the sequence reads as graphical. ---- */
 .lp-steps-viewport { overflow: hidden; border-radius: var(--radius); }
 .lp-steps-track { display: flex; transition: transform .35s ease; }
-.lp-step-card {
-  flex: 0 0 100%; background: var(--card-bg); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 24px;
-  display: flex; align-items: center; gap: 22px;
-}
-.lp-step-content { flex: 1 1 46%; min-width: 0; }
+.lp-step-card { flex: 0 0 100%; background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 22px; min-height: 168px; }
 .lp-step-card .ic {
   width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center;
   justify-content: center; margin-bottom: 12px; color: #fff;
@@ -318,19 +314,6 @@
 }
 .lp-step-card h3 { font-size: 15px; font-weight: 800; margin: 0 0 6px; letter-spacing: -.01em; }
 .lp-step-card p { font-size: 13.5px; color: var(--text-secondary); line-height: 1.6; margin: 0; }
-
-/* A real screenshot of the screen each step describes, sized naturally
-   (full width of its column, height following the image's own aspect
-   ratio) so nothing is cropped or padded out - roughly half the card,
-   same proportion as the "See it in action" and capabilities previews
-   elsewhere on this page. */
-.lp-step-preview { flex: 0 0 50%; min-width: 0; }
-.lp-step-preview img { display: block; width: 100%; height: auto; border: 1px solid var(--border); border-radius: 10px; }
-
-@media (max-width: 640px) {
-  .lp-step-card { flex-direction: column; align-items: stretch; }
-  .lp-step-preview { flex: 0 0 auto; }
-}
 .lp-steps-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
 .lp-steps-dots { display: flex; align-items: center; gap: 6px; }
 .lp-steps-dot { width: 7px; height: 7px; padding: 0; border: none; border-radius: 999px; background: var(--border-strong); cursor: pointer; }
@@ -521,60 +504,32 @@
         <div class="lp-steps-viewport">
           <div class="lp-steps-track">
             <div class="lp-step-card">
-              <div class="lp-step-content">
-                <div class="ic" style="background:var(--primary)">{{ icon('clipboard', 20) }}</div>
-                <div class="lp-step-num">Step 1</div>
-                <h3>Import records</h3>
-                <p>A child's paper immunization record is entered once, with their full dose history
-                   against the DOH schedule.</p>
-              </div>
-              {# A real screenshot of a child's Vaccination Records panel
-                 (BHW child record page). #}
-              <div class="lp-step-preview">
-                <img src="{{ url_for('static', filename='img/landing/step1-records.png') }}" alt="Vaccination Records panel showing a child's dose history">
-              </div>
+              <div class="ic" style="background:var(--primary)">{{ icon('clipboard', 20) }}</div>
+              <div class="lp-step-num">Step 1</div>
+              <h3>Import records</h3>
+              <p>A child's paper immunization record is entered once, with their full dose history
+                 against the DOH schedule.</p>
             </div>
             <div class="lp-step-card">
-              <div class="lp-step-content">
-                <div class="ic" style="background:var(--teal)">{{ icon('activity', 20) }}</div>
-                <div class="lp-step-num">Step 2</div>
-                <h3>Score each child</h3>
-                <p>Missed doses, delays, and time since the last visit are weighed against the schedule
-                   to calculate a risk score.</p>
-              </div>
-              {# A real screenshot of the "Reasons for Follow-Up" panel, the
-                 scorer's weighted factors in plain language (child record page). #}
-              <div class="lp-step-preview">
-                <img src="{{ url_for('static', filename='img/landing/step2-score.png') }}" alt="Reasons for Follow-Up panel showing the risk factors behind a child's score">
-              </div>
+              <div class="ic" style="background:var(--teal)">{{ icon('activity', 20) }}</div>
+              <div class="lp-step-num">Step 2</div>
+              <h3>Score each child</h3>
+              <p>Missed doses, delays, and time since the last visit are weighed against the schedule
+                 to calculate a risk score.</p>
             </div>
             <div class="lp-step-card">
-              <div class="lp-step-content">
-                <div class="ic" style="background:var(--orange)">{{ icon('alert-triangle', 20) }}</div>
-                <div class="lp-step-num">Step 3</div>
-                <h3>Flag at-risk children</h3>
-                <p>Children over the risk threshold are labeled At-Risk automatically and surfaced across
-                   the dashboard &mdash; not buried in a spreadsheet.</p>
-              </div>
-              {# A real screenshot of "Children Who Need a Visit" (Risk
-                 Classification page), with its actual Visit Urgently badges. #}
-              <div class="lp-step-preview">
-                <img src="{{ url_for('static', filename='img/landing/step3-flagged.png') }}" alt="Children Who Need a Visit list with Visit Urgently status badges">
-              </div>
+              <div class="ic" style="background:var(--orange)">{{ icon('alert-triangle', 20) }}</div>
+              <div class="lp-step-num">Step 3</div>
+              <h3>Flag at-risk children</h3>
+              <p>Children over the risk threshold are labeled At-Risk automatically and surfaced across
+                 the dashboard &mdash; not buried in a spreadsheet.</p>
             </div>
             <div class="lp-step-card">
-              <div class="lp-step-content">
-                <div class="ic" style="background:var(--violet)">{{ icon('stethoscope', 20) }}</div>
-                <div class="lp-step-num">Step 4</div>
-                <h3>Health workers act</h3>
-                <p>Barangay health workers see exactly who in their barangay needs a visit and which dose
-                   is due.</p>
-              </div>
-              {# A real screenshot of "Needs Follow-Up Checkup" (BHW dashboard),
-                 the widget a health worker actually acts from. #}
-              <div class="lp-step-preview">
-                <img src="{{ url_for('static', filename='img/landing/step4-act.png') }}" alt="Needs Follow-Up Checkup widget listing children due for a visit">
-              </div>
+              <div class="ic" style="background:var(--violet)">{{ icon('stethoscope', 20) }}</div>
+              <div class="lp-step-num">Step 4</div>
+              <h3>Health workers act</h3>
+              <p>Barangay health workers see exactly who in their barangay needs a visit and which dose
+                 is due.</p>
             </div>
           </div>
         </div>
