@@ -6,6 +6,10 @@
     <h2>Good morning, {{ current_user.full_name.split(' ')[0] }}!</h2>
     <p>Barangay {{ current_user.barangay.name }} · {{ (now.strftime('%B') ~ ' ' ~ now.day ~ ', ' ~ now.year) if now else '' }}</p>
   </div>
+  <div style="display:flex;gap:10px;">
+    <a class="btn btn-banner btn-sm" href="{{ url_for('bhw.children', add=1) }}">{{ icon('plus', 14) }} Add Child</a>
+    <a class="btn btn-banner btn-sm" href="{{ url_for('bhw.requests') }}">{{ icon('clipboard', 14) }} Vaccine Requests</a>
+  </div>
 </div>
 <div class="stat-grid dashboard-stat-grid">
   <div class="stat-card dashboard-stat"><div class="stat-icon bg-blue dashboard-stat-icon">{{ icon('baby', 21) }}</div><div><div class="stat-value">{{ stats.total_children }}</div><div class="stat-label">Total Registered Children</div><div class="stat-caption">All children in your barangay</div></div></div>

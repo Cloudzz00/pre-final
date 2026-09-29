@@ -110,6 +110,11 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+  {% if request.args.get('add') %}
+  const registerModal = document.getElementById('registerChildModal');
+  if (registerModal) registerModal.classList.add('open');
+  {% endif %}
+
   const sourceIcon = document.querySelector('.children-title-icon');
   const topTitle = document.querySelector('.topbar h1');
   const topSubtitle = document.querySelector('.topbar .subtitle');

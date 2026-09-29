@@ -222,6 +222,8 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
 .btn-outline { background: #fff; border: 1px solid var(--border-strong); color: var(--text-primary); }
 .btn-outline:hover { background: var(--slate-bg); }
 .btn-danger { background: var(--red-light); color: #fff; }
+.btn-banner { background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.4); color: #fff; }
+.btn-banner:hover { background: rgba(255,255,255,0.24); }
 .btn-sm { padding: 7px 14px; font-size: 13px; border-radius: var(--radius-sm); }
 .btn-icon { width: 34px; height: 34px; padding: 0; border-radius: var(--radius-sm); }
 
