@@ -50,6 +50,27 @@
 
   <button type="button" class="btn btn-primary rounded-pill-btn add-child-btn" data-open-modal="registerChildModal">{{ icon('plus', 15) }} Add Child</button>
 </form>
+
+{% if due_now_child %}
+<div class="alert-banner {{ 'warning' if due_now_doses else '' }}" style="{% if not due_now_doses %}background:var(--green-bg);border-left-color:var(--green-light);{% endif %} margin-bottom:18px;">
+  <div class="title" style="{% if not due_now_doses %}color:var(--green);{% endif %}">
+    {{ icon('check-circle' if not due_now_doses else 'alert-triangle', 16) }}
+    {{ due_now_child.display_name }} registered
+    {% if due_now_doses %} — due now for {{ due_now_doses|length }} dose{{ '' if due_now_doses|length == 1 else 's' }}{% endif %}
+  </div>
+  {% if due_now_doses %}
+  <ul>
+    {% for d in due_now_doses %}
+    <li>{{ d.name }}{% if d.status == 'overdue' %} <span class="text-muted">({{ d.note }})</span>{% endif %}</li>
+    {% endfor %}
+  </ul>
+  <a href="{{ url_for('bhw.edit_child', child_id=due_now_child.id) }}" class="btn btn-primary btn-sm" style="margin-top:4px;">{{ icon('pencil', 14) }} Record doses given today</a>
+  {% else %}
+  <p style="margin:4px 0 0;font-size:13px;">Nothing due yet based on age — next dose isn't scheduled until later.</p>
+  {% endif %}
+</div>
+{% endif %}
+
 <div class="children-list-meta">
   <p class="text-muted">{{ children|length }} children found</p>
 </div>
