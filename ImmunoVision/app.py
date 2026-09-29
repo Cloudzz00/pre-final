@@ -1158,15 +1158,18 @@ def unread_count(notes):
 
 def _create_child(form, barangay_locked):
     barangay_id = barangay_locked or int(form.get("barangay_id"))
+    dob = datetime.strptime(form.get("date_of_birth"), "%Y-%m-%d").date()
+    date_registered = (datetime.strptime(form.get("date_registered"), "%Y-%m-%d").date()
+                        if form.get("date_registered") else date.today())
     child = Child(
         full_name=form.get("full_name"), sex=form.get("sex"),
-        date_of_birth=datetime.strptime(form.get("date_of_birth"), "%Y-%m-%d").date(),
+        date_of_birth=dob,
         barangay_id=barangay_id, address=form.get("address"), guardian_name=form.get("guardian_name"),
         guardian_contact=form.get("guardian_contact"),
-        date_registered=(datetime.strptime(form.get("date_registered"), "%Y-%m-%d").date()
-                         if form.get("date_registered") else date.today()),
-        vitamin_a_date=(datetime.strptime(form.get("vitamin_a_date"), "%Y-%m-%d").date()
-                        if form.get("vitamin_a_date") else None),
+        date_registered=date_registered,
+        # Ticking "Vitamin A given" with no exact date on hand records it as
+        # of registration, same as the vaccine checkboxes below.
+        vitamin_a_date=date_registered if form.get("vita_given") else None,
         mnp_given=bool(form.get("mnp_given")),
         source="manual", created_by_id=current_user.id,
     )
@@ -1177,7 +1180,16 @@ def _create_child(form, barangay_locked):
     for code, name, antigen_code, dose_no, rec_days in dp.VACCINE_SCHEDULE:
         vt = VaccineType.query.filter_by(code=code).first()
         date_str = form.get(f"dose_{code}")
-        administered = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else None
+        if date_str:
+            administered = datetime.strptime(date_str, "%Y-%m-%d").date()
+        elif form.get(f"dose_{code}_given"):
+            # Ticked with no exact date on hand: recorded as given on its usual
+            # scheduled date for this child's age, capped at today (a dose
+            # can't be dated in the future). The exact date can be corrected
+            # later from the child's profile if the BHW learns it.
+            administered = min(dob + timedelta(days=rec_days), date.today())
+        else:
+            administered = None
         doses_dict[code] = administered
         db.session.add(VaccinationRecord(
             child_id=child.id, vaccine_type_id=vt.id, date_administered=administered,
