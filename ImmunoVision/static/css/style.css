@@ -198,6 +198,8 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
 
 .row-between { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; font-size: 13px; }
 .checkbox-row { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); }
+.checkbox-list { display: flex; flex-direction: column; gap: 10px; max-height: 240px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; }
+.checkbox-list .checkbox-row { color: var(--text-primary); font-size: 13.5px; }
 .link { color: var(--role-accent); font-weight: 600; }
 
 .btn {

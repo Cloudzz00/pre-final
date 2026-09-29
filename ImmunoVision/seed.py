@@ -120,6 +120,7 @@ def seed(reset=False):
             u = User(username=username, full_name=f"{first} {last}", role="bhw", barangay_id=barangay_objs[name].id)
             u.set_password("password123")
             db.session.add(u)
+            u.assigned_barangays.append(barangay_objs[name])
         db.session.commit()
 
         print("  Demo BHW logins (real registry data): "

@@ -1769,6 +1769,7 @@ def _bhw_ctx(active, **extra):
     notes = get_notifications("bhw", barangay_id=current_user.barangay_id)
     return dict(role="bhw", nav_items=build_nav(BHW_NAV), active=active, current_user=current_user,
                 settings_url=url_for("bhw.settings"),
+                assigned_barangays=current_user.assigned_barangays.all(),
                 unread_count=unread_count(notes), notif_url=url_for("bhw.notifications"), **extra)
 
 
@@ -1989,6 +1990,20 @@ def settings():
     return render_template("bhw_settings.html", **_bhw_ctx("settings", page_title="Settings"))
 
 
+@bhw_bp.route("/switch-barangay", methods=["POST"])
+def switch_barangay():
+    """Switches which of her assigned barangays a multi-barangay BHW is
+    currently working in. barangay_id drives every BHW query, so this is
+    the one place that changes - everything downstream picks it up as-is."""
+    barangay_id = request.form.get("barangay_id", type=int)
+    target = current_user.assigned_barangays.filter_by(id=barangay_id).first() or abort(403)
+    current_user.barangay_id = target.id
+    db.session.commit()
+    log_activity(f"Switched to {target.name}")
+    flash(f"Now working in {target.name}.", "success")
+    return redirect(request.referrer or url_for("bhw.dashboard"))
+
+
 # ---------------------------------------------------------------------------
 # Admin blueprint
 # ---------------------------------------------------------------------------
@@ -2101,6 +2116,9 @@ def users():
         u.set_password(request.form.get("password") or "password123")
         db.session.add(u)
         db.session.commit()
+        if role == "bhw" and u.barangay_id:
+            u.assigned_barangays.append(u.barangay)
+            db.session.commit()
         log_activity(f"Created user account: {u.full_name} ({u.role_label})")
         flash(f"User {u.full_name} created.", "success")
         return redirect(url_for("admin.users"))
@@ -2131,10 +2149,24 @@ def toggle_user(user_id):
 def assign_barangay():
     if request.method == "POST":
         u = db.session.get(User, int(request.form.get("user_id"))) or abort(404)
-        u.barangay_id = int(request.form.get("barangay_id"))
+        barangay_ids = [int(v) for v in request.form.getlist("barangay_ids")]
+        if not barangay_ids:
+            flash("Select at least one barangay.", "error")
+            return redirect(url_for("admin.assign_barangay"))
+        current = set(u.assigned_barangays.all())
+        desired = set(Barangay.query.filter(Barangay.id.in_(barangay_ids)).all())
+        for b in current - desired:
+            u.assigned_barangays.remove(b)
+        for b in desired - current:
+            u.assigned_barangays.append(b)
+        # She keeps working in her current barangay if it's still in the set;
+        # otherwise she's moved to the first one, same as a brand-new assignment.
+        if u.barangay_id not in barangay_ids:
+            u.barangay_id = barangay_ids[0]
         db.session.commit()
-        log_activity(f"Reassigned {u.full_name} to {u.barangay.name}")
-        flash(f"{u.full_name} reassigned to {u.barangay.name}.", "success")
+        names = ", ".join(b.name for b in u.assigned_barangays)
+        log_activity(f"Reassigned {u.full_name} to {names}")
+        flash(f"{u.full_name} assigned to {names}.", "success")
         return redirect(url_for("admin.assign_barangay"))
     return render_template("admin_assign_barangay.html", **_admin_ctx(
         "assign", page_title="Assign Barangay", bhws=User.query.filter_by(role="bhw").order_by(User.full_name).all(),
