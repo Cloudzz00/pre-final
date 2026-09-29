@@ -76,7 +76,14 @@ class VaccineAntigen(db.Model):
 
 
 class VaccineType(db.Model):
-    """A single scheduled dose in the RHU's 0-12mo EPI record, e.g. "IPV 2nd Dose"."""
+    """A single scheduled dose in the RHU's 0-12mo EPI record, e.g. "IPV 2nd Dose".
+
+    is_optional marks a dose that isn't part of the core registry schedule
+    (recorded only if a BHW happens to administer it) - it never feeds the
+    risk model, which is calibrated on the core schedule alone, and it's
+    excluded from due/missed dose counts. catch_up_deadline_days is the age
+    past which the dose is no longer given at all (e.g. Rotavirus); null
+    for the core doses, which stay catchable at any age."""
     __tablename__ = "vaccine_types"
     id = db.Column(db.Integer, primary_key=True)
     code = db.Column(db.String(20), unique=True, nullable=False)
@@ -84,6 +91,8 @@ class VaccineType(db.Model):
     antigen_id = db.Column(db.Integer, db.ForeignKey("vaccine_antigens.id"), nullable=False)
     dose_number = db.Column(db.Integer, nullable=False, default=1)
     recommended_age_days = db.Column(db.Integer, nullable=False, default=0)
+    is_optional = db.Column(db.Boolean, nullable=False, default=False)
+    catch_up_deadline_days = db.Column(db.Integer, nullable=True)
 
     antigen = db.relationship("VaccineAntigen")
 

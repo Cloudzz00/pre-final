@@ -260,7 +260,7 @@ def _due_and_missed(child, with_codes=False):
     codes = []
     for record in _records_by_child().get(child.id, ()):
         vt = vt_by_id.get(record.vaccine_type_id)
-        if vt is not None and vt.recommended_age_days <= age:
+        if vt is not None and not vt.is_optional and vt.recommended_age_days <= age:
             due += 1
             if record.date_administered is None:
                 missed += 1
@@ -759,6 +759,15 @@ def child_detail(child):
         except (ValueError, TypeError):
             factors = []
 
+    optional = []
+    for code, name, antigen_code, dose_no, rec_days, deadline in dp.OPTIONAL_VACCINE_SCHEDULE:
+        vt = vt_by_code.get(code)
+        if not vt:
+            continue
+        when = given.get(vt.id)
+        past_window = when is not None and (when - child.date_of_birth).days > deadline
+        optional.append({"code": code, "name": name, "date": when, "past_window": past_window})
+
     given_dates = [d for d in given.values() if d]
     due, missed = _due_and_missed(child)
     history = (ActivityLog.query
@@ -767,6 +776,7 @@ def child_detail(child):
 
     return {
         "schedule": schedule,
+        "optional": optional,
         "given_count": sum(1 for r in schedule if r["status"] == "given"),
         "overdue_count": sum(1 for r in schedule if r["status"] == "overdue"),
         "total_doses": len(schedule),
@@ -1207,6 +1217,7 @@ def _update_child(child, form):
 
     vt_by_code = {vt.code: vt for vt in VaccineType.query.all()}
     existing_by_vt_id = {rec.vaccine_type_id: rec for rec in child.vaccination_records}
+    past_window_warnings = []
     for code in vt_by_code:
         date_str = form.get(f"dose_{code}")
         administered = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else None
@@ -1217,10 +1228,20 @@ def _update_child(child, form):
             db.session.add(rec)
         rec.date_administered = administered
         rec.status = "completed" if administered else "pending"
+        # Optional doses like Rotavirus stop being given past a real age
+        # cutoff (rising intussusception risk in older infants), unlike the
+        # core schedule which stays catchable indefinitely. A record past
+        # that age is still saved as-given - it may be a real dose logged
+        # late - but the BHW is warned rather than told nothing.
+        if administered and vt.is_optional and vt.catch_up_deadline_days is not None:
+            age_at_dose = (administered - child.date_of_birth).days
+            if age_at_dose > vt.catch_up_deadline_days:
+                past_window_warnings.append(vt.name)
     db.session.commit()
 
     result = _recompute_risk(child)
     log_activity(f"Updated child record {child_label(child)}")
+    result["past_window_warnings"] = past_window_warnings
     return result
 
 
@@ -1524,12 +1545,15 @@ def edit_child(child_id):
     if request.method == "POST":
         result = _update_child(child, request.form)
         flash(f"{child.display_name} updated. Risk re-assessed: {result['label']}", "success")
+        for name in result["past_window_warnings"]:
+            flash(f"{name} was recorded past its usual eligibility age — please double-check this dose.", "warning")
         return redirect(url_for("rhu.children"))
     vt_lookup = {vt.code: vt for vt in VaccineType.query.all()}
     doses = {code: (rec.date_administered if (rec := child.vaccination_records.filter_by(
-        vaccine_type_id=vt_lookup[code].id).first()) else None) for code, *_ in dp.VACCINE_SCHEDULE}
+        vaccine_type_id=vt_lookup[code].id).first()) else None) for code, *_ in dp.VACCINE_SCHEDULE + dp.OPTIONAL_VACCINE_SCHEDULE}
     return render_template("edit_child.html", **_rhu_ctx(
         "children", page_title="Edit Child Record", child=child, doses=doses,
+        optional_vaccines=dp.OPTIONAL_VACCINE_SCHEDULE,
         back_url=url_for("rhu.children"), form_action=url_for("rhu.edit_child", child_id=child.id),
     ))
 
@@ -1870,12 +1894,15 @@ def edit_child(child_id):
     if request.method == "POST":
         result = _update_child(child, request.form)
         flash(f"{child.display_name} updated. Risk re-assessed: {result['label']}", "success")
+        for name in result["past_window_warnings"]:
+            flash(f"{name} was recorded past its usual eligibility age — please double-check this dose.", "warning")
         return redirect(url_for("bhw.children"))
     vt_lookup = {vt.code: vt for vt in VaccineType.query.all()}
     doses = {code: (rec.date_administered if (rec := child.vaccination_records.filter_by(
-        vaccine_type_id=vt_lookup[code].id).first()) else None) for code, *_ in dp.VACCINE_SCHEDULE}
+        vaccine_type_id=vt_lookup[code].id).first()) else None) for code, *_ in dp.VACCINE_SCHEDULE + dp.OPTIONAL_VACCINE_SCHEDULE}
     return render_template("edit_child.html", **_bhw_ctx(
         "children", page_title="Edit Child Record", child=child, doses=doses,
+        optional_vaccines=dp.OPTIONAL_VACCINE_SCHEDULE,
         back_url=url_for("bhw.children"), form_action=url_for("bhw.edit_child", child_id=child.id),
     ))
 

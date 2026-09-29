@@ -89,6 +89,20 @@ def seed(reset=False):
             vt_objs[code] = vt
         db.session.commit()
 
+        print("Seeding optional vaccines (BHW-administered, not part of the core schedule)...")
+        for code, name in dp.OPTIONAL_VACCINE_ANTIGENS:
+            a = VaccineAntigen(code=code, name=name)
+            db.session.add(a)
+            antigen_objs[code] = a
+        db.session.commit()
+        for code, name, antigen_code, dose_no, rec_days, deadline in dp.OPTIONAL_VACCINE_SCHEDULE:
+            vt = VaccineType(code=code, name=name, antigen_id=antigen_objs[antigen_code].id,
+                              dose_number=dose_no, recommended_age_days=rec_days,
+                              is_optional=True, catch_up_deadline_days=deadline)
+            db.session.add(vt)
+            vt_objs[code] = vt
+        db.session.commit()
+
         print("Loading real RHU registry data (data/raw/*.csv)...")
         real_children = dp.load_and_merge_real_registries()
         real_barangays = sorted({c["barangay"] for c in real_children})

@@ -74,6 +74,16 @@
       <div class="form-group"><label>MMR 2nd Dose</label><input class="form-control" type="date" name="dose_MMR2" value="{{ doses.MMR2.isoformat() if doses.MMR2 else '' }}"></div>
     </div>
 
+    {% if optional_vaccines %}
+    <div class="section-divider-bar">Additional Vaccines (Optional)</div>
+    <p class="text-muted" style="font-size:12px;margin:-8px 0 12px;">Not part of the core registry schedule — record only if actually given. Some, like Rotavirus, are no longer given past a certain age; you'll be warned but the entry will still be saved.</p>
+    <div class="form-grid-2">
+      {% for code, name, antigen, dose_no, rec_days, deadline in optional_vaccines %}
+      <div class="form-group"><label>{{ name }}</label><input class="form-control" type="date" name="dose_{{ code }}" value="{{ doses[code].isoformat() if doses[code] else '' }}"></div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
     <div class="section-divider-bar">Supplementary (Not a Vaccine)</div>
     <div class="form-grid-2">
       <div class="form-group"><label>Vitamin A (date given)</label><input class="form-control" type="date" name="vitamin_a_date" value="{{ child.vitamin_a_date.isoformat() if child.vitamin_a_date else '' }}"></div>

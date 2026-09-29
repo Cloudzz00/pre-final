@@ -133,6 +133,22 @@ VACCINE_SCHEDULE = [
 ]
 VACCINE_CODES = [row[0] for row in VACCINE_SCHEDULE]
 
+# Vaccines a BHW can administer and log for a child even though they aren't
+# part of the RHU's core registry schedule above - recorded only if actually
+# given. Never fed into the risk model (calibrated on the core schedule) or
+# counted toward due/missed doses. Unlike the core schedule, these can age
+# out for good: catch_up_deadline_days is the age past which WHO/DOH no
+# longer recommend giving the dose at all (Rotavirus, due to rising
+# intussusception risk in older infants).
+OPTIONAL_VACCINE_ANTIGENS = [
+    ("ROTA", "Rotavirus"),
+]
+OPTIONAL_VACCINE_SCHEDULE = [
+    # code, name, antigen_code, dose_number, recommended_age_days, catch_up_deadline_days
+    ("ROTA1", "Rotavirus 1st Dose", "ROTA", 1, 42, 104),   # recommended 6wks, must start by 14wks6d
+    ("ROTA2", "Rotavirus 2nd Dose", "ROTA", 2, 70, 240),   # recommended 10wks, series closes ~8mo
+]
+
 GRACE_PERIOD_DAYS = 30
 
 # Score at or above which a child is flagged At-Risk by the prototype scorer.

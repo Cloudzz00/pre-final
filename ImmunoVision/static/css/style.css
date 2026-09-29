@@ -230,6 +230,7 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
 .alert { padding: 12px 16px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 16px; }
 .alert-error { background: var(--red-bg); color: var(--red); border: 1px solid #fecaca; }
 .alert-success { background: var(--green-bg); color: var(--green); border: 1px solid #bbf7d0; }
+.alert-warning { background: var(--amber-bg); color: var(--amber); border: 1px solid #fde68a; }
 
 /* ---------------- App Shell ---------------- */
 .app-shell { display: flex; min-height: 100vh; }
@@ -904,6 +905,7 @@ table.data-table.pin-first tbody tr:hover td:first-child { background: var(--sla
 .dose-row.given .dot { background: var(--green); }
 .dose-row.overdue .dot { background: var(--red); }
 .dose-row.due .dot { background: var(--amber); }
+.dose-row.past-window .dot { background: var(--amber); }
 .dose-row .dname { font-weight: 600; font-size: 13.5px; color: var(--text-primary); }
 .dose-row .dnote { font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
 .dose-row .dstatus {
@@ -914,6 +916,7 @@ table.data-table.pin-first tbody tr:hover td:first-child { background: var(--sla
 .dose-row.given .dstatus { color: var(--green); }
 .dose-row.overdue .dstatus { color: var(--red); }
 .dose-row.due .dstatus { color: var(--amber); }
+.dose-row.past-window .dstatus { color: var(--amber); }
 
 .factor-list { margin-top: 10px; }
 .factor-row { padding: 9px 0; border-bottom: 1px solid var(--border); }

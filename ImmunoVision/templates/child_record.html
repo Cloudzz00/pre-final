@@ -80,6 +80,24 @@
       </div>
       {% endfor %}
     </div>
+    {% if detail.optional %}
+    <div class="card-title" style="margin-top:20px;">Additional Vaccines (Optional)</div>
+    <div class="card-sub">Not part of the core schedule — recorded only when actually given.</div>
+    <div class="dose-list">
+      {% for d in detail.optional %}
+      <div class="dose-row {{ 'past-window' if d.past_window else ('given' if d.date else '') }}">
+        <span class="dot"></span>
+        <span class="dname">{{ d.name }}</span>
+        <span class="dnote">{{ d.date.strftime('%b %d, %Y') if d.date else 'Not recorded' }}</span>
+        <span class="dstatus">
+          {% if d.date and d.past_window %}{{ icon('alert-triangle', 14) }} Given past eligible age
+          {% elif d.date %}{{ icon('check', 14) }} Given
+          {% else %}&mdash;{% endif %}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
   </div>
 
   <div>
