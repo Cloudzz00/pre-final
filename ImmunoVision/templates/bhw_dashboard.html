@@ -81,7 +81,12 @@
         <div class="dashboard-card-title"><span class="dashboard-section-icon icon-red">{{ icon('alert-triangle', 18) }}</span><div class="card-title mb-0">Needs Follow-Up Checkup</div></div>
         <div class="card-sub mb-0" style="margin-left:43px;">At-risk children under 12 months who need attention.</div>
       </div>
-      <span class="action-count">{{ follow_up|length }} child{{ '' if follow_up|length == 1 else 'ren' }}</span>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+        <span class="action-count">{{ follow_up|length }} child{{ '' if follow_up|length == 1 else 'ren' }}</span>
+        <a href="{{ url_for('bhw.risk') }}" class="btn btn-outline btn-sm" style="padding:5px 10px;font-size:11.5px;">
+          {{ icon('heart-pulse', 13) }} View in Risk Classification
+        </a>
+      </div>
     </div>
     <div class="table-wrap auto-height" style="margin-top:12px;">
       <table class="data-table plain-head compact">
