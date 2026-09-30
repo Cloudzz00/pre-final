@@ -4,6 +4,19 @@
 {% block body %}
 <div class="app-shell">
   <aside class="sidebar" id="sidebar">
+    <script>
+      // Applies the saved collapsed state before the sidebar is painted, so a
+      // full page navigation (this is a classic multi-page app, not an SPA -
+      // every nav reloads the document) doesn't flash open at full width and
+      // then snap back to collapsed once app.js runs at the end of the page.
+      (function () {
+        try {
+          if (localStorage.getItem("iv_sidebar_collapsed") === "1") {
+            document.getElementById("sidebar").classList.add("collapsed");
+          }
+        } catch (e) {}
+      })();
+    </script>
     <div class="sidebar-header">
       {{ brand_mark(38, 10) }}
       <div class="brand-text">
