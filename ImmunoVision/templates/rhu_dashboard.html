@@ -6,6 +6,10 @@
     <h2>Good morning, {{ current_user.full_name.split(' ')[0] }}</h2>
     <p>San Jacinto Municipal Health Dashboard </p>
   </div>
+  <div style="display:flex;gap:10px;">
+    <a class="btn btn-banner btn-sm" href="{{ url_for('rhu.children', add=1) }}">{{ icon('plus', 14) }} Add Child</a>
+    <a class="btn btn-banner btn-sm" href="{{ url_for('rhu.requests') }}">{{ icon('clipboard', 14) }} Vaccine Requests</a>
+  </div>
 </div>
 
 {% if inventory_alerts or at_risk_uncontacted %}

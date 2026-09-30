@@ -1509,9 +1509,9 @@ def dashboard():
 @rhu_bp.route("/children", methods=["GET", "POST"])
 def children():
     if request.method == "POST":
-        _create_child(request.form, barangay_locked=None)
+        new_child = _create_child(request.form, barangay_locked=None)
         flash("Child registered successfully.", "success")
-        return redirect(url_for("rhu.children"))
+        return redirect(url_for("rhu.children", new_child=new_child.id))
     barangay_id = request.args.get("barangay_id", type=int)
     risk_level = request.args.get("risk_level", "")
     search = request.args.get("q", "").strip()
@@ -1524,12 +1524,23 @@ def children():
     if risk_level:
         kids = [c for c in kids if (ra := _latest_risk(c)) and ra.risk_label == risk_level]
     vt_lookup = {vt.code: vt for vt in VaccineType.query.all()}
+
+    # Just registered: show what she can act on today instead of making her
+    # open the new record and scan all 15 doses to find out.
+    due_now_child, due_now_doses = None, []
+    new_child_id = request.args.get("new_child", type=int)
+    if new_child_id:
+        due_now_child = db.session.get(Child, new_child_id)
+        if due_now_child:
+            due_now_doses = [d for d in child_detail(due_now_child)["schedule"] if d["status"] in ("due", "overdue")]
+
     return render_template("rhu_children.html", **_rhu_ctx(
         "children", page_title="Child Records", children=kids,
         barangays=Barangay.query.order_by(Barangay.name).all(), vaccine_schedule=dp.VACCINE_SCHEDULE,
         vt_lookup=vt_lookup, antigens=VaccineAntigen.query.all(), selected_barangay=barangay_id,
         selected_risk=risk_level, search=search,
         dose_matrix=_dose_matrix(kids, vt_lookup), risk_labels=_risk_labels(kids),
+        due_now_child=due_now_child, due_now_doses=due_now_doses,
     ))
 
 
