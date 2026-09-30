@@ -1183,11 +1183,12 @@ def _create_child(form, barangay_locked):
         if date_str:
             administered = datetime.strptime(date_str, "%Y-%m-%d").date()
         elif form.get(f"dose_{code}_given"):
-            # Ticked with no exact date on hand: recorded as given on its usual
-            # scheduled date for this child's age, capped at today (a dose
-            # can't be dated in the future). The exact date can be corrected
-            # later from the child's profile if the BHW learns it.
-            administered = min(dob + timedelta(days=rec_days), date.today())
+            # Ticked with no exact date typed in: recorded as given on this
+            # registration's own date, same as the Vitamin A checkbox above -
+            # that's the real, known date of this visit, not a guess. The
+            # exact date can be corrected later from the child's profile if
+            # it turns out to differ (e.g. backfilling an older paper record).
+            administered = date_registered
         else:
             administered = None
         doses_dict[code] = administered
