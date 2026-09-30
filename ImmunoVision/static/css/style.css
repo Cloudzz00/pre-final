@@ -95,15 +95,6 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
   position: relative;
   overflow: hidden;
 }
-.login-page::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image:
-    radial-gradient(circle at 15% 20%, rgba(59,130,246,0.10), transparent 40%),
-    radial-gradient(circle at 85% 75%, rgba(124,58,237,0.10), transparent 40%);
-  pointer-events: none;
-}
 .login-hero {
   flex: 1;
   display: flex;
@@ -113,7 +104,30 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
   color: #fff;
   max-width: 640px;
   position: relative;
+  overflow: hidden;
   z-index: 1;
+}
+/* Same photo + tint treatment as the landing page's hero, so the login
+   screen and the public landing page read as one system rather than two
+   different designs. */
+.login-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url('/static/img/hero-vaccination.png');
+  background-size: cover;
+  background-position: 62% 38%;
+  opacity: .82;
+  z-index: -2;
+}
+.login-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg,
+    rgba(6,12,30,.72) 0%, rgba(6,12,30,.6) 40%,
+    rgba(12,24,56,.5) 70%, rgba(22,60,180,.4) 100%);
+  z-index: -1;
 }
 .login-hero .brand {
   display: flex;
