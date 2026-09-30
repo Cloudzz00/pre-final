@@ -1156,6 +1156,18 @@ def unread_count(notes):
 # Shared child create/predict helper
 # ---------------------------------------------------------------------------
 
+def _ticked_date(form, checkbox_field, date_field, fallback):
+    """For a "given" checkbox paired with a date box that's only shown once
+    ticked: the date box is still submitted even while hidden, so the
+    checkbox - not the date box's presence - decides whether anything was
+    given at all. Falls back to `fallback` (the registration date) if the
+    date box was somehow left blank."""
+    if not form.get(checkbox_field):
+        return None
+    date_str = form.get(date_field)
+    return datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else fallback
+
+
 def _create_child(form, barangay_locked):
     barangay_id = barangay_locked or int(form.get("barangay_id"))
     dob = datetime.strptime(form.get("date_of_birth"), "%Y-%m-%d").date()
@@ -1169,7 +1181,7 @@ def _create_child(form, barangay_locked):
         date_registered=date_registered,
         # Ticking "Vitamin A given" with no exact date on hand records it as
         # of registration, same as the vaccine checkboxes below.
-        vitamin_a_date=date_registered if form.get("vita_given") else None,
+        vitamin_a_date=(_ticked_date(form, "vita_given", "vitamin_a_date", date_registered)),
         mnp_given=bool(form.get("mnp_given")),
         source="manual", created_by_id=current_user.id,
     )
@@ -1179,18 +1191,7 @@ def _create_child(form, barangay_locked):
     doses_dict = {}
     for code, name, antigen_code, dose_no, rec_days in dp.VACCINE_SCHEDULE:
         vt = VaccineType.query.filter_by(code=code).first()
-        date_str = form.get(f"dose_{code}")
-        if date_str:
-            administered = datetime.strptime(date_str, "%Y-%m-%d").date()
-        elif form.get(f"dose_{code}_given"):
-            # Ticked with no exact date typed in: recorded as given on this
-            # registration's own date, same as the Vitamin A checkbox above -
-            # that's the real, known date of this visit, not a guess. The
-            # exact date can be corrected later from the child's profile if
-            # it turns out to differ (e.g. backfilling an older paper record).
-            administered = date_registered
-        else:
-            administered = None
+        administered = _ticked_date(form, f"dose_{code}_given", f"dose_{code}", date_registered)
         doses_dict[code] = administered
         db.session.add(VaccinationRecord(
             child_id=child.id, vaccine_type_id=vt.id, date_administered=administered,
