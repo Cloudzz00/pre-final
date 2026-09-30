@@ -13,7 +13,7 @@
     </div>
   </div>
   <div class="text-muted" style="font-size:12.5px;">
-    Showing {{ entries|length }} recorded action{{ '' if entries|length == 1 else 's' }}
+    {{ total_entries }} recorded action{{ '' if total_entries == 1 else 's' }}
     {%- if type_filter != 'All' %} in {{ type_filter|lower }}{% endif %}
   </div>
   <a class="btn btn-outline btn-sm" href="{{ url_for('admin.logs', type=type_filter) }}">
@@ -23,7 +23,11 @@
 {% endif %}
 
 <div class="filter-bar">
-  <span class="flabel">{{ entries|length }} entr{{ 'y' if entries|length == 1 else 'ies' }}</span>
+  <span class="flabel">
+    {% if total_entries == 0 %}0 entries{% else %}
+    {{ row_offset + 1 }}&ndash;{{ row_offset + entries|length }} of {{ total_entries }}
+    {% endif %}
+  </span>
 
   <form method="get" action="{{ url_for('admin.logs') }}" style="margin-left:12px;">
     <input type="hidden" name="type" value="{{ type_filter }}">
@@ -52,7 +56,7 @@
 {% for e in entries %}
 {% set log = e.log %}
 <tr>
-  <td>{{ loop.index }}</td>
+  <td>{{ row_offset + loop.index }}</td>
   <td><b>{{ log.user.full_name if log.user else 'System' }}</b></td>
   <td><span class="text-muted">{{ log.user.role_label if log.user else '&mdash;' }}</span></td>
   <td>{{ log.action }}</td>
@@ -78,4 +82,20 @@
 </tbody>
 </table>
 </div>
+
+{% if total_pages > 1 %}
+<div class="flex-gap" style="justify-content:center;margin-top:16px;align-items:center;">
+  {% if page > 1 %}
+  <a class="btn btn-outline btn-sm" href="{{ url_for('admin.logs', type=type_filter, user=selected_user_id, page=page-1) }}">{{ icon('chevron-left', 14, 2.5) }} Prev</a>
+  {% else %}
+  <span class="btn btn-outline btn-sm" style="opacity:.45;pointer-events:none;">{{ icon('chevron-left', 14, 2.5) }} Prev</span>
+  {% endif %}
+  <span class="text-muted" style="font-size:12.5px;padding:0 4px;">Page {{ page }} of {{ total_pages }}</span>
+  {% if page < total_pages %}
+  <a class="btn btn-outline btn-sm" href="{{ url_for('admin.logs', type=type_filter, user=selected_user_id, page=page+1) }}">Next &rsaquo;</a>
+  {% else %}
+  <span class="btn btn-outline btn-sm" style="opacity:.45;pointer-events:none;">Next &rsaquo;</span>
+  {% endif %}
+</div>
+{% endif %}
 {% endblock %}

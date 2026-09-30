@@ -2264,6 +2264,7 @@ def logs():
     combine - ?user=7&type=Record is "what this person did to child records"."""
     type_filter = request.args.get("type", "All")
     user_id = request.args.get("user", type=int)
+    per_page = 50
 
     q = ActivityLog.query
     selected_user = db.session.get(User, user_id) if user_id else None
@@ -2272,16 +2273,29 @@ def logs():
     else:
         user_id = None  # unknown id: fall back to showing everything
 
-    rows = q.order_by(ActivityLog.created_at.desc()).limit(400).all()
+    # log_category() reads free-text action strings, so it can't be pushed
+    # into the query - every matching row is categorized in Python, then the
+    # filtered result is paged. There used to be a silent 400/200-row cutoff
+    # here with no way to see anything older; this now shows everything,
+    # just a page at a time.
+    rows = q.order_by(ActivityLog.created_at.desc()).all()
     entries = [{"log": r, "category": log_category(r.action)} for r in rows]
     if type_filter != "All":
         entries = [e for e in entries if e["category"] == type_filter]
 
+    total_entries = len(entries)
+    total_pages = max(1, -(-total_entries // per_page))
+    page = min(max(1, request.args.get("page", 1, type=int)), total_pages)
+    row_offset = (page - 1) * per_page
+    page_entries = entries[row_offset:row_offset + per_page]
+
     return render_template("admin_logs.html", **_admin_ctx(
-        "logs", page_title="Activity Logs", entries=entries[:200], type_filter=type_filter,
+        "logs", page_title="Activity Logs", entries=page_entries, type_filter=type_filter,
         categories=["All"] + [name for name, _ in LOG_CATEGORIES],
         users=User.query.order_by(User.full_name).all(),
         selected_user=selected_user, selected_user_id=user_id,
+        page=page, total_pages=total_pages, total_entries=total_entries,
+        per_page=per_page, row_offset=row_offset,
     ))
 
 
