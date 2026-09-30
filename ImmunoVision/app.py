@@ -512,12 +512,25 @@ def coverage_change(barangay_id=None):
     }
 
 
+_CORE_ANTIGEN_CODES = {code for code, _name in dp.VACCINE_ANTIGENS}
+
+
+def core_antigens():
+    """Antigens in the RHU's formal inventory/requests system - the 7 core
+    vaccines only. Optional vaccines like Rotavirus (VaccineAntigen rows that
+    exist so a VaccinationRecord can reference them, but which a BHW logs
+    only if actually administered) never had stock tracked or requested for
+    them and shouldn't appear as if they need to be - VaccineAntigen.query.all()
+    would otherwise surface them here as permanently "Out of Stock"."""
+    return [a for a in VaccineAntigen.query.all() if a.code in _CORE_ANTIGEN_CODES]
+
+
 def stock_levels():
     """Stock position per antigen. Extracted from the inventory route so the
     dashboard panel and the Vaccine Inventory page apply identical thresholds
     and can never disagree about what counts as Low or Critical."""
     rows = []
-    for a in VaccineAntigen.query.all():
+    for a in core_antigens():
         batches = InventoryBatch.query.filter_by(antigen_id=a.id, is_archived=False).all()
         total = sum(b.quantity_on_hand for b in batches)
         reorder = min([b.reorder_level for b in batches], default=50)
@@ -1016,7 +1029,7 @@ def map_markers(mode="heatmap"):
 
 def get_notifications(role, barangay_id=None):
     notes = []
-    for antigen in VaccineAntigen.query.all():
+    for antigen in core_antigens():
         total = (db.session.query(func.coalesce(func.sum(InventoryBatch.quantity_on_hand), 0))
                  .filter(InventoryBatch.antigen_id == antigen.id, InventoryBatch.is_archived.is_(False)).scalar())
         reorder = (db.session.query(func.min(InventoryBatch.reorder_level))
@@ -1466,7 +1479,7 @@ def dashboard():
     kids = filtered_children(barangay_id, as_of=as_of)
     stats = stats_for(kids, as_of)
     # Stock is municipality-wide, so alerts are not narrowed by barangay.
-    alerts = [f"{a.name} is completely out of stock" for a in VaccineAntigen.query.all()
+    alerts = [f"{a.name} is completely out of stock" for a in core_antigens()
               if sum(b.quantity_on_hand for b in InventoryBatch.query.filter_by(antigen_id=a.id, is_archived=False)) <= 0]
     dist = risk_distribution_for(kids)
     # Two actionable panels: who needs a visit, and what stock is running out.
@@ -1537,7 +1550,7 @@ def children():
     return render_template("rhu_children.html", **_rhu_ctx(
         "children", page_title="Child Records", children=kids,
         barangays=Barangay.query.order_by(Barangay.name).all(), vaccine_schedule=dp.VACCINE_SCHEDULE,
-        vt_lookup=vt_lookup, antigens=VaccineAntigen.query.all(), selected_barangay=barangay_id,
+        vt_lookup=vt_lookup, antigens=core_antigens(), selected_barangay=barangay_id,
         selected_risk=risk_level, search=search,
         dose_matrix=_dose_matrix(kids, vt_lookup), risk_labels=_risk_labels(kids),
         due_now_child=due_now_child, due_now_doses=due_now_doses,
@@ -1639,7 +1652,7 @@ def inventory():
              "low_critical": sum(1 for r in rows if r["status"] in ("Low", "Critical")),
              "expiring_soon": sum(r["expiring"] for r in rows)}
     return render_template("rhu_inventory.html", **_rhu_ctx(
-        "inventory", page_title="Vaccine Inventory", rows=rows, stats=stats, antigens=VaccineAntigen.query.all(),
+        "inventory", page_title="Vaccine Inventory", rows=rows, stats=stats, antigens=core_antigens(),
     ))
 
 
@@ -1992,7 +2005,7 @@ def requests():
              "distributed": sum(1 for r in reqs if r.status == "fulfilled"),
              "rejected": sum(1 for r in reqs if r.status == "rejected")}
     return render_template("bhw_requests.html", **_bhw_ctx(
-        "requests", page_title="Vaccine Requests", reqs=reqs, stats=stats, antigens=VaccineAntigen.query.all(),
+        "requests", page_title="Vaccine Requests", reqs=reqs, stats=stats, antigens=core_antigens(),
     ))
 
 
@@ -2307,7 +2320,7 @@ def update_warning_levels():
     Changes are logged: raising a threshold silences alerts, and that should be
     traceable."""
     changed = []
-    for antigen in VaccineAntigen.query.all():
+    for antigen in core_antigens():
         raw = request.form.get(f"warn_{antigen.id}")
         if raw is None or not raw.strip():
             continue
