@@ -200,6 +200,23 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
 .checkbox-row { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); }
 .checkbox-list { display: flex; flex-direction: column; gap: 10px; max-height: 240px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; }
 .checkbox-list .checkbox-row { color: var(--text-primary); font-size: 13.5px; }
+
+.vacc-check-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; align-items: start; }
+.vacc-check-card { background: var(--slate-bg); border-radius: var(--radius-sm); padding: 10px 12px; }
+.vacc-check-card-flat { display: flex; align-items: center; }
+.vacc-check-row { display: flex; align-items: center; gap: 10px; }
+.vacc-check-row input[type="checkbox"] { width: 16px; height: 16px; flex-shrink: 0; cursor: pointer; }
+.vacc-check-row label { font-size: 13px; font-weight: 600; flex: 1; cursor: pointer; margin: 0; }
+.vacc-date-row {
+  display: flex; align-items: center; gap: 8px; margin-top: 8px; padding-top: 8px;
+  border-top: 1px dashed var(--border-strong);
+}
+.vacc-date-row[hidden] { display: none; }
+.vacc-date-row span { font-size: 11.5px; color: var(--text-secondary); white-space: nowrap; }
+.vacc-date-row input[type="date"] {
+  font-size: 12.5px; border: 1px solid var(--border-strong); border-radius: 6px;
+  padding: 4px 6px; flex: 1; min-width: 0; background: #fff;
+}
 .link { color: var(--role-accent); font-weight: 600; }
 
 .btn {
