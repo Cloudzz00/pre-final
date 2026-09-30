@@ -23,8 +23,8 @@
 .followup-card,.due-calendar-card{min-width:0}
 .followup-card .card-head,.due-calendar-card .card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 .action-count{font-size:12px;font-weight:800;padding:6px 10px;border-radius:999px;background:#fff1f2;color:#dc2626;white-space:nowrap}
-.followup-sub-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:2px}
-.followup-view-btn{padding:5px 10px;font-size:11.5px;white-space:nowrap;flex-shrink:0}
+.action-count-link{cursor:pointer;transition:background-color .15s}
+.action-count-link:hover{background:#ffe0e2}
 .due-legend{display:flex;gap:12px;flex-wrap:wrap;align-items:center;font-size:11px;font-weight:700;color:var(--text-secondary)}
 .due-legend span{display:inline-flex;align-items:center;gap:5px}
 .due-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
@@ -80,14 +80,11 @@
   <div class="card card-pad followup-card">
     <div class="card-head">
       <div class="dashboard-card-title"><span class="dashboard-section-icon icon-red">{{ icon('alert-triangle', 18) }}</span><div class="card-title mb-0">Needs Follow-Up Checkup</div></div>
-      <span class="action-count">{{ follow_up|length }} child{{ '' if follow_up|length == 1 else 'ren' }}</span>
-    </div>
-    <div class="card-sub mb-0 followup-sub-row" style="margin-left:43px;">
-      <span>At-risk children under 12 months who need attention.</span>
-      <a href="{{ url_for('bhw.risk') }}" class="btn btn-outline btn-sm followup-view-btn">
-        {{ icon('heart-pulse', 13) }} View All
+      <a href="{{ url_for('bhw.risk') }}" class="action-count action-count-link">
+        View All ({{ follow_up|length }})
       </a>
     </div>
+    <div class="card-sub mb-0" style="margin-left:43px;">At-risk children under 12 months who need attention.</div>
     <div class="table-wrap auto-height" style="margin-top:12px;">
       <table class="data-table plain-head compact">
         <thead><tr><th>Child</th><th>Birthdate</th><th>Missed</th><th>Risk</th></tr></thead>
