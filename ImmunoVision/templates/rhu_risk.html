@@ -2,9 +2,9 @@
 {% from "_icons.html" import icon %}
 {% block content %}
 <div class="stat-grid">
-  <div class="stat-card"><div class="stat-icon bg-red">{{ icon('alert-octagon', 21) }}</div><div class="stat-value">{{ dist.high_count }}</div><div class="stat-label">High Risk</div><div class="stat-caption">Immediate action required</div></div>
-  <div class="stat-card"><div class="stat-icon bg-orange">{{ icon('alert-triangle', 21) }}</div><div class="stat-value">{{ dist.medium_count }}</div><div class="stat-label">Medium Risk</div><div class="stat-caption">Monitor closely</div></div>
-  <div class="stat-card"><div class="stat-icon bg-green">{{ icon('check-circle', 21) }}</div><div class="stat-value">{{ dist.low_count }}</div><div class="stat-label">Low Risk</div><div class="stat-caption">On schedule</div></div>
+  <div class="stat-card"><div class="stat-icon bg-red">{{ icon('alert-octagon', 21) }}</div><div class="stat-value">{{ dist.high_count }}</div><div class="stat-label">Visit Urgently</div><div class="stat-caption">Missing high-severity vaccines</div></div>
+  <div class="stat-card"><div class="stat-icon bg-orange">{{ icon('alert-triangle', 21) }}</div><div class="stat-value">{{ dist.medium_count }}</div><div class="stat-label">Visit Soon</div><div class="stat-caption">Missing some vaccines</div></div>
+  <div class="stat-card"><div class="stat-icon bg-green">{{ icon('check-circle', 21) }}</div><div class="stat-value">{{ dist.low_count }}</div><div class="stat-label">On Track</div><div class="stat-caption">On schedule</div></div>
 </div>
 
   <div>
@@ -55,11 +55,23 @@
 
 <div class="section-head" id="atrisk">
   <div>
-    <h3>At-Risk Children</h3>
+    <h3>Children Who Need a Visit</h3>
     <p class="text-muted" style="font-size:12.5px;margin:2px 0 0;">
-      All {{ at_risk_rows|length }} children flagged by the scorer, highest risk first.
+      {% if vaccine_filter %}
+      {{ at_risk_rows|length }} {{ 'child is' if at_risk_rows|length == 1 else 'children are' }} missing a dose from this vaccine, highest severity first.
+      {% else %}
+      {{ at_risk_rows|length }} {{ 'child needs' if at_risk_rows|length == 1 else 'children need' }} a follow-up visit, highest severity first.
+      {% endif %}
     </p>
   </div>
+  <form method="get" action="{{ url_for('rhu.risk') }}#atrisk">
+    <select class="form-control select-sm" name="vaccine" onchange="this.form.submit()" aria-label="Filter by missed vaccine">
+      <option value="">All vaccines</option>
+      {% for code, name in antigen_options %}
+      <option value="{{ code }}" {% if vaccine_filter == code %}selected{% endif %}>Missed {{ name }}</option>
+      {% endfor %}
+    </select>
+  </form>
 </div>
 
 <div>
@@ -102,7 +114,7 @@
 <script>
 new Chart(document.getElementById('riskDonut'), {
   type: 'doughnut',
-  data: { labels: ['Not At-Risk', 'High Risk', 'Medium Risk'],
+  data: { labels: ['On Track', 'Visit Urgently', 'Visit Soon'],
     datasets: [{ data: [{{ dist.low_pct }}, {{ dist.high_pct }}, {{ dist.medium_pct }}], backgroundColor: ['#22c55e', '#ef4444', '#f59e0b'], borderWidth: 0 }] },
   options: { plugins: { legend: { position: 'bottom' } } }
 });

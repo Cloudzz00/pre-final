@@ -268,6 +268,23 @@ def _due_and_missed(child, with_codes=False):
     return (due, missed, codes) if with_codes else (due, missed)
 
 
+def _due_codes(child):
+    """(due_codes, missed_codes) for one child - every core dose whose
+    recommended age has passed, split into given vs missing. Used to weigh
+    severity against what this specific child could possibly be missing,
+    not the full 15-dose schedule."""
+    vt_by_id = _vaccine_types_by_id()
+    age = child.age_in_days
+    due_codes, missed_codes = [], []
+    for record in _records_by_child().get(child.id, ()):
+        vt = vt_by_id.get(record.vaccine_type_id)
+        if vt is not None and not vt.is_optional and vt.recommended_age_days <= age:
+            due_codes.append(vt.code)
+            if record.date_administered is None:
+                missed_codes.append(vt.code)
+    return due_codes, missed_codes
+
+
 def _is_fully_immunized(child):
     due, missed = _due_and_missed(child)
     return True if due == 0 else ((due - missed) / due >= 0.9)
@@ -731,6 +748,78 @@ def at_risk_table(barangay_id=None, limit=None):
                      # consequence is visible rather than only the dose count.
                      "unprotected": dp.diseases_for_missed(missed_codes),
                      "recommendation": "Home Visit" if tier == "High Risk" else "Schedule Visit"})
+    rows.sort(key=lambda r: r["risk_score"], reverse=True)
+    return rows[:limit] if limit else rows
+
+
+# ---------------------------------------------------------------------------
+# Risk Classification's own score: deliberately separate from the
+# RiskAssessment model above (used by the dashboard stat, Continuation
+# Predictor, notifications, and the child record banner). That score blends
+# six factors - visit timing, delay history, registration lag - to answer
+# "how worrying is this child's overall pattern." This page asks a narrower,
+# fully transparent question instead: "of this child's currently-due
+# vaccines, how much protection is missing, weighted by how serious each one
+# is to go without" (dp.ANTIGEN_SEVERITY - measles/pertussis weigh full,
+# polio a bit less, individual-protection-only vaccines less still). No
+# model, trained or rule-based blend, is needed for that - it's one number.
+# ---------------------------------------------------------------------------
+
+def vaccine_risk_tier(pct):
+    if pct >= 60:
+        return "Visit Urgently", "red"
+    if pct >= 25:
+        return "Visit Soon", "amber"
+    return "On Track", "green"
+
+
+def _child_vaccine_severity(c, antigen_of, records, vt_lookup):
+    due_codes, missed_codes = _due_codes(c)
+    max_severity = dp.weighted_missed(due_codes)
+    severity = dp.weighted_missed(missed_codes)
+    pct = round(severity / max_severity * 100) if max_severity else 0
+    tier, color = vaccine_risk_tier(pct)
+    given_dates = [r.date_administered for r in records.get(c.id, ()) if r.date_administered]
+    return {"child": c, "risk_score": pct, "tier": tier, "color": color,
+            "missed": len(missed_codes), "due": len(due_codes),
+            "last_visit": max(given_dates) if given_dates else None,
+            "missed_codes": missed_codes, "missed_antigens": {antigen_of.get(code) for code in missed_codes},
+            "unprotected": dp.diseases_for_missed(missed_codes),
+            "next_dose": _next_dose_for(c, vt_lookup),
+            "recommendation": "Home Visit" if tier == "Visit Urgently" else "Schedule Visit"}
+
+
+def vaccine_risk_distribution(barangay_id=None):
+    antigen_of = {code: ant for code, _n, ant, _d, _r in dp.VACCINE_SCHEDULE}
+    records = _records_by_child()
+    vt_lookup = {vt.code: vt for vt in VaccineType.query.all()}
+    counts = Counter()
+    for c in _children_query(barangay_id).all():
+        row = _child_vaccine_severity(c, antigen_of, records, vt_lookup)
+        counts[row["tier"]] += 1
+    total = sum(counts.values()) or 1
+    return {
+        "high_count": counts["Visit Urgently"], "high_pct": round(counts["Visit Urgently"] / total * 100, 1),
+        "medium_count": counts["Visit Soon"], "medium_pct": round(counts["Visit Soon"] / total * 100, 1),
+        "low_count": counts["On Track"], "low_pct": round(counts["On Track"] / total * 100, 1),
+    }
+
+
+def vaccine_risk_table(barangay_id=None, vaccine_code=None, limit=None):
+    """vaccine_code filters to children missing that antigen specifically
+    (e.g. "MMR" shows only children missing an MMR dose), rather than every
+    child who needs a visit for any reason."""
+    antigen_of = {code: ant for code, _n, ant, _d, _r in dp.VACCINE_SCHEDULE}
+    records = _records_by_child()
+    vt_lookup = {vt.code: vt for vt in VaccineType.query.all()}
+    rows = []
+    for c in _children_query(barangay_id).all():
+        row = _child_vaccine_severity(c, antigen_of, records, vt_lookup)
+        if row["missed"] == 0:
+            continue
+        if vaccine_code and vaccine_code not in row["missed_antigens"]:
+            continue
+        rows.append(row)
     rows.sort(key=lambda r: r["risk_score"], reverse=True)
     return rows[:limit] if limit else rows
 
@@ -1598,13 +1687,14 @@ def edit_child(child_id):
 
 @rhu_bp.route("/risk")
 def risk():
-    dist, factors, rows = risk_distribution(), top_risk_factors(), at_risk_table()
-    engine = dp.model_info()
+    vaccine_filter = request.args.get("vaccine", "")
+    dist = vaccine_risk_distribution()
+    rows = vaccine_risk_table(vaccine_code=vaccine_filter or None)
     return render_template("rhu_risk.html", **_rhu_ctx(
-        "risk", page_title="Risk Classification", dist=dist, factors=factors, at_risk_rows=rows,
+        "risk", page_title="Risk Classification", dist=dist, at_risk_rows=rows,
         severity=dp.ANTIGEN_SEVERITY, severity_bands=dp.SEVERITY_BANDS,
         antigen_names={a.code: a.name for a in VaccineAntigen.query.all()},
-        engine=engine,
+        vaccine_filter=vaccine_filter, antigen_options=dp.VACCINE_ANTIGENS,
     ))
 
 
@@ -1959,12 +2049,11 @@ def edit_child(child_id):
 @bhw_bp.route("/risk")
 def risk():
     bid = current_user.barangay_id
-    engine = dp.model_info()
+    vaccine_filter = request.args.get("vaccine", "")
     return render_template("bhw_risk.html", **_bhw_ctx(
-        "risk", page_title="Risk Classification", dist=risk_distribution(bid), factors=top_risk_factors(bid),
-        severity=dp.ANTIGEN_SEVERITY, severity_bands=dp.SEVERITY_BANDS,
-        antigen_names={a.code: a.name for a in VaccineAntigen.query.all()},
-        at_risk_rows=at_risk_table(bid), engine=engine,
+        "risk", page_title="Risk Classification", dist=vaccine_risk_distribution(bid),
+        at_risk_rows=vaccine_risk_table(bid, vaccine_code=vaccine_filter or None),
+        vaccine_filter=vaccine_filter, antigen_options=dp.VACCINE_ANTIGENS,
     ))
 
 
