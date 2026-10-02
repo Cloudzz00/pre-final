@@ -78,7 +78,7 @@
   <div class="card card-pad followup-card">
     <div class="card-head">
       <div class="dashboard-card-title"><span class="dashboard-section-icon icon-red">{{ icon('alert-triangle', 18) }}</span><div class="card-title mb-0">Needs Follow-Up Checkup</div></div>
-      <a href="{{ url_for('bhw.risk') }}" class="btn btn-outline btn-sm followup-view-btn">
+      <a href="{{ url_for('bhw.continuation') }}" class="btn btn-outline btn-sm followup-view-btn">
         {{ icon('heart-pulse', 13) }} View All ({{ follow_up|length }})
       </a>
     </div>

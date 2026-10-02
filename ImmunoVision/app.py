@@ -126,7 +126,7 @@ def role_required(*roles):
 RHU_NAV = [
     ("dashboard", "home", "Dashboard", "rhu.dashboard"),
     ("children", "baby", "Child Records", "rhu.children"),
-    ("risk", "heart-pulse", "Risk Classification", "rhu.risk"),
+    ("vaccine_gaps", "syringe", "Vaccine Gaps", "rhu.vaccine_gaps"),
     ("continuation", "target", "Continuation Predictor", "rhu.continuation"),
     ("map", "map", "Municipality Map", "rhu.municipality_map"),
     ("inventory", "package", "Vaccine Inventory", "rhu.inventory"),
@@ -138,7 +138,7 @@ RHU_NAV = [
 BHW_NAV = [
     ("dashboard", "home", "Dashboard", "bhw.dashboard"),
     ("children", "baby", "Child Records", "bhw.children"),
-    ("risk", "heart-pulse", "Risk Classification", "bhw.risk"),
+    ("vaccine_gaps", "syringe", "Vaccine Gaps", "bhw.vaccine_gaps"),
     ("continuation", "target", "Continuation Predictor", "bhw.continuation"),
     ("requests", "clipboard", "Vaccine Requests", "bhw.requests"),
     ("reports", "file-text", "Reports", "bhw.reports"),
@@ -753,7 +753,7 @@ def at_risk_table(barangay_id=None, limit=None):
 
 
 # ---------------------------------------------------------------------------
-# Risk Classification's own score: deliberately separate from the
+# Vaccine Gaps' own score: deliberately separate from the
 # RiskAssessment model above (used by the dashboard stat, Continuation
 # Predictor, notifications, and the child record banner). That score blends
 # six factors - visit timing, delay history, registration lag - to answer
@@ -1685,13 +1685,13 @@ def edit_child(child_id):
     ))
 
 
-@rhu_bp.route("/risk")
-def risk():
+@rhu_bp.route("/vaccine-gaps")
+def vaccine_gaps():
     vaccine_filter = request.args.get("vaccine", "")
     dist = vaccine_risk_distribution()
     rows = vaccine_risk_table(vaccine_code=vaccine_filter or None)
-    return render_template("rhu_risk.html", **_rhu_ctx(
-        "risk", page_title="Risk Classification", dist=dist, at_risk_rows=rows,
+    return render_template("rhu_vaccine_gaps.html", **_rhu_ctx(
+        "vaccine_gaps", page_title="Vaccine Gaps", dist=dist, at_risk_rows=rows,
         severity=dp.ANTIGEN_SEVERITY, severity_bands=dp.SEVERITY_BANDS,
         antigen_names={a.code: a.name for a in VaccineAntigen.query.all()},
         vaccine_filter=vaccine_filter, antigen_options=dp.VACCINE_ANTIGENS,
@@ -2046,12 +2046,12 @@ def edit_child(child_id):
     ))
 
 
-@bhw_bp.route("/risk")
-def risk():
+@bhw_bp.route("/vaccine-gaps")
+def vaccine_gaps():
     bid = current_user.barangay_id
     vaccine_filter = request.args.get("vaccine", "")
-    return render_template("bhw_risk.html", **_bhw_ctx(
-        "risk", page_title="Risk Classification", dist=vaccine_risk_distribution(bid),
+    return render_template("bhw_vaccine_gaps.html", **_bhw_ctx(
+        "vaccine_gaps", page_title="Vaccine Gaps", dist=vaccine_risk_distribution(bid),
         at_risk_rows=vaccine_risk_table(bid, vaccine_code=vaccine_filter or None),
         vaccine_filter=vaccine_filter, antigen_options=dp.VACCINE_ANTIGENS,
     ))
