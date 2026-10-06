@@ -2268,10 +2268,24 @@ def dashboard():
     # contradict each other, and yearly coverage can be computed for real.
     trend = yearly_trend()
 
+    # Barangay staffing: the one thing left in the right rail once accounts
+    # moved to ICTMO. Same source the Coverage notification uses, summarised
+    # here rather than making the administrator visit Assign Barangay to find
+    # out whether anything needs attention.
+    all_users = User.query.filter_by(role="bhw").all()
+    covered = {u.barangay_id for u in all_users if u.barangay_id}
+    all_barangays = Barangay.query.order_by(Barangay.name).all()
+    staffing = {
+        "covered": sum(1 for b in all_barangays if b.id in covered),
+        "total": len(all_barangays),
+        "uncovered": [b.name for b in all_barangays if b.id not in covered],
+        "unassigned_bhws": [u.full_name for u in all_users if not u.barangay_id],
+    }
+
     return render_template("admin_dashboard.html", **_admin_ctx(
         "dashboard", page_title="Dashboard",
         municipality=municipality, barangay_rows=barangay_rows, now=datetime.now(),
-        by_vaccine=by_vaccine, trend=trend,
+        by_vaccine=by_vaccine, trend=trend, staffing=staffing,
         vaccine_colours=vaccine_colours(by_vaccine), vaccine_labels=schedule_labels(by_vaccine),
         insights=chart_insights(by_vaccine, barangay_rows, trend),
         months=MONTH_NAMES, years=data_years(), month=month, year=year,

@@ -136,7 +136,7 @@
   </div>
 
   <div>
-    <div class="card card-pad">
+    <div class="card card-pad" style="margin-bottom:16px;">
       <div class="card-title">Quick Actions</div>
       <a href="{{ url_for('admin.assign_barangay') }}" class="settings-row" style="text-decoration:none;">
         <div class="left"><div class="ic">{{ icon('map-pin', 18) }}</div><div class="label">Assign Barangay</div></div><div>&rsaquo;</div>
@@ -148,9 +148,33 @@
         <div class="left"><div class="ic">{{ icon('package', 18) }}</div><div class="label">Vaccine Alerts</div></div><div>&rsaquo;</div>
       </a>
     </div>
+
     {# User accounts and the audit trail moved to the ICTMO administrator -
-       this dashboard keeps only the barangay-staffing and coverage decisions
-       that are the RHU's own to make. #}
+       this is the one thing left that's the RHU's own call: is every
+       barangay actually covered by a health worker. #}
+    <div class="card card-pad">
+      <div class="flex-between" style="margin-bottom:12px;">
+        <div class="card-title mb-0">Barangay Staffing</div>
+        <a class="link" style="font-size:12px;" href="{{ url_for('admin.assign_barangay') }}">Assign</a>
+      </div>
+      <div class="mini-stats">
+        <div class="mini-stat"><span class="v {{ 'bad' if staffing.uncovered else 'good' }}">{{ staffing.covered }}/{{ staffing.total }}</span><span class="k">Barangays Covered</span></div>
+        <div class="mini-stat"><span class="v {{ 'bad' if staffing.unassigned_bhws else '' }}">{{ staffing.unassigned_bhws|length }}</span><span class="k">BHWs Unassigned</span></div>
+      </div>
+      {% if staffing.uncovered %}
+      <p class="text-muted" style="font-size:12.5px;margin:14px 0 0;line-height:1.6;">
+        No health worker assigned to: <b>{{ staffing.uncovered|join(', ') }}</b>.
+      </p>
+      {% elif staffing.unassigned_bhws %}
+      <p class="text-muted" style="font-size:12.5px;margin:14px 0 0;line-height:1.6;">
+        Not yet assigned to a barangay: <b>{{ staffing.unassigned_bhws|join(', ') }}</b>.
+      </p>
+      {% else %}
+      <p class="text-muted" style="font-size:12.5px;margin:14px 0 0;">
+        Every barangay has a health worker assigned.
+      </p>
+      {% endif %}
+    </div>
   </div>
 </div>
 {% endblock %}

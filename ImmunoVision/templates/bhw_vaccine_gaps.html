@@ -1,5 +1,6 @@
 {% extends "layout_app.html" %}
 {% from "_icons.html" import icon %}
+{% block page_subtitle %}Which vaccines are missing, weighted by consequence &mdash; for who is likely to stop coming back altogether, see <a class="link" href="{{ url_for('bhw.continuation') }}">Continuation Predictor</a>.{% endblock %}
 {% block content %}
 {% set total_children = dist.high_count + dist.medium_count + dist.low_count %}
 {% set needs_visit = dist.high_count + dist.medium_count %}

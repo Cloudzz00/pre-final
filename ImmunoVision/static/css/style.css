@@ -506,6 +506,16 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
 }
 /* Short tables shouldn't be forced to fill the cap. */
 .table-wrap.auto-height { max-height: none; min-height: 0; }
+
+/* Shown under wide tables (8+ columns) once the viewport can no longer fit
+   them without scrolling - the table itself already scrolls (.table-wrap has
+   overflow:auto), this just tells people that instead of letting the last
+   column read as silently cut off. */
+.scroll-hint {
+  display: none; align-items: center; gap: 6px; font-size: 12px;
+  color: var(--text-secondary); margin-top: 8px;
+}
+@media (max-width: 1600px) { .scroll-hint { display: flex; } }
 table.data-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 720px; }
 table.data-table thead th {
   background: var(--navy-950); color: #cbd5e1;

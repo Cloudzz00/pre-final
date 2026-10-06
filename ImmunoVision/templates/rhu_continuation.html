@@ -1,5 +1,6 @@
 {% extends "layout_app.html" %}
 {% from "_icons.html" import icon %}
+{% block page_subtitle %}Who is likely to stop coming back altogether &mdash; for which specific vaccines are missing, see <a class="link" href="{{ url_for('rhu.vaccine_gaps') }}">Vaccine Gaps</a>.{% endblock %}
 {% block content %}
 <div class="stat-grid">
   <div class="stat-card"><div class="stat-icon bg-green">{{ icon('check-circle', 21) }}</div><div class="stat-value">{{ dist.low_count }}</div><div class="stat-label">Likely to Continue</div><div class="stat-caption">On track</div></div>
@@ -35,5 +36,6 @@
     </tbody>
   </table>
   </div>
+  <div class="scroll-hint">&harr; Scroll right to see Next Dose Due and Recommendation</div>
 </div>
 {% endblock %}

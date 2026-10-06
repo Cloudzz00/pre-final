@@ -55,7 +55,7 @@
 <tbody>
 {% for e in entries %}
 {% set log = e.log %}
-<tr>
+<tr {% if e.category == 'Login' %}style="color:var(--text-secondary);"{% endif %}>
   <td>{{ row_offset + loop.index }}</td>
   <td><b>{{ log.user.full_name if log.user else 'System' }}</b></td>
   <td><span class="text-muted">{{ log.user.role_label if log.user else '&mdash;' }}</span></td>

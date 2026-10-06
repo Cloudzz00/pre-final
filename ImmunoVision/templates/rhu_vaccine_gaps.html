@@ -1,5 +1,6 @@
 {% extends "layout_app.html" %}
 {% from "_icons.html" import icon %}
+{% block page_subtitle %}Which vaccines are missing, weighted by consequence &mdash; for who is likely to stop coming back altogether, see <a class="link" href="{{ url_for('rhu.continuation') }}">Continuation Predictor</a>.{% endblock %}
 {% block content %}
 <div class="stat-grid">
   <div class="stat-card"><div class="stat-icon bg-red">{{ icon('alert-octagon', 21) }}</div><div class="stat-value">{{ dist.high_count }}</div><div class="stat-label">Visit Urgently</div><div class="stat-caption">Missing high-severity vaccines</div></div>
@@ -105,6 +106,7 @@
     </tbody>
   </table>
   </div>
+  <div class="scroll-hint">&harr; Scroll right to see Last Visit and Recommendation</div>
 </div>
 {% endblock %}
 
