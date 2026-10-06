@@ -57,7 +57,7 @@
   --sidebar-width: 264px;
   --sidebar-width-collapsed: 76px;
 
-  /* Per-role accent, set on <body data-role="rhu|bhw|admin"> */
+  /* Per-role accent, set on <body data-role="rhu|bhw|admin|ictmo"> */
   --role-accent: var(--primary);
   --role-accent-dark: var(--primary-dark);
 }
@@ -69,6 +69,10 @@ body[data-role="bhw"] {
 body[data-role="admin"] {
   --role-accent: var(--violet);
   --role-accent-dark: #6d28d9;
+}
+body[data-role="ictmo"] {
+  --role-accent: #334155;
+  --role-accent-dark: #1e293b;
 }
 
 * { box-sizing: border-box; }

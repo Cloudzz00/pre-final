@@ -16,7 +16,7 @@
     {{ total_entries }} recorded action{{ '' if total_entries == 1 else 's' }}
     {%- if type_filter != 'All' %} in {{ type_filter|lower }}{% endif %}
   </div>
-  <a class="btn btn-outline btn-sm" href="{{ url_for('admin.logs', type=type_filter) }}">
+  <a class="btn btn-outline btn-sm" href="{{ url_for('ictmo.logs', type=type_filter) }}">
     {{ icon('users', 14) }} All users
   </a>
 </div>
@@ -29,7 +29,7 @@
     {% endif %}
   </span>
 
-  <form method="get" action="{{ url_for('admin.logs') }}" style="margin-left:12px;">
+  <form method="get" action="{{ url_for('ictmo.logs') }}" style="margin-left:12px;">
     <input type="hidden" name="type" value="{{ type_filter }}">
     <select class="form-control select-sm" name="user" onchange="this.form.submit()" aria-label="Filter by user">
       <option value="">All users</option>
@@ -44,7 +44,7 @@
   <div class="pill-tabs" style="margin:0;margin-left:auto;">
     {% for c in categories %}
     <a class="pill-tab {{ 'active' if type_filter == c }}"
-       href="{{ url_for('admin.logs', type=c, user=selected_user_id) }}">{{ c }}</a>
+       href="{{ url_for('ictmo.logs', type=c, user=selected_user_id) }}">{{ c }}</a>
     {% endfor %}
   </div>
 </div>
@@ -86,13 +86,13 @@
 {% if total_pages > 1 %}
 <div class="flex-gap" style="justify-content:center;margin-top:16px;align-items:center;">
   {% if page > 1 %}
-  <a class="btn btn-outline btn-sm" href="{{ url_for('admin.logs', type=type_filter, user=selected_user_id, page=page-1) }}">{{ icon('chevron-left', 14, 2.5) }} Prev</a>
+  <a class="btn btn-outline btn-sm" href="{{ url_for('ictmo.logs', type=type_filter, user=selected_user_id, page=page-1) }}">{{ icon('chevron-left', 14, 2.5) }} Prev</a>
   {% else %}
   <span class="btn btn-outline btn-sm" style="opacity:.45;pointer-events:none;">{{ icon('chevron-left', 14, 2.5) }} Prev</span>
   {% endif %}
   <span class="text-muted" style="font-size:12.5px;padding:0 4px;">Page {{ page }} of {{ total_pages }}</span>
   {% if page < total_pages %}
-  <a class="btn btn-outline btn-sm" href="{{ url_for('admin.logs', type=type_filter, user=selected_user_id, page=page+1) }}">Next &rsaquo;</a>
+  <a class="btn btn-outline btn-sm" href="{{ url_for('ictmo.logs', type=type_filter, user=selected_user_id, page=page+1) }}">Next &rsaquo;</a>
   {% else %}
   <span class="btn btn-outline btn-sm" style="opacity:.45;pointer-events:none;">Next &rsaquo;</span>
   {% endif %}

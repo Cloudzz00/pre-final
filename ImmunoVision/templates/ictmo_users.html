@@ -16,7 +16,8 @@
   <div class="search-input-wrap"><span class="si-icon">{{ icon('search', 16) }}</span><input type="text" id="userSearch" placeholder="Search users..."></div>
   <select class="select-sm" id="roleFilter">
     <option value="">All Roles</option>
-    <option value="admin">Administrator</option>
+    <option value="ictmo">ICTMO</option>
+    <option value="admin">RHU Administrator</option>
     <option value="rhu">RHU Personnel</option>
     <option value="bhw">BHW</option>
   </select>
@@ -30,17 +31,17 @@
 <tr data-role="{{ u.role }}" data-name="{{ u.full_name|lower }} {{ u.username|lower }}">
   <td class="id-chip"><span class="avatar-chip" style="background:{{ 'var(--teal)' if u.role=='bhw' else 'var(--primary)' }};width:30px;height:30px;font-size:11px;">{{ u.full_name.split(' ')|map('first')|join('') }}</span>{{ u.full_name }}</td>
   <td>{{ u.username }}</td>
-  <td><span class="badge badge-{{ 'purple' if u.role=='admin' else 'blue' if u.role=='rhu' else 'teal' }}">{{ u.role_label }}</span></td>
+  <td><span class="badge badge-{{ 'gray' if u.role=='ictmo' else 'purple' if u.role=='admin' else 'blue' if u.role=='rhu' else 'teal' }}">{{ u.role_label }}</span></td>
   <td>{{ u.barangay.name if u.barangay else 'All' }}</td>
   <td><span class="badge badge-{{ 'green' if u.is_active_flag else 'red' }}">{{ 'Active' if u.is_active_flag else 'Disabled' }}</span></td>
   <td>{{ u.last_login_at.strftime('%Y-%m-%d %H:%M') if u.last_login_at else '—' }}</td>
   <td>
     {# Audit entry point: the question "what has this person been doing?"
        arises here, looking at their account. #}
-    <a class="btn btn-outline btn-sm" href="{{ url_for('admin.logs', user=u.id) }}"
+    <a class="btn btn-outline btn-sm" href="{{ url_for('ictmo.logs', user=u.id) }}"
        title="View this account's recorded activity">{{ icon('history', 14) }} Activity</a>
     {% if u.id != current_user.id %}
-    <form method="post" action="{{ url_for('admin.toggle_user', user_id=u.id) }}" style="display:inline">
+    <form method="post" action="{{ url_for('ictmo.toggle_user', user_id=u.id) }}" style="display:inline">
       <button class="btn btn-outline btn-sm" data-confirm="{{ 'Disable' if u.is_active_flag else 'Enable' }} this account?">{% if u.is_active_flag %}{{ icon('x', 14) }} Disable{% else %}{{ icon('check', 14) }} Enable{% endif %}</button>
     </form>
     {% else %}<span class="text-muted">—</span>{% endif %}
@@ -54,7 +55,7 @@
 <div class="modal-scrim" id="addUserModal">
   <div class="modal-box">
     <div class="modal-head"><h3>Add New User</h3><button class="modal-close" data-close-modal>×</button></div>
-    <form method="post" action="{{ url_for('admin.users') }}">
+    <form method="post" action="{{ url_for('ictmo.users') }}">
       <div class="modal-body">
         <div class="form-grid-2">
           <div class="form-group"><label>First Name</label><input class="form-control" name="first_name" placeholder="e.g. Maria" required></div>
@@ -67,7 +68,8 @@
             <select class="form-control" name="role" id="roleSelect" required>
               <option value="rhu">RHU Personnel</option>
               <option value="bhw">BHW</option>
-              <option value="admin">System Administrator</option>
+              <option value="admin">RHU Administrator</option>
+              <option value="ictmo">ICTMO Administrator</option>
             </select>
           </div>
           <div class="form-group" id="barangayField"><label>Assigned Barangay</label>

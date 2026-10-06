@@ -109,11 +109,13 @@ def seed(reset=False):
         print(f"  {len(real_children)} real children across: {', '.join(real_barangays)}")
 
         print("Seeding user accounts...")
+        ictmo = User(username="rcastillo", full_name="Rafael Castillo", role="ictmo")
+        ictmo.set_password("password123")
         admin = User(username="jdelacruz", full_name="Juan Dela Cruz", role="admin")
         admin.set_password("password123")
         rhu = User(username="msantos", full_name="Maria Santos", role="rhu")
         rhu.set_password("password123")
-        db.session.add_all([admin, rhu])
+        db.session.add_all([ictmo, admin, rhu])
         db.session.commit()
 
         rng = random.Random(11)
@@ -141,6 +143,7 @@ def seed(reset=False):
               + ", ".join(f"{u}/password123" for _, _, u in FEATURED_BHW.values()))
         print("  Demo RHU login: msantos / password123")
         print("  Demo Admin login: jdelacruz / password123")
+        print("  Demo ICTMO login: rcastillo / password123")
 
         print(f"Inserting {len(real_children)} real children...")
         for i, c in enumerate(real_children, 1):

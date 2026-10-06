@@ -58,6 +58,7 @@ def create_app():
     app.register_blueprint(rhu_bp)
     app.register_blueprint(bhw_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(ictmo_bp)
     app.register_blueprint(api_bp)
 
     @login_manager.user_loader
@@ -145,11 +146,14 @@ BHW_NAV = [
 ]
 ADMIN_NAV = [
     ("dashboard", "home", "Dashboard", "admin.dashboard"),
-    ("users", "users", "User Management", "admin.users"),
     ("assign", "map-pin", "Assign Barangay", "admin.assign_barangay"),
     ("map", "map", "Municipality Map", "admin.municipality_map"),
     ("vaccines", "package", "Vaccine Alerts", "admin.vaccine_alerts"),
-    ("logs", "history", "Activity Logs", "admin.logs"),
+]
+ICTMO_NAV = [
+    ("dashboard", "home", "Dashboard", "ictmo.dashboard"),
+    ("users", "users", "User Management", "ictmo.users"),
+    ("logs", "history", "Activity Logs", "ictmo.logs"),
 ]
 
 
@@ -1187,28 +1191,19 @@ def get_notifications(role, barangay_id=None):
 
 
 def admin_notifications():
-    """Account and system-governance alerts for the administrator.
+    """Staffing-coverage alerts for the RHU administrator.
 
     Deliberately not vaccine stock or clinical risk - those belong to RHU and
-    BHW users who can act on them. The administrator's job is accounts, access
-    and coverage of staffing, so that is what is surfaced here."""
+    BHW users who can act on them. Account-level alerts (disabled accounts,
+    stale logins) moved to the ICTMO administrator along with User Management
+    itself; this keeps only the staffing question the RHU administrator still
+    owns: is every barangay covered by a health worker."""
     notes = []
-    today = date.today()
     users = User.query.all()
-
-    disabled = [u for u in users if not u.is_active_flag]
-    if disabled:
-        notes.append({"category": "Accounts", "severity": "warning", "icon": "x-circle", "icon_bg": "bg-orange",
-                      "title": f"{len(disabled)} Disabled Account{'s' if len(disabled) > 1 else ''}",
-                      "body": "Disabled accounts cannot sign in: "
-                              + ", ".join(u.full_name for u in disabled[:4])
-                              + (f" and {len(disabled) - 4} more." if len(disabled) > 4 else "."),
-                      "time_label": "Ongoing", "unread": True,
-                      "url": url_for("admin.users")})
 
     unassigned = [u for u in users if u.role == "bhw" and not u.barangay_id]
     if unassigned:
-        notes.append({"category": "Accounts", "severity": "critical", "icon": "map-pin", "icon_bg": "bg-red",
+        notes.append({"category": "Coverage", "severity": "critical", "icon": "map-pin", "icon_bg": "bg-red",
                       "title": f"{len(unassigned)} BHW Without a Barangay",
                       "body": "These health workers cannot see any child records until they are assigned: "
                               + ", ".join(u.full_name for u in unassigned[:4]) + ".",
@@ -1226,6 +1221,29 @@ def admin_notifications():
                       "time_label": "Ongoing", "unread": True,
                       "url": url_for("admin.assign_barangay")})
 
+    return notes
+
+
+def ictmo_notifications():
+    """Account and system-governance alerts for the ICTMO administrator.
+
+    This is the identity/access half of what used to be admin_notifications():
+    accounts the ICTMO provisions and must keep an eye on, not the RHU's
+    day-to-day staffing-coverage question (that stays on the RHU admin side)."""
+    notes = []
+    today = date.today()
+    users = User.query.all()
+
+    disabled = [u for u in users if not u.is_active_flag]
+    if disabled:
+        notes.append({"category": "Accounts", "severity": "warning", "icon": "x-circle", "icon_bg": "bg-orange",
+                      "title": f"{len(disabled)} Disabled Account{'s' if len(disabled) > 1 else ''}",
+                      "body": "Disabled accounts cannot sign in: "
+                              + ", ".join(u.full_name for u in disabled[:4])
+                              + (f" and {len(disabled) - 4} more." if len(disabled) > 4 else "."),
+                      "time_label": "Ongoing", "unread": True,
+                      "url": url_for("ictmo.users")})
+
     never = [u for u in users if u.is_active_flag and not u.last_login_at]
     if never:
         notes.append({"category": "Accounts", "severity": "info", "icon": "log-in", "icon_bg": "bg-blue",
@@ -1234,7 +1252,7 @@ def admin_notifications():
                               + ", ".join(u.full_name for u in never[:4])
                               + (f" and {len(never) - 4} more." if len(never) > 4 else "."),
                       "time_label": "Ongoing", "unread": True,
-                      "url": url_for("admin.users")})
+                      "url": url_for("ictmo.users")})
 
     stale = [u for u in users if u.is_active_flag and u.last_login_at
              and (today - u.last_login_at.date()).days > 30]
@@ -1245,7 +1263,7 @@ def admin_notifications():
                               + ", ".join(u.full_name for u in stale[:4])
                               + (f" and {len(stale) - 4} more." if len(stale) > 4 else "."),
                       "time_label": "Ongoing", "unread": False,
-                      "url": url_for("admin.users")})
+                      "url": url_for("ictmo.users")})
 
     return notes
 
@@ -1424,7 +1442,7 @@ def _due_calendar(children, vt_lookup, days_behind=90, days_ahead=60):
 # ---------------------------------------------------------------------------
 
 auth_bp = Blueprint("auth", __name__)
-ROLE_HOME = {"admin": "admin.dashboard", "rhu": "rhu.dashboard", "bhw": "bhw.dashboard"}
+ROLE_HOME = {"ictmo": "ictmo.dashboard", "admin": "admin.dashboard", "rhu": "rhu.dashboard", "bhw": "bhw.dashboard"}
 
 
 @auth_bp.route("/")
@@ -1511,7 +1529,7 @@ def login():
         # The account's own role decides where it lands — the user never picks it.
         if user and user.check_password(password):
             if not user.is_active_flag:
-                flash("This account has been disabled. Contact your System Administrator.", "error")
+                flash("This account has been disabled. Contact your ICTMO administrator.", "error")
                 return render_template("login.html")
             login_user(user)
             user.last_login_at = datetime.utcnow()
@@ -2193,17 +2211,11 @@ def _admin_guard():
 
 @admin_bp.route("/dashboard")
 def dashboard():
-    users = User.query.all()
-    stats = {"total": len(users), "rhu": sum(1 for u in users if u.role == "rhu"),
-             "bhw": sum(1 for u in users if u.role == "bhw"), "active": sum(1 for u in users if u.is_active_flag),
-             "disabled": sum(1 for u in users if not u.is_active_flag),
-             "logins_today": sum(1 for u in users if u.last_login_at and u.last_login_at.date() == datetime.utcnow().date())}
-    role_dist = {"admin": sum(1 for u in users if u.role == "admin"), "rhu": stats["rhu"], "bhw": stats["bhw"]}
-
     # Municipality-wide oversight. AGGREGATES ONLY - counts and percentages per
-    # barangay, never child-level records. The administrator manages accounts and
-    # oversees municipal performance, but has no need to see individual children,
-    # so the minimum necessary data is exposed here.
+    # barangay, never child-level records. The RHU administrator oversees
+    # municipal performance and barangay staffing, but has no need to see
+    # individual children or manage accounts (that moved to ICTMO), so the
+    # minimum necessary data is exposed here.
     # Deliberately the same functions the RHU dashboard and Coverage Analytics
     # use, so every live view of municipal performance reports identical
     # figures. (report_figures() is reserved for the Reports page, which is
@@ -2241,12 +2253,6 @@ def dashboard():
     # Worst-performing first, so barangays needing attention surface immediately.
     barangay_rows = sorted(rows, key=lambda r: r["coverage"])
 
-    # Oversight is the administrator's job, and 192 of 320 audit entries are from
-    # the last week - none of which appeared on this page. Summarises the
-    # Activity Logs page rather than reproducing it.
-    recent = (ActivityLog.query.order_by(ActivityLog.created_at.desc()).limit(7).all())
-    recent_activity = [{"log": r, "category": log_category(r.action)} for r in recent]
-
     # The admin Coverage Analytics page was retired: its barangay view duplicated
     # the table above, so its two unique panels moved onto this page.
     by_vaccine = order_by_schedule(report_by_vaccine(None, as_of) if as_of else coverage_by_vaccine())
@@ -2255,9 +2261,9 @@ def dashboard():
     trend = yearly_trend()
 
     return render_template("admin_dashboard.html", **_admin_ctx(
-        "dashboard", page_title="Dashboard", stats=stats, role_dist=role_dist, users=users,
+        "dashboard", page_title="Dashboard",
         municipality=municipality, barangay_rows=barangay_rows, now=datetime.now(),
-        recent_activity=recent_activity, by_vaccine=by_vaccine, trend=trend,
+        by_vaccine=by_vaccine, trend=trend,
         vaccine_colours=vaccine_colours(by_vaccine), vaccine_labels=schedule_labels(by_vaccine),
         insights=chart_insights(by_vaccine, barangay_rows, trend),
         months=MONTH_NAMES, years=data_years(), month=month, year=year,
@@ -2265,49 +2271,6 @@ def dashboard():
         barangays=Barangay.query.order_by(Barangay.name).all(),
         selected_barangay=selected, selected_barangay_id=barangay_id,
     ))
-
-
-@admin_bp.route("/users", methods=["GET", "POST"])
-def users():
-    if request.method == "POST":
-        role = request.form.get("role")
-        username = request.form.get("username").strip()
-        if User.query.filter_by(username=username).first():
-            flash("Username already exists.", "error")
-            return redirect(url_for("admin.users"))
-        u = User(username=username, full_name=f"{request.form.get('first_name')} {request.form.get('last_name')}".strip(),
-                 role=role, barangay_id=(int(request.form.get("barangay_id"))
-                                         if role == "bhw" and request.form.get("barangay_id") else None))
-        u.set_password(request.form.get("password") or "password123")
-        db.session.add(u)
-        db.session.commit()
-        if role == "bhw" and u.barangay_id:
-            u.assigned_barangays.append(u.barangay)
-            db.session.commit()
-        log_activity(f"Created user account: {u.full_name} ({u.role_label})")
-        flash(f"User {u.full_name} created.", "success")
-        return redirect(url_for("admin.users"))
-
-    all_users = User.query.order_by(User.id).all()
-    stats = {"total": len(all_users), "active": sum(1 for u in all_users if u.is_active_flag),
-             "bhw": sum(1 for u in all_users if u.role == "bhw"),
-             "rhu": sum(1 for u in all_users if u.role in ("rhu", "admin"))}
-    return render_template("admin_users.html", **_admin_ctx(
-        "users", page_title="User Management", users=all_users, stats=stats,
-        barangays=Barangay.query.order_by(Barangay.name).all(),
-    ))
-
-
-@admin_bp.route("/users/<int:user_id>/toggle", methods=["POST"])
-def toggle_user(user_id):
-    u = db.session.get(User, user_id) or abort(404)
-    if u.id == current_user.id:
-        abort(400)
-    u.is_active_flag = not u.is_active_flag
-    db.session.commit()
-    log_activity(f"{'Enabled' if u.is_active_flag else 'Disabled'} user account: {u.username}")
-    flash(f"User {u.username} {'enabled' if u.is_active_flag else 'disabled'}.", "success")
-    return redirect(url_for("admin.users"))
 
 
 @admin_bp.route("/assign-barangay", methods=["GET", "POST"])
@@ -2344,47 +2307,6 @@ def municipality_map():
     return render_template("admin_map.html", **_admin_ctx(
         "map", page_title="Municipality Map",
         heatmap=map_markers("heatmap"), at_risk=map_markers("at_risk"), density=map_markers("density"),
-    ))
-
-
-@admin_bp.route("/logs")
-def logs():
-    """Audit trail. Filterable by category and by user account, and the two
-    combine - ?user=7&type=Record is "what this person did to child records"."""
-    type_filter = request.args.get("type", "All")
-    user_id = request.args.get("user", type=int)
-    per_page = 50
-
-    q = ActivityLog.query
-    selected_user = db.session.get(User, user_id) if user_id else None
-    if selected_user:
-        q = q.filter(ActivityLog.user_id == selected_user.id)
-    else:
-        user_id = None  # unknown id: fall back to showing everything
-
-    # log_category() reads free-text action strings, so it can't be pushed
-    # into the query - every matching row is categorized in Python, then the
-    # filtered result is paged. There used to be a silent 400/200-row cutoff
-    # here with no way to see anything older; this now shows everything,
-    # just a page at a time.
-    rows = q.order_by(ActivityLog.created_at.desc()).all()
-    entries = [{"log": r, "category": log_category(r.action)} for r in rows]
-    if type_filter != "All":
-        entries = [e for e in entries if e["category"] == type_filter]
-
-    total_entries = len(entries)
-    total_pages = max(1, -(-total_entries // per_page))
-    page = min(max(1, request.args.get("page", 1, type=int)), total_pages)
-    row_offset = (page - 1) * per_page
-    page_entries = entries[row_offset:row_offset + per_page]
-
-    return render_template("admin_logs.html", **_admin_ctx(
-        "logs", page_title="Activity Logs", entries=page_entries, type_filter=type_filter,
-        categories=["All"] + [name for name, _ in LOG_CATEGORIES],
-        users=User.query.order_by(User.full_name).all(),
-        selected_user=selected_user, selected_user_id=user_id,
-        page=page, total_pages=total_pages, total_entries=total_entries,
-        per_page=per_page, row_offset=row_offset,
     ))
 
 
@@ -2451,6 +2373,156 @@ def update_warning_levels():
     else:
         flash("No warning levels were changed.", "info")
     return redirect(url_for("admin.vaccine_alerts"))
+
+
+# ---------------------------------------------------------------------------
+# ICTMO blueprint
+# ---------------------------------------------------------------------------
+# The municipality's Information and Communications Technology Management
+# Office/Officer: a real LGU office separate from the RHU, holding identity
+# and access governance (user accounts, audit trail) for every department it
+# serves. Splitting this off the RHU administrator means account provisioning
+# and security auditing is owned by the office actually equipped to judge it,
+# while the RHU administrator keeps only health-program decisions (barangay
+# staffing, stock policy, municipal oversight). ICTMO never sees child or
+# clinical records - it administers the system, not the program.
+
+ictmo_bp = Blueprint("ictmo", __name__, url_prefix="/ictmo")
+
+
+def _ictmo_ctx(active, **extra):
+    notes = ictmo_notifications()
+    return dict(role="ictmo", nav_items=build_nav(ICTMO_NAV), active=active, current_user=current_user,
+                settings_url=url_for("ictmo.settings"),
+                unread_count=sum(1 for n in notes if n["unread"]),
+                notif_url=url_for("ictmo.notifications"), **extra)
+
+
+@ictmo_bp.before_request
+@login_required
+@role_required("ictmo")
+def _ictmo_guard():
+    pass
+
+
+@ictmo_bp.route("/dashboard")
+def dashboard():
+    users = User.query.all()
+    stats = {"total": len(users), "ictmo": sum(1 for u in users if u.role == "ictmo"),
+             "admin": sum(1 for u in users if u.role == "admin"),
+             "rhu": sum(1 for u in users if u.role == "rhu"), "bhw": sum(1 for u in users if u.role == "bhw"),
+             "active": sum(1 for u in users if u.is_active_flag),
+             "disabled": sum(1 for u in users if not u.is_active_flag),
+             "logins_today": sum(1 for u in users if u.last_login_at and u.last_login_at.date() == datetime.utcnow().date())}
+    role_dist = {"admin": stats["admin"], "rhu": stats["rhu"], "bhw": stats["bhw"]}
+
+    # Account oversight is ICTMO's job, same reasoning the RHU admin dashboard
+    # used to apply to the whole audit trail: summarise Activity Logs here
+    # rather than making this page a second copy of it.
+    recent = (ActivityLog.query.order_by(ActivityLog.created_at.desc()).limit(7).all())
+    recent_activity = [{"log": r, "category": log_category(r.action)} for r in recent]
+
+    return render_template("ictmo_dashboard.html", **_ictmo_ctx(
+        "dashboard", page_title="Dashboard", stats=stats, role_dist=role_dist, users=users,
+        recent_activity=recent_activity, now=datetime.now(),
+    ))
+
+
+@ictmo_bp.route("/users", methods=["GET", "POST"])
+def users():
+    if request.method == "POST":
+        role = request.form.get("role")
+        username = request.form.get("username").strip()
+        if User.query.filter_by(username=username).first():
+            flash("Username already exists.", "error")
+            return redirect(url_for("ictmo.users"))
+        u = User(username=username, full_name=f"{request.form.get('first_name')} {request.form.get('last_name')}".strip(),
+                 role=role, barangay_id=(int(request.form.get("barangay_id"))
+                                         if role == "bhw" and request.form.get("barangay_id") else None))
+        u.set_password(request.form.get("password") or "password123")
+        db.session.add(u)
+        db.session.commit()
+        if role == "bhw" and u.barangay_id:
+            u.assigned_barangays.append(u.barangay)
+            db.session.commit()
+        log_activity(f"Created user account: {u.full_name} ({u.role_label})")
+        flash(f"User {u.full_name} created.", "success")
+        return redirect(url_for("ictmo.users"))
+
+    all_users = User.query.order_by(User.id).all()
+    stats = {"total": len(all_users), "active": sum(1 for u in all_users if u.is_active_flag),
+             "bhw": sum(1 for u in all_users if u.role == "bhw"),
+             "rhu": sum(1 for u in all_users if u.role in ("rhu", "admin"))}
+    return render_template("ictmo_users.html", **_ictmo_ctx(
+        "users", page_title="User Management", users=all_users, stats=stats,
+        barangays=Barangay.query.order_by(Barangay.name).all(),
+    ))
+
+
+@ictmo_bp.route("/users/<int:user_id>/toggle", methods=["POST"])
+def toggle_user(user_id):
+    u = db.session.get(User, user_id) or abort(404)
+    if u.id == current_user.id:
+        abort(400)
+    u.is_active_flag = not u.is_active_flag
+    db.session.commit()
+    log_activity(f"{'Enabled' if u.is_active_flag else 'Disabled'} user account: {u.username}")
+    flash(f"User {u.username} {'enabled' if u.is_active_flag else 'disabled'}.", "success")
+    return redirect(url_for("ictmo.users"))
+
+
+@ictmo_bp.route("/logs")
+def logs():
+    """Audit trail. Filterable by category and by user account, and the two
+    combine - ?user=7&type=Record is "what this person did to child records"."""
+    type_filter = request.args.get("type", "All")
+    user_id = request.args.get("user", type=int)
+    per_page = 50
+
+    q = ActivityLog.query
+    selected_user = db.session.get(User, user_id) if user_id else None
+    if selected_user:
+        q = q.filter(ActivityLog.user_id == selected_user.id)
+    else:
+        user_id = None  # unknown id: fall back to showing everything
+
+    # log_category() reads free-text action strings, so it can't be pushed
+    # into the query - every matching row is categorized in Python, then the
+    # filtered result is paged. There used to be a silent 400/200-row cutoff
+    # here with no way to see anything older; this now shows everything,
+    # just a page at a time.
+    rows = q.order_by(ActivityLog.created_at.desc()).all()
+    entries = [{"log": r, "category": log_category(r.action)} for r in rows]
+    if type_filter != "All":
+        entries = [e for e in entries if e["category"] == type_filter]
+
+    total_entries = len(entries)
+    total_pages = max(1, -(-total_entries // per_page))
+    page = min(max(1, request.args.get("page", 1, type=int)), total_pages)
+    row_offset = (page - 1) * per_page
+    page_entries = entries[row_offset:row_offset + per_page]
+
+    return render_template("ictmo_logs.html", **_ictmo_ctx(
+        "logs", page_title="Activity Logs", entries=page_entries, type_filter=type_filter,
+        categories=["All"] + [name for name, _ in LOG_CATEGORIES],
+        users=User.query.order_by(User.full_name).all(),
+        selected_user=selected_user, selected_user_id=user_id,
+        page=page, total_pages=total_pages, total_entries=total_entries,
+        per_page=per_page, row_offset=row_offset,
+    ))
+
+
+@ictmo_bp.route("/notifications")
+def notifications():
+    notes = ictmo_notifications()
+    return render_template("admin_notifications.html", **_ictmo_ctx(
+        "notifications", page_title="Notifications", notes=notes,
+    ))
+
+
+@ictmo_bp.route("/settings")
+def settings():
+    return render_template("admin_settings.html", **_ictmo_ctx("settings", page_title="Settings"))
 
 
 # ---------------------------------------------------------------------------
