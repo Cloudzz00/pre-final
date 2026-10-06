@@ -639,12 +639,21 @@
           </div>
         </div>
         <div class="lp-role-card">
-          <div class="ic" style="background:var(--violet)">{{ icon('users', 18) }}</div>
-          <b class="tag" style="color:var(--violet)">Administrator</b>
-          <p>Manage accounts and barangay assignments, review the audit log &mdash; municipality-wide
-             totals only, never a child's record.</p>
+          <div class="ic" style="background:var(--violet)">{{ icon('map-pin', 18) }}</div>
+          <b class="tag" style="color:var(--violet)">RHU Administrator</b>
+          <p>Manage barangay staffing assignments and municipal coverage oversight &mdash;
+             municipality-wide totals only, never a child's record.</p>
           <div class="lp-chips">
             <span class="lp-chip">{{ icon('map', 13) }} Assignments</span>
+          </div>
+        </div>
+        <div class="lp-role-card">
+          <div class="ic" style="background:#334155">{{ icon('users', 18) }}</div>
+          <b class="tag" style="color:#334155">ICTMO</b>
+          <p>Provision and audit every account in the system &mdash; the municipality's IT office,
+             scoped to accounts and access, never clinical data.</p>
+          <div class="lp-chips">
+            <span class="lp-chip">{{ icon('history', 13) }} Audit log</span>
           </div>
         </div>
         <div class="lp-role-card">
@@ -660,9 +669,9 @@
     <div class="lp-flow-text">
       <div class="lp-flow-eyebrow">Who it's for</div>
       <h2>Every account sees exactly the view its role needs.</h2>
-      <p>Three account roles share the same system, each scoped to what it actually needs to act on
-         &mdash; a barangay, a municipality, or the system itself &mdash; and public coverage numbers
-         are open with no login at all.</p>
+      <p>Four account roles share the same system, each scoped to what it actually needs to act on
+         &mdash; a barangay, a municipality, or accounts and access &mdash; and public coverage
+         numbers are open with no login at all.</p>
       <a class="lp-btn" href="{{ url_for('auth.login') }}">Sign in <span class="lp-fwd">{{ icon('chevron-left', 15, 2.5) }}</span></a>
     </div>
   </div>

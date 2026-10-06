@@ -812,14 +812,22 @@ def vaccine_risk_distribution(barangay_id=None):
 def vaccine_risk_table(barangay_id=None, vaccine_code=None, limit=None):
     """vaccine_code filters to children missing that antigen specifically
     (e.g. "MMR" shows only children missing an MMR dose), rather than every
-    child who needs a visit for any reason."""
+    child who needs a visit for any reason.
+
+    Only children tiered "Visit Urgently" or "Visit Soon" appear here - this
+    is the same tier vaccine_risk_distribution() counts into those two stat
+    cards, and the page both numbers sit on is titled "Children Who Need a
+    Visit". A child who merely has one missed-but-not-due dose (tier "On
+    Track") used to still show up here, which meant the table could list
+    several times more children than its own "need a visit" stat cards and
+    subtitle claimed."""
     antigen_of = {code: ant for code, _n, ant, _d, _r in dp.VACCINE_SCHEDULE}
     records = _records_by_child()
     vt_lookup = {vt.code: vt for vt in VaccineType.query.all()}
     rows = []
     for c in _children_query(barangay_id).all():
         row = _child_vaccine_severity(c, antigen_of, records, vt_lookup)
-        if row["missed"] == 0:
+        if row["tier"] == "On Track":
             continue
         if vaccine_code and vaccine_code not in row["missed_antigens"]:
             continue
