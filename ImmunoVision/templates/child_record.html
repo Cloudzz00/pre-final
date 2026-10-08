@@ -75,6 +75,7 @@
           {% if d.status == 'given' %}{{ icon('check', 14) }} Given
           {% elif d.status == 'overdue' %}{{ icon('alert-triangle', 14) }} Overdue
           {% elif d.status == 'due' %}{{ icon('clock', 14) }} Due
+          {% elif d.status == 'past-window' %}{{ icon('x-circle', 14) }} Window Closed
           {% else %}{{ icon('calendar', 14) }} Upcoming{% endif %}
         </span>
       </div>

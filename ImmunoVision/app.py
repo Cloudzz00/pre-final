@@ -253,6 +253,13 @@ def _risk_labels(children):
     return {c.id: (risk[c.id].risk_label if c.id in risk else None) for c in children}
 
 
+def _still_catchable(vt, age):
+    """True unless this dose has its own catch-up deadline (BCG, Rotavirus)
+    and the child is past it - at which point it drops out of due/missed
+    entirely rather than sitting as permanently "overdue"."""
+    return vt.catch_up_deadline_days is None or age <= vt.catch_up_deadline_days
+
+
 def _due_and_missed(child, with_codes=False):
     """Doses the child is old enough to have received, and how many are unfilled.
 
@@ -264,7 +271,7 @@ def _due_and_missed(child, with_codes=False):
     codes = []
     for record in _records_by_child().get(child.id, ()):
         vt = vt_by_id.get(record.vaccine_type_id)
-        if vt is not None and not vt.is_optional and vt.recommended_age_days <= age:
+        if vt is not None and not vt.is_optional and vt.recommended_age_days <= age and _still_catchable(vt, age):
             due += 1
             if record.date_administered is None:
                 missed += 1
@@ -282,7 +289,7 @@ def _due_codes(child):
     due_codes, missed_codes = [], []
     for record in _records_by_child().get(child.id, ()):
         vt = vt_by_id.get(record.vaccine_type_id)
-        if vt is not None and not vt.is_optional and vt.recommended_age_days <= age:
+        if vt is not None and not vt.is_optional and vt.recommended_age_days <= age and _still_catchable(vt, age):
             due_codes.append(vt.code)
             if record.date_administered is None:
                 missed_codes.append(vt.code)
@@ -858,6 +865,8 @@ def child_detail(child):
             status, note = "given", when.strftime("%b %d, %Y")
         elif age_days < rec_days:
             status, note = "upcoming", f"due {due_on.strftime('%b %d, %Y')}"
+        elif not _still_catchable(vt, age_days):
+            status, note = "past-window", "no longer given at this age"
         elif (today - due_on).days > dp.GRACE_PERIOD_DAYS:
             status, note = "overdue", f"{(today - due_on).days} days overdue"
         else:
@@ -893,7 +902,10 @@ def child_detail(child):
         "optional": optional,
         "given_count": sum(1 for r in schedule if r["status"] == "given"),
         "overdue_count": sum(1 for r in schedule if r["status"] == "overdue"),
-        "total_doses": len(schedule),
+        # A dose past its own catch-up window (BCG) and never given drops out
+        # of the denominator too - it's no longer part of this child's
+        # achievable schedule, not a permanent, uncompletable gap.
+        "total_doses": sum(1 for r in schedule if r["status"] != "past-window"),
         "due": due, "missed": missed,
         "risk": latest, "factors": factors,
         "risk_tier": dp.risk_tier(latest.risk_probability) if latest else None,
@@ -1007,7 +1019,8 @@ def report_figures(barangay_id=None, as_of=None):
         due = given = 0
         for rec in records.get(child.id, ()):
             vtype = vt_by_id.get(rec.vaccine_type_id)
-            if vtype is not None and vtype.recommended_age_days <= age:
+            if (vtype is not None and not vtype.is_optional and vtype.recommended_age_days <= age
+                    and _still_catchable(vtype, age)):
                 due += 1
                 if rec.date_administered is not None and rec.date_administered <= as_of:
                     given += 1

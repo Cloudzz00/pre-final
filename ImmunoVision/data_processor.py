@@ -133,6 +133,16 @@ VACCINE_SCHEDULE = [
 ]
 VACCINE_CODES = [row[0] for row in VACCINE_SCHEDULE]
 
+# Unlike OPTIONAL_VACCINE_SCHEDULE's catch_up_deadline_days (a dose that
+# becomes actively unsafe to give late, e.g. Rotavirus), this is a core dose
+# that simply stops being clinically indicated past a certain age. BCG's
+# benefit is specific to early infancy (protecting against severe forms of
+# TB in infants); DOH/WHO guidance does not recommend it as routine catch-up
+# once a child is past their first year. Every other core dose has no entry
+# here and stays catchable at any age, consistent with DOH catch-up
+# schedules running through age 5 for most of the primary series.
+CORE_CATCH_UP_DEADLINES = {"BCG": 365}
+
 # Vaccines a BHW can administer and log for a child even though they aren't
 # part of the RHU's core registry schedule above - recorded only if actually
 # given. Never fed into the risk model (calibrated on the core schedule) or
@@ -454,7 +464,8 @@ def compute_features(date_of_birth, date_registered, sex, dose_records, assessme
     age_days = (assessment_date - date_of_birth).days
     registration_delay = max(0, (date_registered - date_of_birth).days)
 
-    due = [r for r in dose_records if r["recommended_age_days"] <= age_days]
+    due = [r for r in dose_records if r["recommended_age_days"] <= age_days
+           and (r.get("catch_up_deadline_days") is None or age_days <= r["catch_up_deadline_days"])]
     completed, delayed, missed, delays = [], [], [], []
     last_dose_day = None
 
@@ -529,7 +540,8 @@ def final_outcome_label(date_of_birth, dose_records, window_days=365):
 
 def _dose_records_for(doses_dict):
     return [
-        {"code": code, "recommended_age_days": rec_days, "date_administered": doses_dict.get(code)}
+        {"code": code, "recommended_age_days": rec_days, "date_administered": doses_dict.get(code),
+         "catch_up_deadline_days": CORE_CATCH_UP_DEADLINES.get(code)}
         for code, name, antigen, dose_no, rec_days in VACCINE_SCHEDULE
     ]
 

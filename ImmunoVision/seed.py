@@ -84,7 +84,8 @@ def seed(reset=False):
         vt_objs = {}
         for code, name, antigen_code, dose_no, rec_days in dp.VACCINE_SCHEDULE:
             vt = VaccineType(code=code, name=name, antigen_id=antigen_objs[antigen_code].id,
-                              dose_number=dose_no, recommended_age_days=rec_days)
+                              dose_number=dose_no, recommended_age_days=rec_days,
+                              catch_up_deadline_days=dp.CORE_CATCH_UP_DEADLINES.get(code))
             db.session.add(vt)
             vt_objs[code] = vt
         db.session.commit()
