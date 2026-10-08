@@ -61,7 +61,7 @@
     </button>
   </th>
   {% for code, name, antigen, dose_no, rec_days in vaccine_schedule %}<th class="vaccine-group-head dose-col">{{ name }}</th>{% endfor %}
-  <th>Risk</th><th>Actions</th>
+  <th>Actions</th>
 </tr>
 </thead>
 <tbody>
@@ -87,18 +87,9 @@
       {{ given.strftime('%m/%d/%y') if given else '—' }}
     </td>
   {% endfor %}
-  <td>
-    {% set label = risk_labels[c.id] %}
-    {% if label %}
-      <span class="badge badge-{{ 'red' if label=='At-Risk' else 'green' }}">{{ label }}</span>
-    {% else %}<span class="badge badge-gray">Pending</span>{% endif %}
-  </td>
   <td class="flex-gap">
     <a href="{{ url_for('rhu.child_record', child_id=c.id) }}" class="btn btn-outline btn-sm">{{ icon('search', 14) }} View</a>
     <a href="{{ url_for('rhu.edit_child', child_id=c.id) }}" class="btn btn-outline btn-sm">{{ icon('pencil', 14) }} Edit</a>
-    <form method="post" action="{{ url_for('rhu.recompute_risk', child_id=c.id) }}" style="display:inline">
-      <button class="btn btn-outline btn-sm" type="submit">{{ icon('refresh', 14) }} Re-assess</button>
-    </form>
   </td>
 </tr>
 {% else %}
@@ -107,7 +98,7 @@
 </tbody>
 </table>
 </div>
-<div class="scroll-hint">&harr; Scroll right to see Risk and Actions</div>
+<div class="scroll-hint">&harr; Scroll right to see Actions</div>
 
 {% include "register_child_modal.html" %}
 {% if request.args.get('add') %}

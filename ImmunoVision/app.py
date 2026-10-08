@@ -1667,7 +1667,7 @@ def children():
         barangays=Barangay.query.order_by(Barangay.name).all(), vaccine_schedule=dp.VACCINE_SCHEDULE,
         vt_lookup=vt_lookup, antigens=core_antigens(), selected_barangay=barangay_id,
         selected_risk=risk_level, search=search,
-        dose_matrix=_dose_matrix(kids, vt_lookup), risk_labels=_risk_labels(kids),
+        dose_matrix=_dose_matrix(kids, vt_lookup),
         due_now_child=due_now_child, due_now_doses=due_now_doses,
     ))
 
