@@ -370,7 +370,9 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
   border-top: 1px solid rgba(255,255,255,0.06);
   padding: 14px 18px;
   display: flex; align-items: center; gap: 10px;
+  text-decoration: none; cursor: pointer;
 }
+.sidebar-footer:hover { background: rgba(255,255,255,0.05); }
 .avatar-chip {
   width: 36px; height: 36px; border-radius: 50%;
   background: var(--primary); color: #fff;
