@@ -59,13 +59,19 @@
     <h3>Children Who Need a Visit</h3>
     <p class="text-muted" style="font-size:12.5px;margin:2px 0 0;">
       {% if vaccine_filter %}
-      {{ at_risk_rows|length }} {{ 'child is' if at_risk_rows|length == 1 else 'children are' }} missing a dose from this vaccine, highest severity first.
+      {{ at_risk_rows|length }} {{ 'child is' if at_risk_rows|length == 1 else 'children are' }} missing a dose from this vaccine in {{ scope_name }}, highest severity first.
       {% else %}
-      {{ at_risk_rows|length }} {{ 'child needs' if at_risk_rows|length == 1 else 'children need' }} a follow-up visit, highest severity first.
+      {{ at_risk_rows|length }} {{ 'child needs' if at_risk_rows|length == 1 else 'children need' }} a follow-up visit in {{ scope_name }}, highest severity first.
       {% endif %}
     </p>
   </div>
-  <form method="get" action="{{ url_for('rhu.vaccine_gaps') }}#atrisk">
+  <form method="get" action="{{ url_for('rhu.vaccine_gaps') }}#atrisk" class="flex-gap">
+    <select class="form-control select-sm" name="barangay_id" onchange="this.form.submit()" aria-label="Filter by barangay">
+      <option value="">All barangays</option>
+      {% for b in barangays %}
+      <option value="{{ b.id }}" {% if selected_barangay == b.id %}selected{% endif %}>{{ b.name }}</option>
+      {% endfor %}
+    </select>
     <select class="form-control select-sm" name="vaccine" onchange="this.form.submit()" aria-label="Filter by missed vaccine">
       <option value="">All vaccines</option>
       {% for code, name in antigen_options %}

@@ -9,8 +9,20 @@
 </div>
 
 <div class="card card-pad">
-  <div class="card-title">Children Predicted Not to Continue</div>
-  <div class="card-sub">Ranked by discontinuation risk - highest first</div>
+  <div class="flex-between" style="margin-bottom:4px;">
+    <div>
+      <div class="card-title mb-0">Children Predicted Not to Continue</div>
+      <div class="card-sub mb-0">Ranked by discontinuation risk in {{ scope_name }} - highest first</div>
+    </div>
+    <form method="get" action="{{ url_for('rhu.continuation') }}">
+      <select class="form-control select-sm" name="barangay_id" onchange="this.form.submit()" aria-label="Filter by barangay">
+        <option value="">All barangays</option>
+        {% for b in barangays %}
+        <option value="{{ b.id }}" {% if selected_barangay == b.id %}selected{% endif %}>{{ b.name }}</option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
   <div class="table-wrap">
   <table class="data-table">
     <thead><tr><th>Rank</th><th>Patient ID</th><th>Barangay</th><th>Continuation Likelihood</th><th>Missed Vaccines</th><th>Next Dose Due</th><th>Last Visit</th><th>Recommendation</th></tr></thead>

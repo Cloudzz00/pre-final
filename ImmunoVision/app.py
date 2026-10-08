@@ -1730,28 +1730,38 @@ def edit_child(child_id):
 @rhu_bp.route("/vaccine-gaps")
 def vaccine_gaps():
     vaccine_filter = request.args.get("vaccine", "")
-    dist = vaccine_risk_distribution()
-    rows = vaccine_risk_table(vaccine_code=vaccine_filter or None)
+    barangay_id = request.args.get("barangay_id", type=int)
+    barangays = Barangay.query.order_by(Barangay.name).all()
+    barangay_obj = next((b for b in barangays if b.id == barangay_id), None)
+    dist = vaccine_risk_distribution(barangay_id)
+    rows = vaccine_risk_table(barangay_id, vaccine_code=vaccine_filter or None)
     return render_template("rhu_vaccine_gaps.html", **_rhu_ctx(
         "vaccine_gaps", page_title="Vaccine Gaps", dist=dist, at_risk_rows=rows,
         severity=dp.ANTIGEN_SEVERITY, severity_bands=dp.SEVERITY_BANDS,
         antigen_names={a.code: a.name for a in VaccineAntigen.query.all()},
         vaccine_filter=vaccine_filter, antigen_options=dp.VACCINE_ANTIGENS,
+        barangays=barangays, selected_barangay=barangay_id,
+        scope_name=barangay_obj.name if barangay_obj else "all barangays",
     ))
 
 
 @rhu_bp.route("/continuation")
 def continuation():
     vt_lookup = {vt.code: vt for vt in VaccineType.query.all()}
-    rows = at_risk_table()
+    barangay_id = request.args.get("barangay_id", type=int)
+    barangays = Barangay.query.order_by(Barangay.name).all()
+    barangay_obj = next((b for b in barangays if b.id == barangay_id), None)
+    rows = at_risk_table(barangay_id)
     for r in rows:
         r["continuation_pct"] = 100 - r["risk_score"]
         r["next_dose"] = _next_dose_for(r["child"], vt_lookup)
     engine = dp.model_info()
     return render_template("rhu_continuation.html", **_rhu_ctx(
-        "continuation", page_title="Continuation Predictor", rows=rows, stats=dashboard_stats(),
-        dist=risk_distribution(), engine=engine, scoring_rules=dp.SCORING_RULES,
+        "continuation", page_title="Continuation Predictor", rows=rows, stats=dashboard_stats(barangay_id),
+        dist=risk_distribution(barangay_id), engine=engine, scoring_rules=dp.SCORING_RULES,
         feature_labels=dp.FEATURE_LABELS, features=feature_catalog(),
+        barangays=barangays, selected_barangay=barangay_id,
+        scope_name=barangay_obj.name if barangay_obj else "all barangays",
     ))
 
 
