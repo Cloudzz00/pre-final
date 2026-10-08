@@ -655,6 +655,7 @@ def generate_training_dataset(n_children=3000, seed=7, real_children=None):
 # ---------------------------------------------------------------------------
 
 def train_and_save_model(n_synthetic=3000, seed=7, use_real_data=True):
+    import joblib
     from sklearn.ensemble import RandomForestClassifier
     from sklearn.linear_model import LogisticRegression
     from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
