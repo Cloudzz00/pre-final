@@ -40,6 +40,16 @@
   </div>
 </div>
 
+{% if child.age_in_days > 1825 and detail.overdue_count %}
+<div class="report-insight">
+  <div class="insight-icon">{{ icon('hourglass', 16) }}</div>
+  <div>
+    <b>Past typical catch-up age</b>
+    <p>This child is over 5 years old. DOH catch-up guidance for the primary series generally runs through age 5 for most doses (MMR has no upper age limit) — confirm current guidance before administering the doses still listed below.</p>
+  </div>
+</div>
+{% endif %}
+
 <div class="stat-grid child-summary-grid">
   <div class="stat-card">
     <div class="stat-icon bg-blue">{{ icon('baby', 21) }}</div>

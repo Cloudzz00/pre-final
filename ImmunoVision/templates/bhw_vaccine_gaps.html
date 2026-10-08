@@ -78,7 +78,7 @@
               <b style="font-size:14px;">{{ r.child.display_name }}</b>
             </a><br>
             <span class="text-muted" style="font-size:12px;">
-              {{ 'Male' if r.child.sex=='M' else 'Female' }} · {{ r.child.age_display }}
+              {{ 'Male' if r.child.sex=='M' else 'Female' }} · {{ r.child.age_display }}{% if r.child.age_in_days > 1825 %} <span title="Past the typical catch-up age (5 years) for the primary vaccine series &mdash; confirm current DOH guidance." style="cursor:help;">{{ icon('hourglass', 11) }}</span>{% endif %}
             </span>
           </td>
           <td>

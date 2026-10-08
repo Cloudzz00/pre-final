@@ -83,7 +83,7 @@
     {% for r in at_risk_rows %}
       <tr>
         <td><span class="rank-badge">{{ loop.index }}</span></td>
-        <td><b>{{ r.child.barangay.name[:2]|upper }}-{{ '%03d'|format(r.child.id) }}</b><br><span class="text-muted" style="font-size:11.5px">{{ r.child.display_name }} · {{ 'Male' if r.child.sex=='M' else 'Female' }} · {{ r.child.age_display }}</span></td>
+        <td><b>{{ r.child.barangay.name[:2]|upper }}-{{ '%03d'|format(r.child.id) }}</b><br><span class="text-muted" style="font-size:11.5px">{{ r.child.display_name }} · {{ 'Male' if r.child.sex=='M' else 'Female' }} · {{ r.child.age_display }}{% if r.child.age_in_days > 1825 %} <span title="Past the typical catch-up age (5 years) for the primary vaccine series &mdash; confirm current DOH guidance." style="cursor:help;">{{ icon('hourglass', 11) }}</span>{% endif %}</span></td>
         <td>{{ r.child.barangay.name }}</td>
         <td><span class="progress-track"><span class="progress-fill {{ r.color }}" style="width:{{ r.risk_score }}%"></span></span>{{ r.risk_score }}%</td>
         <td><span class="badge badge-{{ r.color }}">{{ r.tier }}</span></td>

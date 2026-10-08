@@ -1417,12 +1417,15 @@ def _recompute_risk(child):
 
 
 def _next_dose_for(child, vt_lookup):
-    """Returns the next not-yet-administered dose in the schedule for one
-    child (or None if every dose has been given), used by the
-    Continuation Predictor list to show what's coming up next."""
+    """Returns the next not-yet-administered, still-catchable dose in the
+    schedule for one child (or None if every such dose has been given or has
+    aged out), used by the Continuation Predictor list to show what's coming
+    up next."""
     given = _doses_given(child.id)
+    age = child.age_in_days
     for code, name, antigen, dose_no, rec_days in dp.VACCINE_SCHEDULE:
-        if given.get(vt_lookup[code].id) is None:
+        vt = vt_lookup[code]
+        if given.get(vt.id) is None and _still_catchable(vt, age):
             due_date = child.date_of_birth + timedelta(days=rec_days)
             return {"name": name, "due_date": due_date, "overdue": due_date < date.today()}
     return None
