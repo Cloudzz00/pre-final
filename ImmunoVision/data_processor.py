@@ -270,7 +270,16 @@ def load_registry_csv(path, barangay_name):
             raw_val = row[_FIRST_DATA_COL + i] if _FIRST_DATA_COL + i < len(row) else ""
             if str(raw_val).strip().upper() == "MOVE OUT":
                 moved_out = True
-            doses[code] = _clean_date(raw_val)
+            dose_date = _clean_date(raw_val)
+            # Same data-quality rule as the date-of-birth check above: some
+            # registries use the dose column to pencil in the next scheduled
+            # visit for a dose not yet given, rather than leaving it blank.
+            # A dose cannot have been administered in the future, so that
+            # value is discarded (treated as not yet given) rather than
+            # counted as a completed dose.
+            if dose_date is not None and dose_date > date.today():
+                dose_date = None
+            doses[code] = dose_date
 
         visits_raw = row[_FIRST_DATA_COL + len(_DOSE_COL_ORDER)] if len(row) > _FIRST_DATA_COL + len(_DOSE_COL_ORDER) else ""
         try:
