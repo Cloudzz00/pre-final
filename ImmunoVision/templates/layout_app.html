@@ -37,12 +37,6 @@
       </a>
       {% endfor %}
     </nav>
-    {# Name/role already shown in the topbar chip - just the avatar here as a
-       quick Settings shortcut, so the sidebar isn't repeating it in full. #}
-    <a class="sidebar-footer" href="{{ settings_url }}"
-       title="{{ current_user.full_name }} · {{ current_user.role_label }} · Account settings">
-      <div class="avatar-chip">{{ current_user.full_name.split(' ')|map('first')|join('') }}</div>
-    </a>
   </aside>
 
   <div class="main-col">
@@ -90,7 +84,6 @@
               <div class="n">{{ current_user.full_name }}</div>
               <div class="r">{{ current_user.role_label }}{% if current_user.barangay %} &middot; {{ current_user.barangay.name }}{% endif %}</div>
             </div>
-            <a role="menuitem" href="{{ settings_url }}#profile">{{ icon('user', 16) }} My Profile</a>
             <a role="menuitem" href="{{ settings_url }}">{{ icon('settings', 16) }} Settings</a>
             <div class="ad-sep"></div>
             <a role="menuitem" class="danger" href="{{ url_for('auth.logout') }}">{{ icon('log-out', 16) }} Log out</a>
