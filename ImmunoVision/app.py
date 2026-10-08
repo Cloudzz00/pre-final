@@ -2436,7 +2436,7 @@ def dashboard():
              "active": sum(1 for u in users if u.is_active_flag),
              "disabled": sum(1 for u in users if not u.is_active_flag),
              "logins_today": sum(1 for u in users if u.last_login_at and u.last_login_at.date() == datetime.utcnow().date())}
-    role_dist = {"admin": stats["admin"], "rhu": stats["rhu"], "bhw": stats["bhw"]}
+    role_dist = {"admin": stats["admin"], "rhu": stats["rhu"], "bhw": stats["bhw"], "ictmo": stats["ictmo"]}
 
     # Account oversight is ICTMO's job, same reasoning the RHU admin dashboard
     # used to apply to the whole audit trail: summarise Activity Logs here
