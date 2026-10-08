@@ -37,16 +37,11 @@
       </a>
       {% endfor %}
     </nav>
-    {# Same name/role the topbar account menu already shows - this used to be
-       inert duplication. Linking it to Settings gives it its own reason to
-       exist (a one-click shortcut) instead of just repeating what the
-       topbar chip already says. #}
-    <a class="sidebar-footer" href="{{ settings_url }}" title="Account settings">
+    {# Name/role already shown in the topbar chip - just the avatar here as a
+       quick Settings shortcut, so the sidebar isn't repeating it in full. #}
+    <a class="sidebar-footer" href="{{ settings_url }}"
+       title="{{ current_user.full_name }} · {{ current_user.role_label }} · Account settings">
       <div class="avatar-chip">{{ current_user.full_name.split(' ')|map('first')|join('') }}</div>
-      <div class="who">
-        <div class="name">{{ current_user.full_name }}</div>
-        <div class="role">{{ current_user.role_label }}</div>
-      </div>
     </a>
   </aside>
 
