@@ -21,6 +21,38 @@
       const collapsed = !sidebar.classList.contains("collapsed");
       apply(collapsed);
       localStorage.setItem(KEY, collapsed ? "1" : "0");
+      hideSidebarTooltip();
+    });
+  }
+
+  // Collapsed-sidebar tooltips: a nav icon alone doesn't say what it does, and
+  // hovering the rail used to show nothing. A floating label fixes that
+  // without the whole-page reflow a hover-to-expand sidebar would cause.
+  // position:fixed (not absolute) is deliberate - .sidebar-nav scrolls its own
+  // content and clips anything absolutely positioned past its right edge, so
+  // only a viewport-fixed element can sit outside the rail.
+  let sidebarTip = null;
+  function hideSidebarTooltip() {
+    if (sidebarTip) sidebarTip.classList.remove("show");
+  }
+  if (sidebar) {
+    sidebar.querySelectorAll(".sidebar-nav .nav-item").forEach((item) => {
+      item.addEventListener("mouseenter", () => {
+        if (!sidebar.classList.contains("collapsed")) return;
+        const label = item.querySelector(".label");
+        if (!label) return;
+        if (!sidebarTip) {
+          sidebarTip = document.createElement("div");
+          sidebarTip.className = "sidebar-tooltip";
+          document.body.appendChild(sidebarTip);
+        }
+        sidebarTip.textContent = label.textContent;
+        const r = item.getBoundingClientRect();
+        sidebarTip.style.top = r.top + r.height / 2 + "px";
+        sidebarTip.style.left = r.right + 10 + "px";
+        sidebarTip.classList.add("show");
+      });
+      item.addEventListener("mouseleave", hideSidebarTooltip);
     });
   }
 
