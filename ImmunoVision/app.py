@@ -1886,6 +1886,7 @@ def reports():
     as_of = period_end(period)
     fig = report_figures(barangay_id, as_of)
     barangays = Barangay.query.order_by(Barangay.name).all()
+    barangay_obj = next((b for b in barangays if b.id == barangay_id), None)
 
     extra = {}
     if report_type == "atrisk":
@@ -1893,14 +1894,14 @@ def reports():
     elif report_type == "inventory":
         extra["inventory_rows"] = stock_levels()
     elif report_type == "barangay":
-        extra["barangay_obj"] = next((b for b in barangays if b.id == barangay_id), None)
+        extra["barangay_obj"] = barangay_obj
     elif report_type == "monthly":
         extra["trend"] = yearly_trend(barangay_id)
 
     return render_template("rhu_reports.html", **_rhu_ctx(
         "reports", page_title="Reports", report_type=report_type,
         stats=fig, by_barangay=fig["by_barangay"], generated_at=datetime.now(),
-        barangays=barangays,
+        barangays=barangays, scope_name=barangay_obj.name if barangay_obj else "All Barangays",
         selected_barangay=barangay_id, periods=month_options(), selected_period=period,
         as_of=as_of, **extra,
     ))

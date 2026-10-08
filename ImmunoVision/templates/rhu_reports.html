@@ -7,86 +7,379 @@
   ('atrisk', 'alert-triangle', 'At-Risk Children Report', 'Children identified as at risk of incomplete immunization'),
   ('inventory', 'package', 'Inventory Report', 'Current vaccine stock levels, expiry dates, and usage'),
   ('barangay', 'map-pin', 'Barangay Report', 'Complete statistics for individual barangays'),
-  ('monthly', 'calendar', 'Monthly Summary', 'Monthly performance report and trend analysis'),
+  ('monthly', 'calendar', 'Monthly Summary', 'Period performance and year-over-year trend'),
 ] %}
+{% set current = report_types|selectattr('0', 'equalto', report_type)|first %}
 
-<div class="report-layout">
-  <div class="report-config no-print">
-    <div class="card-title" style="margin-bottom:10px;">Report Configuration</div>
+<div class="rhu-report-page">
 
-    <div class="config-label">Report Type</div>
+  {# ── Page header ── #}
+  <div class="report-hero">
+    <div>
+      <h2>Reports</h2>
+      <p>View vaccination coverage, stock levels, and at-risk cases across the municipality.</p>
+    </div>
+    <div class="report-period-pill">{{ icon('map-pin', 13) }} {{ scope_name }}</div>
+  </div>
+
+  {# ── Report type selector ── #}
+  <div class="report-types no-print">
     {% for key, icon_name, title, desc in report_types %}
     <a href="{{ url_for('rhu.reports', type=key, barangay_id=selected_barangay, period=selected_period) }}"
-       class="report-type-card {{ 'active' if report_type==key }}">
+       class="report-type-card {{ 'active' if report_type == key }}">
       <div class="ic">{{ icon(icon_name, 18) }}</div>
-      <div><div class="t">{{ title }}</div><div class="d">{{ desc }}</div></div>
+      <div>
+        <div class="t">{{ title }}</div>
+        <div class="d">{{ desc }}</div>
+      </div>
     </a>
     {% endfor %}
+  </div>
 
-    <form method="get" action="{{ url_for('rhu.reports') }}" class="report-filters">
-      <input type="hidden" name="type" value="{{ report_type }}">
-
-      <div class="form-group">
-        <label for="rptBarangay">Barangay</label>
-        <select class="form-control" id="rptBarangay" name="barangay_id">
-          <option value="">All Barangays</option>
-          {% for b in barangays %}
-          <option value="{{ b.id }}" {% if selected_barangay == b.id %}selected{% endif %}>{{ b.name }}</option>
-          {% endfor %}
-        </select>
+  {# ── Toolbar: scope + period selectors + actions ── #}
+  <div class="report-toolbar no-print">
+    <div class="toolbar-info">
+      <span class="badge">{{ icon('calendar', 16) }}</span>
+      <div>
+        <b>Reporting period</b><br>
+        <span>{{ as_of.strftime('%B %d, %Y') }}</span>
       </div>
-
-      <div class="form-group">
-        <label for="rptPeriod">Period</label>
-        <select class="form-control" id="rptPeriod" name="period">
-          {% for value, label in periods %}
-          <option value="{{ value }}" {% if selected_period == value or (not selected_period and loop.first) %}selected{% endif %}>{{ label }}</option>
-          {% endfor %}
-        </select>
+    </div>
+    <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;">
+      <form method="get" action="{{ url_for('rhu.reports') }}" class="toolbar-form">
+        <input type="hidden" name="type" value="{{ report_type }}">
+        <div>
+          <label for="rptBarangay">Barangay</label>
+          <select class="form-control" id="rptBarangay" name="barangay_id">
+            <option value="">All Barangays</option>
+            {% for b in barangays %}
+            <option value="{{ b.id }}" {% if selected_barangay == b.id %}selected{% endif %}>{{ b.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="rptPeriod">Period</label>
+          <select class="form-control" id="rptPeriod" name="period">
+            {% for value, label in periods %}
+            <option value="{{ value }}" {% if selected_period == value or (not selected_period and loop.first) %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary">{{ icon('refresh', 14) }} Update</button>
+      </form>
+      <div class="report-actions">
+        <button type="button" class="btn btn-primary" onclick="window.print()">{{ icon('printer', 14) }} Print</button>
+        <button type="button" class="btn btn-outline" onclick="window.print()">{{ icon('file-text', 14) }} PDF</button>
+        <a class="btn btn-outline" href="{{ url_for('rhu.export_report_csv', barangay_id=selected_barangay, period=selected_period) }}">{{ icon('download', 14) }} Excel</a>
       </div>
-
-      <button type="submit" class="btn btn-primary btn-block">{{ icon('file-text', 15) }} Generate Report</button>
-    </form>
-
-    <div class="report-export">
-      <button type="button" class="btn btn-outline btn-sm" onclick="window.print()">{{ icon('download', 14) }} PDF</button>
-      <a class="btn btn-outline btn-sm"
-         href="{{ url_for('rhu.export_report_csv', barangay_id=selected_barangay, period=selected_period) }}">{{ icon('download', 14) }} Excel</a>
-      <button type="button" class="btn btn-outline btn-sm" onclick="window.print()">{{ icon('file-text', 14) }} Print</button>
     </div>
   </div>
 
-  <div class="report-doc">
-    {% set current = report_types|selectattr('0', 'equalto', report_type)|first %}
-    <div class="report-doc-head">
-      <div>
-        <div class="report-letterhead">{{ brand_mark(22, 6) }}<b style="color:var(--primary)">ImmunoVision</b></div>
-        <div style="font-weight:800;font-size:18px;">{{ current[2] if current else 'Coverage Report' }}</div>
-        <div class="text-muted" style="font-size:12.5px;">San Jacinto Rural Health Unit, Pangasinan · {{ as_of.strftime('%B %Y') }}</div>
-        <div class="text-muted" style="font-size:12px;margin-top:2px;">
-          {% if selected_barangay %}{% for b in barangays %}{% if b.id == selected_barangay %}Barangay {{ b.name }}{% endif %}{% endfor %}{% else %}All 19 barangays{% endif %}
-          · as of {{ as_of.strftime('%b %d, %Y') }}
+  {# ── Report document ── #}
+  <main class="report-doc">
+
+    {# ── 1. At-Risk Children ── #}
+    {% if report_type == 'atrisk' %}
+      <div class="report-doc-head">
+        <div>
+          <div class="report-letterhead">{{ brand_mark(22, 6) }}<b style="color:var(--primary)">ImmunoVision</b></div>
+          <div class="report-kicker">{{ icon(current[1], 12) }} {{ current[2] }}</div>
+          <h1 class="report-doc-title">At-Risk Children Report</h1>
+          <p class="report-doc-sub">{{ scope_name }} &middot; {{ as_of.strftime('%B %Y') }}</p>
+        </div>
+        <div class="generated-meta">{{ icon('clock', 12) }}<br>Generated {{ generated_at.strftime('%b %d, %Y %I:%M %p') }}</div>
+      </div>
+
+      {% if at_risk_rows %}
+      <div class="report-section-head">
+        <div>
+          <div class="report-section-title">
+            <span class="section-icon orange">{{ icon('users', 16) }}</span>
+            Children Flagged At-Risk
+          </div>
+          <div class="report-section-sub">Ranked by risk score, highest first &middot; {{ at_risk_rows|length }} shown</div>
         </div>
       </div>
-      <div class="text-muted" style="font-size:12px;text-align:right;">{{ icon('clock', 13) }} Generated: {{ generated_at.strftime('%b %d, %Y %I:%M %p') }}</div>
-    </div>
+      <div class="coverage-table-wrap">
+        <table class="coverage-table">
+          <thead>
+            <tr>
+              <th>Child</th>
+              <th>Barangay</th>
+              <th>Risk Tier</th>
+              <th>Missed Doses</th>
+              <th>Recommendation</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in at_risk_rows %}
+            <tr>
+              <td>
+                <a class="child-name" href="{{ url_for('rhu.child_record', child_id=r.child.id) }}">{{ r.child.display_name }}</a>
+              </td>
+              <td>{{ r.child.barangay.name }}</td>
+              <td><span class="risk-pill">{{ r.tier }} &middot; {{ r.risk_score }}%</span></td>
+              <td class="missed-count">{{ r.missed }} of {{ r.due }}</td>
+              <td>{{ r.recommendation }}</td>
+              <td>
+                <a class="btn btn-outline btn-sm child-report-btn" href="{{ url_for('rhu.child_record', child_id=r.child.id) }}">
+                  {{ icon('file-text', 13) }} View
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">{{ icon('check-circle', 22) }}</div>
+        <div>
+          <strong>No children currently flagged at-risk{{ ' in ' + scope_name if selected_barangay else '' }}.</strong>
+          <p>Everyone in scope is on track for this reporting period.</p>
+        </div>
+      </div>
+      {% endif %}
 
-    <div class="report-chips">
-      <div class="report-chip"><div class="v" style="color:var(--primary)">{{ stats.coverage_rate }}%</div><div class="l">Coverage Rate</div></div>
-      <div class="report-chip"><div class="v" style="color:var(--green)">{{ stats.fully_immunized }}</div><div class="l">Fully Immunized</div></div>
-      <div class="report-chip"><div class="v" style="color:var(--orange)">{{ stats.at_risk }}</div><div class="l">At-Risk Children</div></div>
-    </div>
+    {# ── 2. Inventory ── #}
+    {% elif report_type == 'inventory' %}
+      <div class="report-doc-head">
+        <div>
+          <div class="report-letterhead">{{ brand_mark(22, 6) }}<b style="color:var(--primary)">ImmunoVision</b></div>
+          <div class="report-kicker">{{ icon(current[1], 12) }} {{ current[2] }}</div>
+          <h1 class="report-doc-title">Vaccine Inventory Report</h1>
+          <p class="report-doc-sub">San Jacinto Rural Health Unit &middot; {{ as_of.strftime('%B %Y') }}</p>
+        </div>
+        <div class="generated-meta">{{ icon('clock', 12) }}<br>Generated {{ generated_at.strftime('%b %d, %Y %I:%M %p') }}</div>
+      </div>
 
-    <div class="card-title" style="font-size:14px;">Coverage Rate by Barangay</div>
-    <div class="chart-box tall"><canvas id="reportChart"></canvas></div>
-  </div>
+      <div class="data-note" style="margin:0 0 14px;">Central cold-chain stock is RHU-wide and not split by barangay, so the Barangay filter above does not apply to this report.</div>
+
+      <div class="report-section-head">
+        <div>
+          <div class="report-section-title">
+            <span class="section-icon">{{ icon('package', 16) }}</span>
+            Stock on Hand
+          </div>
+          <div class="report-section-sub">{{ inventory_rows|length }} vaccine types tracked</div>
+        </div>
+      </div>
+      <div class="coverage-table-wrap">
+        <table class="coverage-table">
+          <thead>
+            <tr>
+              <th>Vaccine</th>
+              <th>Current Stock</th>
+              <th class="coverage-bar-cell">Stock Level</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in inventory_rows %}
+            <tr>
+              <td>{{ r.antigen.name }}</td>
+              <td class="coverage-value">{{ r.total }} <span class="text-muted" style="font-weight:600;">/ {{ r.reorder }}</span></td>
+              <td class="coverage-bar-cell">
+                <div class="mini-track"><div class="mini-fill" style="width:{{ r.pct }}%;background:{{ '#dc2626' if r.color=='red' else ('#d97706' if r.color=='amber' else '#14b8a6') }}"></div></div>
+              </td>
+              <td>
+                {% if r.status == 'Enough' %}<span class="status-pill status-good">{{ icon('check', 12) }} Enough</span>
+                {% elif r.status == 'Low' %}<span class="status-pill status-warn">{{ icon('alert-triangle', 12) }} Low</span>
+                {% else %}<span class="status-pill status-low">{{ icon('alert-triangle', 12) }} {{ r.status }}</span>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+    {# ── 3. Barangay Report ── #}
+    {% elif report_type == 'barangay' %}
+      {% if barangay_obj %}
+      <div class="report-doc-head">
+        <div>
+          <div class="report-letterhead">{{ brand_mark(22, 6) }}<b style="color:var(--primary)">ImmunoVision</b></div>
+          <div class="report-kicker">{{ icon(current[1], 12) }} {{ current[2] }}</div>
+          <h1 class="report-doc-title">Barangay {{ barangay_obj.name }} Overview</h1>
+          <p class="report-doc-sub">Overall immunization status &middot; {{ as_of.strftime('%B %Y') }}</p>
+        </div>
+        <div class="generated-meta">{{ icon('clock', 12) }}<br>Generated {{ generated_at.strftime('%b %d, %Y %I:%M %p') }}</div>
+      </div>
+
+      <div class="report-insight {{ 'warn' if stats.coverage_rate < 95 }}">
+        <div class="insight-icon">{{ icon('map-pin', 16) }}</div>
+        <div>
+          <b>Barangay coverage</b>
+          <p>{{ barangay_obj.name }} has <b>{{ stats.coverage_rate }}%</b> overall vaccination coverage for the selected period, against the DOH target of 95%.</p>
+        </div>
+      </div>
+
+      <div class="report-section-head">
+        <div>
+          <div class="report-section-title">
+            <span class="section-icon">{{ icon('bar-chart', 16) }}</span>
+            Barangay Snapshot
+          </div>
+          <div class="report-section-sub">Key figures for {{ barangay_obj.name }}</div>
+        </div>
+      </div>
+      <div class="snapshot-grid">
+        <div><span>Barangay</span><strong>{{ barangay_obj.name }}</strong></div>
+        <div><span>Total Children</span><strong>{{ stats.total_children }}</strong></div>
+        <div><span>Coverage</span><strong>{{ stats.coverage_rate }}%</strong></div>
+        <div><span>Fully Immunized</span><strong>{{ stats.fully_immunized }}</strong></div>
+        <div><span>At-Risk</span><strong>{{ stats.at_risk }}</strong></div>
+      </div>
+      {% else %}
+      <div class="report-doc-head">
+        <div>
+          <div class="report-letterhead">{{ brand_mark(22, 6) }}<b style="color:var(--primary)">ImmunoVision</b></div>
+          <div class="report-kicker">{{ icon(current[1], 12) }} {{ current[2] }}</div>
+          <h1 class="report-doc-title">Barangay Report</h1>
+          <p class="report-doc-sub">Complete statistics for an individual barangay</p>
+        </div>
+      </div>
+      <div class="empty-state">
+        <div class="empty-icon">{{ icon('map-pin', 22) }}</div>
+        <div>
+          <strong>Select a barangay above to generate its report.</strong>
+          <p>This report covers one barangay at a time. For all 19 at once, see the Coverage Report.</p>
+        </div>
+      </div>
+      {% endif %}
+
+    {# ── 4. Monthly Summary ── #}
+    {% elif report_type == 'monthly' %}
+      <div class="report-doc-head">
+        <div>
+          <div class="report-letterhead">{{ brand_mark(22, 6) }}<b style="color:var(--primary)">ImmunoVision</b></div>
+          <div class="report-kicker">{{ icon(current[1], 12) }} {{ current[2] }}</div>
+          <h1 class="report-doc-title">Performance Summary</h1>
+          <p class="report-doc-sub">{{ scope_name }} &middot; {{ as_of.strftime('%B %Y') }}</p>
+        </div>
+        <div class="generated-meta">{{ icon('clock', 12) }}<br>Generated {{ generated_at.strftime('%b %d, %Y %I:%M %p') }}</div>
+      </div>
+
+      <div class="report-summary">
+        <div class="summary-card">
+          <div class="summary-icon">{{ icon('activity', 17) }}</div>
+          <div class="v" style="color:var(--primary)">{{ stats.coverage_rate }}%</div>
+          <div class="l">Coverage Rate</div>
+          <div class="d">As of {{ as_of.strftime('%b %d, %Y') }}</div>
+        </div>
+        <div class="summary-card green">
+          <div class="summary-icon">{{ icon('check-circle', 17) }}</div>
+          <div class="v" style="color:#16a34a">{{ stats.fully_immunized }}</div>
+          <div class="l">Fully Immunized</div>
+          <div class="d">of {{ stats.total_children }} children</div>
+        </div>
+        <div class="summary-card orange">
+          <div class="summary-icon">{{ icon('alert-triangle', 17) }}</div>
+          <div class="v" style="color:#d97706">{{ stats.at_risk }}</div>
+          <div class="l">At-Risk Children</div>
+          <div class="d">need follow-up</div>
+        </div>
+      </div>
+
+      {% if trend|length > 1 %}
+      <div class="chart-panel">
+        <div class="report-section-head" style="margin-bottom:8px;margin-top:0;">
+          <div class="report-section-title" style="font-size:14px;">Coverage Trend, Year End</div>
+          <div class="report-target">Measured, not simulated</div>
+        </div>
+        <div class="chart-box"><canvas id="reportChart"></canvas></div>
+      </div>
+      {% else %}
+      <div class="data-note">Not enough prior years of data in {{ scope_name }} to chart a trend yet.</div>
+      {% endif %}
+
+    {# ── 5. Coverage Report (default) ── #}
+    {% else %}
+      <div class="report-doc-head">
+        <div>
+          <div class="report-letterhead">{{ brand_mark(22, 6) }}<b style="color:var(--primary)">ImmunoVision</b></div>
+          <div class="report-kicker">{{ icon(current[1], 12) if current else icon('trending-up', 12) }} {{ current[2] if current else 'Coverage Report' }}</div>
+          <h1 class="report-doc-title">Coverage Report</h1>
+          <p class="report-doc-sub">San Jacinto Rural Health Unit, Pangasinan &middot; {{ scope_name }} &middot; {{ as_of.strftime('%B %Y') }}</p>
+        </div>
+        <div class="generated-meta">{{ icon('clock', 12) }}<br>Generated {{ generated_at.strftime('%b %d, %Y %I:%M %p') }}</div>
+      </div>
+
+      <div class="report-summary">
+        <div class="summary-card">
+          <div class="summary-icon">{{ icon('activity', 17) }}</div>
+          <div class="v" style="color:var(--primary)">{{ stats.coverage_rate }}%</div>
+          <div class="l">Coverage Rate</div>
+          <div class="d">Overall coverage against the 95% target</div>
+        </div>
+        <div class="summary-card green">
+          <div class="summary-icon">{{ icon('check-circle', 17) }}</div>
+          <div class="v" style="color:#16a34a">{{ stats.fully_immunized }}</div>
+          <div class="l">Fully Immunized</div>
+          <div class="d">Children who have completed all doses</div>
+        </div>
+        <div class="summary-card orange">
+          <div class="summary-icon">{{ icon('alert-triangle', 17) }}</div>
+          <div class="v" style="color:#d97706">{{ stats.at_risk }}</div>
+          <div class="l">At-Risk Children</div>
+          <div class="d">need follow-up</div>
+        </div>
+      </div>
+
+      <div class="report-section-head">
+        <div>
+          <div class="report-section-title">
+            <span class="section-icon">{{ icon('bar-chart', 16) }}</span>
+            Coverage by Barangay
+          </div>
+          <div class="report-section-sub">{{ by_barangay|length }} barangays, lowest coverage first</div>
+        </div>
+        <div class="report-target">Target: 95%</div>
+      </div>
+      <div class="coverage-table-wrap">
+        <table class="coverage-table">
+          <thead>
+            <tr>
+              <th>Barangay</th>
+              <th>Children</th>
+              <th>Fully Immunized</th>
+              <th>Coverage</th>
+              <th class="coverage-bar-cell">Progress</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in by_barangay|sort(attribute='coverage') %}
+            <tr>
+              <td>{{ r.barangay }}</td>
+              <td>{{ r.children }}</td>
+              <td>{{ r.fully_immunized }}</td>
+              <td class="coverage-value">{{ r.coverage }}%</td>
+              <td class="coverage-bar-cell">
+                <div class="mini-track"><div class="mini-fill" style="width:{{ r.coverage }}%;"></div></div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="chart-panel">
+        <div class="report-section-head" style="margin-bottom:8px;margin-top:0;">
+          <div class="report-section-title" style="font-size:14px;">Coverage Rate by Barangay</div>
+        </div>
+        <div class="chart-box"><canvas id="reportChart"></canvas></div>
+      </div>
+    {% endif %}
+
+  </main>
 </div>
 {% endblock %}
 
 {% block extra_js %}
+{% if report_type == 'coverage' or not report_type %}
 <script src="{{ url_for('static', filename='js/vendor/chart.umd.js') }}"></script>
-<script>Chart.defaults.maintainAspectRatio = false; Chart.defaults.responsive = true;</script>
-<script>
+<script>Chart.defaults.maintainAspectRatio = false; Chart.defaults.responsive = true;
 new Chart(document.getElementById('reportChart'), {
   type: 'bar',
   data: { labels: [{% for r in by_barangay %}{{ r.barangay|tojson }},{% endfor %}],
@@ -94,4 +387,16 @@ new Chart(document.getElementById('reportChart'), {
   options: { plugins: { legend: { display: false } }, scales: { y: { max: 100 } } }
 });
 </script>
+{% elif report_type == 'monthly' and trend|length > 1 %}
+<script src="{{ url_for('static', filename='js/vendor/chart.umd.js') }}"></script>
+<script>Chart.defaults.maintainAspectRatio = false; Chart.defaults.responsive = true;
+new Chart(document.getElementById('reportChart'), {
+  type: 'line',
+  data: { labels: [{% for label, rate, n in trend %}{{ label|tojson }},{% endfor %}],
+    datasets: [{ data: [{% for label, rate, n in trend %}{{ rate }},{% endfor %}],
+      borderColor: '#14b8a6', backgroundColor: 'rgba(20,184,166,.12)', fill: true, tension: .3 }] },
+  options: { plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' } } } }
+});
+</script>
+{% endif %}
 {% endblock %}
