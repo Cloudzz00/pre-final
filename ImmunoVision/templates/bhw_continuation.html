@@ -1,6 +1,6 @@
 {% extends "layout_app.html" %}
 {% from "_icons.html" import icon %}
-{% block page_subtitle %}Who is likely to stop coming back altogether &mdash; for which specific vaccines are missing, see <a class="link" href="{{ url_for('bhw.vaccine_gaps') }}">Vaccine Gaps</a>.{% endblock %}
+{% block page_subtitle %}Who, in their first year, is likely to stop coming back altogether &mdash; for which specific vaccines are missing at any age, see <a class="link" href="{{ url_for('bhw.vaccine_gaps') }}">Vaccine Gaps</a>.{% endblock %}
 {% block content %}
 <div class="stat-grid">
   <div class="stat-card"><div class="stat-icon bg-green">{{ icon('check-circle', 21) }}</div><div class="stat-value">{{ dist.low_count }}</div><div class="stat-label">On Track</div><div class="stat-caption">No follow-up needed</div></div>

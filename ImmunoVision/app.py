@@ -301,8 +301,10 @@ def _is_fully_immunized(child):
     return True if due == 0 else ((due - missed) / due >= 0.9)
 
 
-def dashboard_stats(barangay_id=None):
+def dashboard_stats(barangay_id=None, max_age_days=None):
     children = _children_query(barangay_id).all()
+    if max_age_days is not None:
+        children = [c for c in children if c.age_in_days <= max_age_days]
     total = len(children)
     fully = sum(1 for c in children if _is_fully_immunized(c))
     risk = _latest_risk_by_child()
@@ -400,6 +402,14 @@ def schedule_labels(rows):
 # one that is seriously behind.
 COVERAGE_TARGET = 95          # DOH EPI target, also drawn on the trend charts
 COVERAGE_BANDS = ((COVERAGE_TARGET, "green"), (75, "amber"))
+
+# The primary series itself runs 0-365 days (MMR 2nd Dose, the last core
+# dose, is recommended at day 365); past that a child has already either
+# continued or not, so "at risk of discontinuing" stops being a prediction
+# and becomes a historical fact. Caps at_risk_table() for the Continuation
+# Predictor and its dashboard summaries - never for Vaccine Gaps or the
+# At-Risk Children report, which stay a complete registry at any age.
+CONTINUATION_WINDOW_DAYS = 365
 
 
 def simulated_barangays():
@@ -640,10 +650,12 @@ def monthly_trend(barangay_id=None, current_rate=None):
     return list(zip(months, values))
 
 
-def risk_distribution(barangay_id=None):
+def risk_distribution(barangay_id=None, max_age_days=None):
     counts = Counter()
     risk = _latest_risk_by_child()
     for c in _children_query(barangay_id).all():
+        if max_age_days is not None and c.age_in_days > max_age_days:
+            continue
         latest = risk.get(c.id)
         counts[dp.risk_tier(latest.risk_probability) if latest else "Low Risk"] += 1
     total = sum(counts.values()) or 1
@@ -741,11 +753,19 @@ def top_risk_factors(barangay_id=None, limit=6):
     return [{"label": label, "count": count, "pct": round(count / max_v * 100)} for label, count in ranked]
 
 
-def at_risk_table(barangay_id=None, limit=None):
+def at_risk_table(barangay_id=None, limit=None, max_age_days=None):
+    """max_age_days scopes this to the Continuation Predictor's "early
+    warning during the active primary series" framing (the series itself
+    runs 0-365 days; the reverted ML model was trained the same way, on
+    60-300-day snapshots). Omitted entirely for Vaccine Gaps and the At-Risk
+    Children report, which are meant to be a complete current registry
+    regardless of age, not a prediction."""
     rows = []
     risk = _latest_risk_by_child()
     records = _records_by_child()
     for c in _children_query(barangay_id).all():
+        if max_age_days is not None and c.age_in_days > max_age_days:
+            continue
         latest = risk.get(c.id)
         if not latest or latest.risk_label != "At-Risk":
             continue
@@ -1615,7 +1635,7 @@ def dashboard():
     dist = risk_distribution_for(kids)
     # Two actionable panels: who needs a visit, and what stock is running out.
     # Both summarise their dedicated pages rather than reproducing them.
-    follow_up = at_risk_table(barangay_id, limit=5)
+    follow_up = at_risk_table(barangay_id, limit=5, max_age_days=CONTINUATION_WINDOW_DAYS)
     low_stock = stock_alerts(limit=5)
     # Approving requests is an RHU responsibility; nothing surfaced them before.
     # Requests belong to a barangay, so they follow the scope filter. (Stock does
@@ -1751,14 +1771,16 @@ def continuation():
     barangay_id = request.args.get("barangay_id", type=int)
     barangays = Barangay.query.order_by(Barangay.name).all()
     barangay_obj = next((b for b in barangays if b.id == barangay_id), None)
-    rows = at_risk_table(barangay_id)
+    rows = at_risk_table(barangay_id, max_age_days=CONTINUATION_WINDOW_DAYS)
     for r in rows:
         r["continuation_pct"] = 100 - r["risk_score"]
         r["next_dose"] = _next_dose_for(r["child"], vt_lookup)
     engine = dp.model_info()
     return render_template("rhu_continuation.html", **_rhu_ctx(
-        "continuation", page_title="Continuation Predictor", rows=rows, stats=dashboard_stats(barangay_id),
-        dist=risk_distribution(barangay_id), engine=engine, scoring_rules=dp.SCORING_RULES,
+        "continuation", page_title="Continuation Predictor", rows=rows,
+        stats=dashboard_stats(barangay_id, max_age_days=CONTINUATION_WINDOW_DAYS),
+        dist=risk_distribution(barangay_id, max_age_days=CONTINUATION_WINDOW_DAYS),
+        engine=engine, scoring_rules=dp.SCORING_RULES,
         feature_labels=dp.FEATURE_LABELS, features=feature_catalog(),
         barangays=barangays, selected_barangay=barangay_id,
         scope_name=barangay_obj.name if barangay_obj else "all barangays",
@@ -2008,7 +2030,7 @@ def dashboard():
     as_of, period_label, clamped = resolve_period(month, year)
     kids = filtered_children(bid, risk_level, status, as_of)
     # The BHW does the home visits, so the "who to chase" list matters most here.
-    follow_up = at_risk_table(bid, limit=5)
+    follow_up = at_risk_table(bid, limit=5, max_age_days=CONTINUATION_WINDOW_DAYS)
 
     # Coverage Analytics merged into this page; its own route was retired.
     by_vaccine = order_by_schedule(report_by_vaccine(bid, as_of) if as_of else coverage_by_vaccine(bid))
@@ -2148,14 +2170,16 @@ def vaccine_gaps():
 def continuation():
     bid = current_user.barangay_id
     vt_lookup = {vt.code: vt for vt in VaccineType.query.all()}
-    rows = at_risk_table(bid)
+    rows = at_risk_table(bid, max_age_days=CONTINUATION_WINDOW_DAYS)
     for r in rows:
         r["continuation_pct"] = 100 - r["risk_score"]
         r["next_dose"] = _next_dose_for(r["child"], vt_lookup)
     engine = dp.model_info()
     return render_template("bhw_continuation.html", **_bhw_ctx(
-        "continuation", page_title="Continuation Predictor", rows=rows, stats=dashboard_stats(bid),
-        dist=risk_distribution(bid), engine=engine, scoring_rules=dp.SCORING_RULES,
+        "continuation", page_title="Continuation Predictor", rows=rows,
+        stats=dashboard_stats(bid, max_age_days=CONTINUATION_WINDOW_DAYS),
+        dist=risk_distribution(bid, max_age_days=CONTINUATION_WINDOW_DAYS),
+        engine=engine, scoring_rules=dp.SCORING_RULES,
         feature_labels=dp.FEATURE_LABELS, features=feature_catalog(),
     ))
 
