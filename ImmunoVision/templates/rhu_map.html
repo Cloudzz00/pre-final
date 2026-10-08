@@ -263,6 +263,11 @@ function renderOffline() {
   const shapesG = document.getElementById('mapShapes');
   const labelsG = document.getElementById('mapLabels');
   shapesG.innerHTML = ''; labelsG.innerHTML = '';
+  // Two passes, not one: adjoining barangay shapes often share overlapping
+  // boundary coordinates, so a fill drawn later in DATA[mode] could paint
+  // over an earlier barangay's hatch if fill-then-hatch were interleaved
+  // per shape. Every fill goes down first, then every hatch on top, so a
+  // simulated barangay's hatch is never hidden by a neighbour's fill.
   DATA[mode].forEach(m => {
     if (!m.d) return;
     const path = document.createElementNS(SVG_NS, 'path');
@@ -279,15 +284,6 @@ function renderOffline() {
     title.textContent = `${m.barangay} — ${m.value}${m.suffix}`;
     path.appendChild(title);
     shapesG.appendChild(path);
-
-    if (m.simulated) {
-      // Hatch drawn over the fill so the coverage colour stays readable.
-      const hatch = document.createElementNS(SVG_NS, 'path');
-      hatch.setAttribute('d', m.d);
-      hatch.setAttribute('fill', 'url(#simHatch)');
-      hatch.setAttribute('pointer-events', 'none');
-      shapesG.appendChild(hatch);
-    }
 
     if (m.area >= LABEL_MIN_AREA) {
       const nm = document.createElementNS(SVG_NS, 'text');
@@ -309,6 +305,17 @@ function renderOffline() {
       dot.addEventListener('click', () => { select(m); renderOffline(); });
       labelsG.appendChild(dot);
     }
+  });
+
+  // Second pass: every hatch on top of every fill, pointer-events off so
+  // clicks still reach the shape underneath.
+  DATA[mode].forEach(m => {
+    if (!m.d || !m.simulated) return;
+    const hatch = document.createElementNS(SVG_NS, 'path');
+    hatch.setAttribute('d', m.d);
+    hatch.setAttribute('fill', 'url(#simHatch)');
+    hatch.setAttribute('pointer-events', 'none');
+    shapesG.appendChild(hatch);
   });
 }
 
