@@ -1882,14 +1882,27 @@ def allocation():
 def reports():
     barangay_id = request.args.get("barangay_id", type=int)
     period = request.args.get("period", "")
+    report_type = request.args.get("type", "coverage")
     as_of = period_end(period)
     fig = report_figures(barangay_id, as_of)
+    barangays = Barangay.query.order_by(Barangay.name).all()
+
+    extra = {}
+    if report_type == "atrisk":
+        extra["at_risk_rows"] = at_risk_table(barangay_id, limit=50)
+    elif report_type == "inventory":
+        extra["inventory_rows"] = stock_levels()
+    elif report_type == "barangay":
+        extra["barangay_obj"] = next((b for b in barangays if b.id == barangay_id), None)
+    elif report_type == "monthly":
+        extra["trend"] = yearly_trend(barangay_id)
+
     return render_template("rhu_reports.html", **_rhu_ctx(
-        "reports", page_title="Reports", report_type=request.args.get("type", "coverage"),
+        "reports", page_title="Reports", report_type=report_type,
         stats=fig, by_barangay=fig["by_barangay"], generated_at=datetime.now(),
-        barangays=Barangay.query.order_by(Barangay.name).all(),
+        barangays=barangays,
         selected_barangay=barangay_id, periods=month_options(), selected_period=period,
-        as_of=as_of,
+        as_of=as_of, **extra,
     ))
 
 
@@ -2051,6 +2064,27 @@ def child_record(child_id):
     ))
 
 
+@bhw_bp.route("/children/<int:child_id>/followup-report")
+def child_followup_report(child_id):
+    """Printable, single-child version of a row on the Children Who Need a
+    Visit report - the full picture (why they're flagged, what's overdue,
+    what to do) for a home visit, rather than the whole-barangay table."""
+    child = db.session.get(Child, child_id) or abort(404)
+    if child.barangay_id != current_user.barangay_id:
+        abort(403)
+    detail = child_detail(child)
+    risk_score = round(detail["risk"].risk_probability * 100) if detail["risk"] else 0
+    factor_names = [f["factor"] for f in detail["factors"]]
+    return render_template("bhw_child_followup_report.html", **_bhw_ctx(
+        "reports", page_title="Follow-Up Report", child=child, detail=detail,
+        risk_score=risk_score,
+        overdue=[r for r in detail["schedule"] if r["status"] == "overdue"],
+        due=[r for r in detail["schedule"] if r["status"] == "due"],
+        factor_names=factor_names, generated_at=datetime.now(),
+        back_url=url_for("bhw.reports", type="atrisk"),
+    ))
+
+
 @bhw_bp.route("/children/<int:child_id>/edit", methods=["GET", "POST"])
 def edit_child(child_id):
     child = db.session.get(Child, child_id) or abort(404)
@@ -2133,6 +2167,7 @@ def reports():
     return render_template("bhw_reports.html", **_bhw_ctx(
         "reports", page_title="Reports", report_type=request.args.get("type", "coverage"),
         stats=fig, by_vaccine=report_by_vaccine(bid, as_of), generated_at=datetime.now(),
+        at_risk_rows=vaccine_risk_table(bid, limit=50),
         periods=month_options(), selected_period=period, as_of=as_of,
     ))
 

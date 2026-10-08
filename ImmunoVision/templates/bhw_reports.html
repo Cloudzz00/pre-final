@@ -258,7 +258,7 @@
             {% endfor %}
           </select>
         </div>
-        <button type="submit" class="btn btn-primary">{{ icon('refresh-cw', 14) }} Update</button>
+        <button type="submit" class="btn btn-primary">{{ icon('refresh', 14) }} Update</button>
       </form>
       <div class="report-actions">
         <button type="button" class="btn btn-primary" onclick="window.print()">{{ icon('printer', 14) }} Print</button>
@@ -300,15 +300,13 @@
             {% for r in at_risk_rows %}
             <tr>
               <td>
-                <a class="child-name" href="{{ url_for('bhw.child_followup_report', child_id=r.child.id) }}">
+                <a class="child-name" href="{{ url_for('bhw.child_record', child_id=r.child.id) }}">
                   {{ r.child.display_name }}
                 </a>
               </td>
               <td>{{ r.child.date_of_birth.strftime('%b %d, %Y') }}</td>
               <td>
-                <span class="risk-pill">
-                  {{ 'Visit Urgently' if r.risk_score >= 70 else 'Visit Soon' }}
-                </span>
+                <span class="risk-pill">{{ r.tier }}</span>
               </td>
               <td class="missed-count">{{ r.missed }}</td>
               <td>

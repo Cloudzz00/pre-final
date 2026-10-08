@@ -94,7 +94,7 @@
         <div class="attention-card"><h4>{{ icon('alert-triangle', 12) }} Overdue / Due Doses</h4>
           {% if overdue or due %}<ul>{% for r in overdue %}<li><strong>{{ r.name }}</strong> — overdue since {{ r.due_on.strftime('%b %d, %Y') }}</li>{% endfor %}{% for r in due %}<li><strong>{{ r.name }}</strong> — due {{ r.due_on.strftime('%b %d, %Y') }}</li>{% endfor %}</ul>{% else %}<div style="font-size:10.5px;color:var(--text-secondary)">No overdue or due dose is listed in the current schedule.</div>{% endif %}
         </div>
-        <div class="attention-card"><h4>{{ icon('shield-alert', 12) }} Vaccination Gaps</h4>
+        <div class="attention-card"><h4>{{ icon('shield', 12) }} Vaccination Gaps</h4>
           {% if factor_names %}<ul>{% for f in factor_names[:4] %}<li>{{ f }}</li>{% endfor %}</ul>{% elif detail.due %}<div style="font-size:10.5px;color:var(--text-secondary)">{{ detail.due }} scheduled dose(s) require attention.</div>{% else %}<div style="font-size:10.5px;color:var(--text-secondary)">Review the vaccination records above for the current follow-up status.</div>{% endif %}
         </div>
       </div>
