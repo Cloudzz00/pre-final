@@ -67,7 +67,10 @@
 <tbody>
 {% for c in children %}
 <tr>
-  <td class="id-chip"><span class="sex-dot {{ c.sex }}"></span>{{ c.barangay.name[:2]|upper }}-{{ '%03d'|format(c.id) }}</td>
+  <td>
+    <span class="id-chip"><span class="sex-dot {{ c.sex }}"></span>{{ c.barangay.name[:2]|upper }}-{{ '%03d'|format(c.id) }}</span><br>
+    <span class="text-muted" style="font-size:11.5px;">{{ c.display_name }}</span>
+  </td>
   <td>{{ c.date_registered.strftime('%m/%d/%y') }}</td>
   <td>{{ c.date_of_birth.strftime('%m/%d/%y') }}</td>
   <td>{{ c.sex }}</td>

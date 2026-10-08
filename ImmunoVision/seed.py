@@ -203,20 +203,22 @@ def seed(reset=False):
             db.session.add(vr)
         db.session.commit()
 
-        # Personal identifiers are left blank in the prototype. The columns and
-        # the form inputs remain - a real deployment records the child's name,
-        # guardian and contact, which is what a health worker needs to follow a
-        # child up. Screens fall back to Child.display_name (e.g. GU-001).
-        print("Clearing personal identifiers (prototype runs de-identified)...")
+        # Guardian contact details are left blank in the prototype - a real
+        # deployment records them, which is what a health worker needs to
+        # reach a family. The child's own name is kept: every name reaching
+        # this point is already synthetic (the real registry CSVs were
+        # anonymized before being committed, and the simulated barangays were
+        # always generated, never real), so blanking it bought no privacy and
+        # only left the UI showing record codes instead of names.
+        print("Clearing guardian contact details (prototype runs de-identified)...")
         cleared = 0
         for ch in Child.query.all():
-            if ch.full_name or ch.guardian_name or ch.guardian_contact:
-                ch.full_name = ""
+            if ch.guardian_name or ch.guardian_contact:
                 ch.guardian_name = None
                 ch.guardian_contact = None
                 cleared += 1
         db.session.commit()
-        print(f"  {cleared} child records de-identified")
+        print(f"  {cleared} child records' guardian details cleared")
 
         # One deactivated account, so the administrator's notifications and the
         # "Disabled" figure on the dashboard reflect a realistic system rather

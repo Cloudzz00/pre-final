@@ -140,12 +140,9 @@ class Child(db.Model):
 
     @property
     def display_name(self):
-        """What the UI shows for this child.
-
-        The name field is deliberately left blank in this prototype, so screens
-        fall back to the record code rather than rendering an empty cell. The
-        field itself remains editable - a real deployment records the actual
-        name, which is what a health worker needs to follow the child up."""
+        """What the UI shows for this child: the recorded name, or the
+        record code for the rare row with none (e.g. a legacy import gap)
+        rather than rendering an empty cell."""
         return (self.full_name or "").strip() or self.record_code
 
     @property
