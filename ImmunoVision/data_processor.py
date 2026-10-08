@@ -880,7 +880,21 @@ def predict_for_child(date_of_birth, date_registered, sex, doses_dict, barangay_
 
     doses_dict maps VACCINE_CODES -> date|None for one child. Returns the same
     shape the trained model will return, so swapping the ML model back in for
-    the final defense requires no changes in app.py."""
+    the final defense requires no changes in app.py.
+
+    NOT wired to the trained model despite one existing on disk
+    (model_is_trained() can be True). train_and_save_model()'s snapshots are
+    deliberately young - every training row is assessed at a random age of
+    60-300 days (an early-warning design: "will this infant's 12-month
+    outcome be good or bad, judged a few months in"). Scoring a child at
+    date.today() - their actual current age, often several years for anyone
+    already in this registry - asks the model to extrapolate on inputs (e.g.
+    days_since_last_dose in the thousands) nothing in training ever
+    resembled. Tried this wiring and it produced nonsense: a child with a
+    flawless 15/15 record still scored 83% At-Risk. Needs an age-gated
+    integration (use the model only inside its ~60-300-day training window,
+    rule-based scorer otherwise) before this is safe to turn on - not done
+    here without that guard."""
     dose_records = _dose_records_for(doses_dict)
     feats = compute_features(
         date_of_birth, date_registered, sex, dose_records, date.today(),
