@@ -10,7 +10,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
 login_manager = LoginManager()
-login_manager.login_view = "login"
+login_manager.login_view = "auth.login"
 
 
 # A BHW covering more than one barangay (common where the RHU is short-staffed)
