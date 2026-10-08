@@ -532,12 +532,19 @@ def _dose_records_for(doses_dict):
 # ---------------------------------------------------------------------------
 
 FIRST_NAMES_M = ["Juan", "Miguel", "Jose", "Antonio", "Carlos", "Rafael", "Gabriel", "Diego",
-                 "Marco", "Angelo", "Vincent", "Emmanuel", "Joshua", "Nathaniel", "Elijah"]
+                 "Marco", "Angelo", "Vincent", "Emmanuel", "Joshua", "Nathaniel", "Elijah",
+                 "Paolo", "Enrico", "Ramon", "Francisco", "Benedict", "Xavier", "Patrick",
+                 "Daniel", "Mark", "Christian", "Kurt", "Ivan", "Luis", "Renzo", "Julian"]
 FIRST_NAMES_F = ["Maria", "Sofia", "Isabella", "Andrea", "Camille", "Angela", "Bianca", "Kyla",
-                  "Daniella", "Trisha", "Reign", "Althea", "Janelle", "Precious", "Faith"]
+                  "Daniella", "Trisha", "Reign", "Althea", "Janelle", "Precious", "Faith",
+                  "Patricia", "Erika", "Michelle", "Nicole", "Samantha", "Hannah", "Alexa",
+                  "Gabrielle", "Kristine", "Charisse", "Jasmine", "Rica", "Shaira", "Mikaela"]
 LAST_NAMES = ["Reyes", "Santos", "Cruz", "Bautista", "Garcia", "Mendoza", "Torres", "Ramos",
               "Flores", "Villanueva", "Castillo", "Aquino", "De Guzman", "Del Rosario",
-              "Fernandez", "Gonzales", "Pascual", "Rivera", "Salazar", "Navarro"]
+              "Fernandez", "Gonzales", "Pascual", "Rivera", "Salazar", "Navarro",
+              "Ocampo", "Domingo", "Pacheco", "Manalo", "Ferrer", "Macaraeg", "Esguerra",
+              "Tolentino", "Agustin", "Marquez", "Soriano", "Lazaro", "Alvarado", "Jimenez",
+              "Cabrera", "Valdez", "Panganiban", "Villareal", "Dizon", "Umali"]
 
 _rng_seed = random.Random(42)
 BARANGAY_REMOTENESS = {b: round(_rng_seed.uniform(0.05, 0.35), 2) for b in BARANGAYS}
