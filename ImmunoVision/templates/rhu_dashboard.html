@@ -153,7 +153,7 @@
                   <div class="card-title mb-0">Needs Follow-Up</div>
                   <div class="card-sub mb-0">Highest-risk children under 12 months{% if selected_barangay %} in {{ selected_barangay.name }}{% endif %}</div>
                 </div>
-                <a class="btn btn-outline btn-sm" href="{{ url_for('rhu.continuation') }}">All {{ stats.at_risk }} &rsaquo;</a>
+                <a class="btn btn-outline btn-sm" href="{{ url_for('rhu.continuation') }}">All {{ follow_up_total }} &rsaquo;</a>
               </div>
               <div class="table-wrap auto-height" style="margin-top:10px;">
                 <table class="data-table plain-head compact">

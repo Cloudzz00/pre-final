@@ -1634,8 +1634,13 @@ def dashboard():
               if sum(b.quantity_on_hand for b in InventoryBatch.query.filter_by(antigen_id=a.id, is_archived=False)) <= 0]
     dist = risk_distribution_for(kids)
     # Two actionable panels: who needs a visit, and what stock is running out.
-    # Both summarise their dedicated pages rather than reproducing them.
-    follow_up = at_risk_table(barangay_id, limit=5, max_age_days=CONTINUATION_WINDOW_DAYS)
+    # Both summarise their dedicated pages rather than reproducing them. The
+    # "All N" link points at Continuation Predictor, so N has to be its own
+    # (12-month-scoped) count - the dashboard's unrestricted at-risk total
+    # would promise more rows than that page actually shows.
+    follow_up_all = at_risk_table(barangay_id, max_age_days=CONTINUATION_WINDOW_DAYS)
+    follow_up = follow_up_all[:5]
+    follow_up_total = len(follow_up_all)
     low_stock = stock_alerts(limit=5)
     # Approving requests is an RHU responsibility; nothing surfaced them before.
     # Requests belong to a barangay, so they follow the scope filter. (Stock does
@@ -1662,7 +1667,7 @@ def dashboard():
         selected_barangay=selected, selected_barangay_id=barangay_id,
         months=MONTH_NAMES, years=data_years(), month=month, year=year,
         as_of=as_of, period_label=period_label, period_clamped=clamped,
-        follow_up=follow_up, low_stock=low_stock, pending_requests=pending,
+        follow_up=follow_up, follow_up_total=follow_up_total, low_stock=low_stock, pending_requests=pending,
         by_barangay=by_barangay, by_vaccine=by_vaccine, trend=trend,
         vaccine_colours=vaccine_colours(by_vaccine), vaccine_labels=schedule_labels(by_vaccine),
         insights=chart_insights(by_vaccine, by_barangay, trend),
@@ -2029,8 +2034,12 @@ def dashboard():
     year = request.args.get("year", "")
     as_of, period_label, clamped = resolve_period(month, year)
     kids = filtered_children(bid, risk_level, status, as_of)
-    # The BHW does the home visits, so the "who to chase" list matters most here.
-    follow_up = at_risk_table(bid, limit=5, max_age_days=CONTINUATION_WINDOW_DAYS)
+    # The BHW does the home visits, so the "who to chase" list matters most
+    # here. "View All (N)" reads straight off follow_up|length in the
+    # template, so the full (unlimited) list is what gets passed - slicing
+    # it here would silently cap that count at 5 too.
+    follow_up_all = at_risk_table(bid, max_age_days=CONTINUATION_WINDOW_DAYS)
+    follow_up = follow_up_all[:5]
 
     # Coverage Analytics merged into this page; its own route was retired.
     by_vaccine = order_by_schedule(report_by_vaccine(bid, as_of) if as_of else coverage_by_vaccine(bid))
@@ -2045,6 +2054,7 @@ def dashboard():
         risk_level=risk_level, status=status,
         months=MONTH_NAMES, years=data_years(), month=month, year=year,
         as_of=as_of, period_label=period_label, period_clamped=clamped, follow_up=follow_up,
+        follow_up_total=len(follow_up_all),
         by_vaccine=by_vaccine, trend=trend, change=change,
         vaccine_colours=vaccine_colours(by_vaccine), vaccine_labels=schedule_labels(by_vaccine),
         insights=chart_insights(by_vaccine, [], trend),
