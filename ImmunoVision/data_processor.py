@@ -164,6 +164,22 @@ GRACE_PERIOD_DAYS = 30
 # Score at or above which a child is flagged At-Risk by the prototype scorer.
 RISK_THRESHOLD = 0.50
 
+# The primary series itself runs 0-365 days (MMR 2nd Dose, the last core
+# dose, is recommended at day 365); past that a child has already either
+# continued or not, so "at risk of discontinuing" stops being a prediction
+# and becomes a historical fact. Single source of truth for: (a) the
+# Continuation Predictor's own age scope (app.py caps at_risk_table() with
+# it - never for Vaccine Gaps or the At-Risk Children report, which stay a
+# complete registry at any age), and (b) the ML model's training/serving
+# window below, so the model is only ever asked to score children the same
+# age as the ones it learned from.
+CONTINUATION_WINDOW_DAYS = 365
+
+# Below this, a child cannot yet have any missed dose (GRACE_PERIOD_DAYS is
+# 30), so every row would look identically "clean" - too little signal to
+# train or predict on.
+ML_ASSESSMENT_FLOOR_DAYS = GRACE_PERIOD_DAYS
+
 
 ROLE_ADMIN, ROLE_RHU, ROLE_BHW = "admin", "rhu", "bhw"
 REQUEST_PENDING, REQUEST_APPROVED, REQUEST_REJECTED, REQUEST_FULFILLED = (
@@ -637,7 +653,10 @@ def generate_training_dataset(n_children=3000, seed=7, real_children=None):
     def _add_row(dob, date_registered, sex, doses_dict, barangay):
         dose_records = _dose_records_for(doses_dict)
         label = final_outcome_label(dob, dose_records, window_days=365)
-        assessment_age = rng.randint(60, 300)
+        # Sampled across the same window predict_for_child() serves at
+        # (ML_ASSESSMENT_FLOOR_DAYS..CONTINUATION_WINDOW_DAYS), so the model
+        # never has to extrapolate past what it was trained on.
+        assessment_age = rng.randint(ML_ASSESSMENT_FLOOR_DAYS, CONTINUATION_WINDOW_DAYS)
         assessment_date = min(date.today(), dob + timedelta(days=assessment_age))
         feats = compute_features(dob, date_registered, sex, dose_records, assessment_date, barangay_risk_rate=None)
         feats["barangay"] = barangay
@@ -831,15 +850,18 @@ def _explain(feats, artifact, top_n=3):
 
 
 # ---------------------------------------------------------------------------
-# Rule-based risk scorer (pre-final defense prototype)
+# Rule-based risk scorer - fallback for predict_for_child()
 #
-# The trained classifier is deliberately not part of this build. Risk flags are
-# produced by the transparent weighted rules below, drawn from the same feature
-# set the model will eventually consume, so the whole system is demonstrable
-# end-to-end without any ML dependency.
+# predict_for_child() uses the trained classifier (train_and_save_model())
+# whenever a child's age falls inside its training window. Outside that
+# window - no model trained yet, or the child has already aged past the
+# primary series - risk flags come from the transparent weighted rules
+# below instead, drawn from the same feature set the model consumes, so the
+# whole system stays demonstrable end-to-end even with no model on disk.
 #
-# Every weight is visible and explainable, which is the point: nothing here
-# claims to be a trained model, and no accuracy figures are reported for it.
+# Every weight here is visible and explainable, which is the point: this
+# scorer never claims to be a trained model, and no accuracy figures are
+# reported for it.
 # ---------------------------------------------------------------------------
 
 SCORER_NAME = "Rule-Based Scorer"
@@ -896,31 +918,54 @@ def _explain_rules(feats, top_n=3):
                         "detail": "No significant risk indicators detected."}]
 
 
+def _predict_with_model(feats):
+    """Score one child with the trained classifier. Returns None (never
+    raises) if the artifact can't be loaded or scored, so callers always have
+    the rule-based scorer to fall back on."""
+    try:
+        artifact = _load_artifact()
+        import numpy as np  # lazy: only needed on this path
+        x = np.array([[feats[c] for c in artifact["feature_columns"]]], dtype=float)
+        if artifact.get("needs_scaler") and artifact.get("scaler") is not None:
+            x = artifact["scaler"].transform(x)
+        score = round(float(artifact["model"].predict_proba(x)[0, 1]), 4)
+        return score, artifact
+    except Exception as exc:
+        print(f"WARNING: ML scoring failed ({exc}); falling back to rule-based scorer.")
+        return None
+
+
 def predict_for_child(date_of_birth, date_registered, sex, doses_dict, barangay_name):
     """Public scoring entrypoint used by app.py and seed.py.
 
-    doses_dict maps VACCINE_CODES -> date|None for one child. Returns the same
-    shape the trained model will return, so swapping the ML model back in for
-    the final defense requires no changes in app.py.
+    doses_dict maps VACCINE_CODES -> date|None for one child.
 
-    NOT wired to the trained model despite one existing on disk
-    (model_is_trained() can be True). train_and_save_model()'s snapshots are
-    deliberately young - every training row is assessed at a random age of
-    60-300 days (an early-warning design: "will this infant's 12-month
-    outcome be good or bad, judged a few months in"). Scoring a child at
-    date.today() - their actual current age, often several years for anyone
-    already in this registry - asks the model to extrapolate on inputs (e.g.
-    days_since_last_dose in the thousands) nothing in training ever
-    resembled. Tried this wiring and it produced nonsense: a child with a
-    flawless 15/15 record still scored 83% At-Risk. Needs an age-gated
-    integration (use the model only inside its ~60-300-day training window,
-    rule-based scorer otherwise) before this is safe to turn on - not done
-    here without that guard."""
+    Uses the trained classifier (train_and_save_model()) only while the
+    child's current age falls inside the window it was trained on
+    (ML_ASSESSMENT_FLOOR_DAYS..CONTINUATION_WINDOW_DAYS) - the same window
+    the Continuation Predictor itself is scoped to. Outside that window (no
+    model trained yet, or the child has already aged past the primary
+    series) this falls back to the transparent rule-based scorer, so a
+    child is never scored on inputs nothing in training ever resembled."""
     dose_records = _dose_records_for(doses_dict)
+    age_days = (date.today() - date_of_birth).days
     feats = compute_features(
         date_of_birth, date_registered, sex, dose_records, date.today(),
         barangay_risk_rate=BARANGAY_BASE_RISK.get(barangay_name, 0.15),
     )
+
+    if model_is_trained() and ML_ASSESSMENT_FLOOR_DAYS <= age_days <= CONTINUATION_WINDOW_DAYS:
+        ml_result = _predict_with_model(feats)
+        if ml_result is not None:
+            score, artifact = ml_result
+            return {
+                "label": "At-Risk" if score >= RISK_THRESHOLD else "Not At-Risk",
+                "probability": score,
+                "model_version": f"{artifact.get('model_name', 'ml')}-{artifact.get('model_version', '')}",
+                "top_factors": _explain(feats, artifact),
+                "features": feats,
+            }
+
     score = score_child(feats)
     return {
         "label": "At-Risk" if score >= RISK_THRESHOLD else "Not At-Risk",

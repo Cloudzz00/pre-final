@@ -403,13 +403,12 @@ def schedule_labels(rows):
 COVERAGE_TARGET = 95          # DOH EPI target, also drawn on the trend charts
 COVERAGE_BANDS = ((COVERAGE_TARGET, "green"), (75, "amber"))
 
-# The primary series itself runs 0-365 days (MMR 2nd Dose, the last core
-# dose, is recommended at day 365); past that a child has already either
-# continued or not, so "at risk of discontinuing" stops being a prediction
-# and becomes a historical fact. Caps at_risk_table() for the Continuation
+# Single source of truth in data_processor.py - also the ML model's
+# training/serving window, so the Continuation Predictor's age scope and the
+# model's own never drift apart. Caps at_risk_table() for the Continuation
 # Predictor and its dashboard summaries - never for Vaccine Gaps or the
 # At-Risk Children report, which stay a complete registry at any age.
-CONTINUATION_WINDOW_DAYS = 365
+CONTINUATION_WINDOW_DAYS = dp.CONTINUATION_WINDOW_DAYS
 
 
 def simulated_barangays():

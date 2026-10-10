@@ -8,6 +8,16 @@
   <div class="stat-card"><div class="stat-icon bg-blue">{{ icon('baby', 21) }}</div><div class="stat-value">{{ stats.total_children }}</div><div class="stat-label">Total Children Assessed</div></div>
 </div>
 
+{% if engine.trained %}
+<div class="report-insight">
+  <div class="insight-icon">{{ icon('cpu', 16) }}</div>
+  <div>
+    <b>Powered by {{ engine.engine }}</b>
+    <p>Trained classifier ({{ engine.version }}) &mdash; {{ (engine.metrics.accuracy * 100)|round(1) }}% accuracy, {{ (engine.metrics.recall * 100)|round(1) }}% recall, {{ engine.metrics.roc_auc|round(3) }} ROC-AUC on held-out data. Scores children within their first year of the primary series; a transparent rule-based fallback covers anyone outside that window.</p>
+  </div>
+</div>
+{% endif %}
+
 <div class="card card-pad">
   <div class="flex-between" style="margin-bottom:4px;">
     <div>
