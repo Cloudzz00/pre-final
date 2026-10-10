@@ -1227,7 +1227,7 @@ def get_notifications(role, barangay_id=None):
                   "title": "Monthly Report Due",
                   "body": f"The {date.today().strftime('%B %Y')} monthly immunization report is due at month end.",
                   "time_label": "This week", "unread": False})
-    return notes
+    return _apply_seen_state(notes, current_user)
 
 
 def admin_notifications():
@@ -1261,7 +1261,7 @@ def admin_notifications():
                       "time_label": "Ongoing", "unread": True,
                       "url": url_for("admin.assign_barangay")})
 
-    return notes
+    return _apply_seen_state(notes, current_user)
 
 
 def ictmo_notifications():
@@ -1305,11 +1305,35 @@ def ictmo_notifications():
                       "time_label": "Ongoing", "unread": False,
                       "url": url_for("ictmo.users")})
 
-    return notes
+    return _apply_seen_state(notes, current_user)
 
 
 def unread_count(notes):
     return sum(1 for n in notes if n.get("unread"))
+
+
+def _apply_seen_state(notes, user):
+    """Downgrades a note to read if its title was already showing the last
+    time this user opened their notifications page. Notifications have no
+    stored rows to flag read/unread against - they're regenerated from live
+    system state on every request - so title is used as the stable key: an
+    alert that's still here next visit reads as read, one that cleared and
+    later recurred reads as unread again."""
+    seen = set()
+    if user.last_seen_notification_titles:
+        try:
+            seen = set(json.loads(user.last_seen_notification_titles))
+        except (ValueError, TypeError):
+            seen = set()
+    for n in notes:
+        if n["title"] in seen:
+            n["unread"] = False
+    return notes
+
+
+def _mark_notifications_seen(notes, user):
+    user.last_seen_notification_titles = json.dumps([n["title"] for n in notes])
+    db.session.commit()
 
 
 # ---------------------------------------------------------------------------
@@ -1992,9 +2016,10 @@ def export_report_csv():
 
 @rhu_bp.route("/notifications")
 def notifications():
-    return render_template("rhu_notifications.html", **_rhu_ctx(
-        "notifications", page_title="Notifications", notes=get_notifications("rhu"),
-    ))
+    notes = get_notifications("rhu")
+    ctx = _rhu_ctx("notifications", page_title="Notifications", notes=notes)
+    _mark_notifications_seen(notes, current_user)
+    return render_template("rhu_notifications.html", **ctx)
 
 
 @rhu_bp.route("/settings")
@@ -2266,9 +2291,10 @@ def export_report_csv():
 
 @bhw_bp.route("/notifications")
 def notifications():
-    return render_template("bhw_notifications.html", **_bhw_ctx(
-        "notifications", page_title="Notifications", notes=get_notifications("bhw", barangay_id=current_user.barangay_id),
-    ))
+    notes = get_notifications("bhw", barangay_id=current_user.barangay_id)
+    ctx = _bhw_ctx("notifications", page_title="Notifications", notes=notes)
+    _mark_notifications_seen(notes, current_user)
+    return render_template("bhw_notifications.html", **ctx)
 
 
 @bhw_bp.route("/settings")
@@ -2430,9 +2456,9 @@ def municipality_map():
 @admin_bp.route("/notifications")
 def notifications():
     notes = admin_notifications()
-    return render_template("admin_notifications.html", **_admin_ctx(
-        "notifications", page_title="Notifications", notes=notes,
-    ))
+    ctx = _admin_ctx("notifications", page_title="Notifications", notes=notes)
+    _mark_notifications_seen(notes, current_user)
+    return render_template("admin_notifications.html", **ctx)
 
 
 @admin_bp.route("/settings")
@@ -2632,9 +2658,9 @@ def logs():
 @ictmo_bp.route("/notifications")
 def notifications():
     notes = ictmo_notifications()
-    return render_template("admin_notifications.html", **_ictmo_ctx(
-        "notifications", page_title="Notifications", notes=notes,
-    ))
+    ctx = _ictmo_ctx("notifications", page_title="Notifications", notes=notes)
+    _mark_notifications_seen(notes, current_user)
+    return render_template("admin_notifications.html", **ctx)
 
 
 @ictmo_bp.route("/settings")

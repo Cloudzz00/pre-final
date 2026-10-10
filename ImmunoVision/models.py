@@ -45,6 +45,12 @@ class User(UserMixin, db.Model):
     is_active_flag = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login_at = db.Column(db.DateTime, nullable=True)
+    # JSON list of notification titles shown the last time this user opened
+    # their notifications page. Notifications are regenerated live from
+    # current system state (no stored notification rows to mark read), so a
+    # title is used as a stable-enough key: unread means "not present the
+    # last time this user looked," not "created after some timestamp."
+    last_seen_notification_titles = db.Column(db.Text, nullable=True)
 
     # All barangays this BHW is assigned to (a single-barangay BHW just has one).
     # barangay_id above is always one of these - the one she's currently working in.
