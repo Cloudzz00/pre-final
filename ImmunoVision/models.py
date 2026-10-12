@@ -162,11 +162,80 @@ class Child(db.Model):
         return self.risk_assessments.first()
 
 
+campaign_barangays = db.Table(
+    "campaign_barangays",
+    db.Column("campaign_id", db.Integer, db.ForeignKey("campaigns.id"), primary_key=True),
+    db.Column("barangay_id", db.Integer, db.ForeignKey("barangays.id"), primary_key=True),
+)
+
+
+class Campaign(db.Model):
+    """A Supplementary Immunization Activity (SIA) / catch-up campaign
+    vaccine (e.g. "MR Catch-up 2026"), created by the Admin without a code
+    change - DOH announces these on its own schedule, for whichever vaccine
+    and age group it decides, so this can't be a fixed list baked into the
+    app.
+
+    Deliberately separate from VaccineType's core schedule: a campaign has
+    an active date window and a target age range instead of a fixed
+    recommended_age_days, and a child's eligibility is checked live against
+    both rather than baked in at seed time.
+
+    Doses recorded under a campaign are never fed into risk scoring (see
+    at_risk_table()/compute_features()) - same as how Rotavirus already
+    stays outside it. A missed campaign dose is a missed catch-up
+    opportunity, not an ongoing risk, and it quietly stops being offered
+    once the window closes rather than showing as "Overdue"."""
+    __tablename__ = "campaigns"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), nullable=False)
+    vaccine_type_id = db.Column(db.Integer, db.ForeignKey("vaccine_types.id"), nullable=False)
+    min_age_days = db.Column(db.Integer, nullable=False, default=0)
+    max_age_days = db.Column(db.Integer, nullable=False)
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=False)
+    created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    vaccine_type = db.relationship("VaccineType")
+    created_by = db.relationship("User")
+    # Empty = applies to every barangay, rather than requiring every
+    # barangay to be ticked individually for the common "everywhere" case.
+    barangays = db.relationship("Barangay", secondary=campaign_barangays,
+                                 order_by="Barangay.name", lazy="dynamic")
+    records = db.relationship("VaccinationRecord", backref="campaign", lazy="dynamic")
+
+    @property
+    def is_active(self):
+        return self.start_date <= date.today() <= self.end_date
+
+    def age_eligible(self, age_days):
+        return self.min_age_days <= age_days <= self.max_age_days
+
+    def barangay_eligible(self, barangay_id):
+        return self.barangays.count() == 0 or self.barangays.filter_by(id=barangay_id).first() is not None
+
+    @property
+    def is_locked(self):
+        """Once a dose has been recorded under this campaign, its vaccine
+        can no longer be changed - doing so would silently misattribute
+        whatever was already recorded as something else. Dates, name and
+        barangay scope stay editable regardless (DOH commonly extends a
+        campaign's window after it starts)."""
+        return self.records.first() is not None
+
+
 class VaccinationRecord(db.Model):
     __tablename__ = "vaccination_records"
     id = db.Column(db.Integer, primary_key=True)
     child_id = db.Column(db.Integer, db.ForeignKey("children.id"), nullable=False)
     vaccine_type_id = db.Column(db.Integer, db.ForeignKey("vaccine_types.id"), nullable=False)
+    # Set only for a dose given under a supplementary campaign (Campaign
+    # above); null for every core-schedule dose. Kept as its own column
+    # rather than inferred from vaccine_type_id, so the same vaccine (e.g.
+    # MR) can be reused across separate campaign runs in different years
+    # without their records colliding.
+    campaign_id = db.Column(db.Integer, db.ForeignKey("campaigns.id"), nullable=True)
     date_administered = db.Column(db.Date, nullable=True)
     status = db.Column(db.String(20), nullable=False, default="pending")
     administered_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
@@ -175,7 +244,15 @@ class VaccinationRecord(db.Model):
     vaccine_type = db.relationship("VaccineType")
     administered_by = db.relationship("User")
 
-    __table_args__ = (db.UniqueConstraint("child_id", "vaccine_type_id", name="uq_child_vaccine"),)
+    # campaign_id is part of the key so a child can receive the same vaccine
+    # again under a different campaign run without colliding with the first.
+    # SQL treats every NULL as distinct from every other NULL, so this does
+    # not relax uniqueness for the core schedule (campaign_id is always NULL
+    # there) - duplicate core-dose rows are prevented by the registration/
+    # edit routes finding-or-creating by vaccine_type_id, same as before.
+    __table_args__ = (
+        db.UniqueConstraint("child_id", "vaccine_type_id", "campaign_id", name="uq_child_vaccine_campaign"),
+    )
 
 
 class RiskAssessment(db.Model):

@@ -14,6 +14,7 @@ import json
 import io
 import os
 import random
+import re
 from collections import Counter, defaultdict
 from datetime import date, datetime, timedelta
 
@@ -25,7 +26,7 @@ from sqlalchemy import func, or_
 import data_processor as dp
 from models import (
     db, login_manager, User, Barangay, Child, VaccineAntigen, VaccineType,
-    VaccinationRecord, RiskAssessment, InventoryBatch, VaccineRequest, ActivityLog,
+    VaccinationRecord, RiskAssessment, InventoryBatch, VaccineRequest, ActivityLog, Campaign,
 )
 
 try:
@@ -147,6 +148,7 @@ BHW_NAV = [
 ADMIN_NAV = [
     ("dashboard", "home", "Dashboard", "admin.dashboard"),
     ("assign", "map-pin", "Assign Barangay", "admin.assign_barangay"),
+    ("campaigns", "syringe", "Campaigns", "admin.campaigns"),
     ("map", "map", "Municipality Map", "admin.municipality_map"),
     ("vaccines", "package", "Vaccine Alerts", "admin.vaccine_alerts"),
 ]
@@ -332,6 +334,38 @@ def coverage_by_barangay():
                       "coverage": round((fully / total) * 100, 1) if total else 0.0})
     rows.sort(key=lambda r: r["coverage"], reverse=True)
     return rows
+
+
+def campaign_reach(campaign):
+    """Eligible-vs-received counts per barangay for one campaign.
+
+    Eligibility is evaluated against the campaign's own active window (did
+    the child's age overlap the target range at any point between
+    start_date and end_date), not "today" - a child who was eligible during
+    the campaign but has since aged out, or one too young at the time who
+    has since aged in, still counts (or doesn't) the same way regardless of
+    when this report is viewed."""
+    scope = campaign.barangays.all() or Barangay.query.order_by(Barangay.name).all()
+    received_child_ids = {
+        r.child_id for r in VaccinationRecord.query.filter_by(campaign_id=campaign.id)
+        .filter(VaccinationRecord.date_administered.isnot(None)).all()
+    }
+    rows = []
+    totals = {"eligible": 0, "received": 0}
+    for b in scope:
+        eligible_ids = [
+            c.id for c in Child.query.filter_by(barangay_id=b.id).all()
+            if (campaign.end_date - c.date_of_birth).days >= campaign.min_age_days
+            and (campaign.start_date - c.date_of_birth).days <= campaign.max_age_days
+        ]
+        received = sum(1 for cid in eligible_ids if cid in received_child_ids)
+        rows.append({"barangay": b.name, "eligible": len(eligible_ids), "received": received,
+                      "pct": round(received / len(eligible_ids) * 100, 1) if eligible_ids else 0.0})
+        totals["eligible"] += len(eligible_ids)
+        totals["received"] += received
+    rows.sort(key=lambda r: r["pct"])
+    totals["pct"] = round(totals["received"] / totals["eligible"] * 100, 1) if totals["eligible"] else 0.0
+    return rows, totals
 
 
 def coverage_by_vaccine(barangay_id=None):
@@ -916,9 +950,19 @@ def child_detail(child):
                .filter(ActivityLog.action.contains(child.display_name))
                .order_by(ActivityLog.created_at.desc()).limit(6).all())
 
+    # Every campaign dose this child has ever been given - not just the
+    # currently-eligible ones the Edit form offers, since a dose given under
+    # a campaign that has since closed is still a real, permanent part of
+    # this child's record.
+    campaign_records = (VaccinationRecord.query.filter_by(child_id=child.id)
+                         .filter(VaccinationRecord.campaign_id.isnot(None)).all())
+    campaigns = [{"name": r.campaign.name, "vaccine": r.vaccine_type.name, "date": r.date_administered}
+                 for r in campaign_records]
+
     return {
         "schedule": schedule,
         "optional": optional,
+        "campaigns": campaigns,
         "given_count": sum(1 for r in schedule if r["status"] == "given"),
         "overdue_count": sum(1 for r in schedule if r["status"] == "overdue"),
         # A dose past its own catch-up window (BCG) and never given drops out
@@ -1352,6 +1396,26 @@ def _ticked_date(form, checkbox_field, date_field, fallback):
     return datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else fallback
 
 
+# The core/optional dose codes the Edit Child form's generic per-code loop is
+# allowed to touch. A Campaign's VaccineType (e.g. "MR") is a real row in the
+# same table but is deliberately excluded here - it's recorded through its
+# own dose_campaign_<id> field (see eligible_campaigns_for_child()), never
+# by code, since the same vaccine can be reused across different campaign
+# runs and a code-keyed lookup can't tell those apart.
+_KNOWN_DOSE_CODES = [code for code, *_ in dp.VACCINE_SCHEDULE + dp.OPTIONAL_VACCINE_SCHEDULE]
+
+
+def eligible_campaigns_for_child(child):
+    """Active campaigns this child currently qualifies for, by age and
+    barangay. Drives both what the Edit Child form shows/accepts and what
+    the child's record displays - never risk scoring, which only ever reads
+    dp.VACCINE_SCHEDULE codes regardless of what rows exist in the DB."""
+    today = date.today()
+    age = child.age_in_days
+    candidates = Campaign.query.filter(Campaign.start_date <= today, Campaign.end_date >= today).all()
+    return [c for c in candidates if c.age_eligible(age) and c.barangay_eligible(child.barangay_id)]
+
+
 def _create_child(form, barangay_locked):
     barangay_id = barangay_locked or int(form.get("barangay_id"))
     dob = datetime.strptime(form.get("date_of_birth"), "%Y-%m-%d").date()
@@ -1414,12 +1478,14 @@ def _update_child(child, form):
     child.mnp_given = bool(form.get("mnp_given"))
 
     vt_by_code = {vt.code: vt for vt in VaccineType.query.all()}
-    existing_by_vt_id = {rec.vaccine_type_id: rec for rec in child.vaccination_records}
+    existing_by_vt_id = {rec.vaccine_type_id: rec for rec in child.vaccination_records if rec.campaign_id is None}
     past_window_warnings = []
-    for code in vt_by_code:
+    for code in _KNOWN_DOSE_CODES:
+        vt = vt_by_code.get(code)
+        if vt is None:
+            continue
         date_str = form.get(f"dose_{code}")
         administered = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else None
-        vt = vt_by_code[code]
         rec = existing_by_vt_id.get(vt.id)
         if rec is None:
             rec = VaccinationRecord(child_id=child.id, vaccine_type_id=vt.id)
@@ -1435,6 +1501,24 @@ def _update_child(child, form):
             age_at_dose = (administered - child.date_of_birth).days
             if age_at_dose > vt.catch_up_deadline_days:
                 past_window_warnings.append(vt.name)
+
+    # Campaign doses: a separate field per campaign (dose_campaign_<id>), not
+    # per vaccine code - the same vaccine can recur across campaign runs, and
+    # existing_by_vt_id above only sees non-campaign records, so it can't be
+    # reused here. Only ever written for campaigns this child currently
+    # qualifies for, and never touches risk scoring (see
+    # eligible_campaigns_for_child()'s docstring).
+    for campaign in eligible_campaigns_for_child(child):
+        date_str = form.get(f"dose_campaign_{campaign.id}")
+        administered = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else None
+        rec = child.vaccination_records.filter_by(campaign_id=campaign.id).first()
+        if rec is None:
+            if administered is None:
+                continue  # nothing to save - don't create an empty row for every eligible campaign
+            rec = VaccinationRecord(child_id=child.id, vaccine_type_id=campaign.vaccine_type_id, campaign_id=campaign.id)
+            db.session.add(rec)
+        rec.date_administered = administered
+        rec.status = "completed" if administered else "pending"
     db.session.commit()
 
     result = _recompute_risk(child)
@@ -1768,9 +1852,13 @@ def edit_child(child_id):
     vt_lookup = {vt.code: vt for vt in VaccineType.query.all()}
     doses = {code: (rec.date_administered if (rec := child.vaccination_records.filter_by(
         vaccine_type_id=vt_lookup[code].id).first()) else None) for code, *_ in dp.VACCINE_SCHEDULE + dp.OPTIONAL_VACCINE_SCHEDULE}
+    active_campaigns = eligible_campaigns_for_child(child)
+    campaign_doses = {c.id: (rec.date_administered if (rec := child.vaccination_records.filter_by(
+        campaign_id=c.id).first()) else None) for c in active_campaigns}
     return render_template("edit_child.html", **_rhu_ctx(
         "children", page_title="Edit Child Record", child=child, doses=doses,
         optional_vaccines=dp.OPTIONAL_VACCINE_SCHEDULE,
+        active_campaigns=active_campaigns, campaign_doses=campaign_doses,
         back_url=url_for("rhu.children"), form_action=url_for("rhu.edit_child", child_id=child.id),
     ))
 
@@ -2182,9 +2270,13 @@ def edit_child(child_id):
     vt_lookup = {vt.code: vt for vt in VaccineType.query.all()}
     doses = {code: (rec.date_administered if (rec := child.vaccination_records.filter_by(
         vaccine_type_id=vt_lookup[code].id).first()) else None) for code, *_ in dp.VACCINE_SCHEDULE + dp.OPTIONAL_VACCINE_SCHEDULE}
+    active_campaigns = eligible_campaigns_for_child(child)
+    campaign_doses = {c.id: (rec.date_administered if (rec := child.vaccination_records.filter_by(
+        campaign_id=c.id).first()) else None) for c in active_campaigns}
     return render_template("edit_child.html", **_bhw_ctx(
         "children", page_title="Edit Child Record", child=child, doses=doses,
         optional_vaccines=dp.OPTIONAL_VACCINE_SCHEDULE,
+        active_campaigns=active_campaigns, campaign_doses=campaign_doses,
         back_url=url_for("bhw.children"), form_action=url_for("bhw.edit_child", child_id=child.id),
     ))
 
@@ -2442,6 +2534,120 @@ def assign_barangay():
     return render_template("admin_assign_barangay.html", **_admin_ctx(
         "assign", page_title="Assign Barangay", bhws=User.query.filter_by(role="bhw").order_by(User.full_name).all(),
         barangays=Barangay.query.order_by(Barangay.name).all(),
+    ))
+
+
+@admin_bp.route("/campaigns", methods=["GET", "POST"])
+def campaigns():
+    """Supplementary Immunization Activities (SIA campaigns, e.g. an MR
+    catch-up drive) - created here rather than hardcoded, since DOH
+    announces these on its own schedule for whatever vaccine and age group
+    it decides. A campaign can reuse a vaccine an earlier campaign already
+    used, or introduce a brand-new one on the spot - no code change or
+    redeploy needed either way."""
+    if request.method == "POST":
+        name = (request.form.get("name") or "").strip()
+        new_vaccine_name = (request.form.get("new_vaccine_name") or "").strip()
+        existing_vt_id = request.form.get("vaccine_type_id")
+        min_months = request.form.get("min_age_months")
+        max_months = request.form.get("max_age_months")
+        start_date_str = request.form.get("start_date")
+        end_date_str = request.form.get("end_date")
+
+        if not (name and start_date_str and end_date_str and min_months and max_months):
+            flash("Fill in all required fields.", "error")
+            return redirect(url_for("admin.campaigns"))
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+        end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+        if end_date < start_date:
+            flash("End date can't be before the start date.", "error")
+            return redirect(url_for("admin.campaigns"))
+
+        if new_vaccine_name:
+            # A short, DB-unique code derived from the name, for internal
+            # use only (inventory keys, chart lookups) - never shown to a
+            # user, who only ever sees new_vaccine_name itself.
+            base_code = re.sub(r"[^A-Z0-9]", "", new_vaccine_name.upper())[:16] or "CAMPAIGN"
+            code, n = base_code, 1
+            while VaccineType.query.filter_by(code=code).first() or VaccineAntigen.query.filter_by(code=code).first():
+                n += 1
+                code = f"{base_code}{n}"
+            antigen = VaccineAntigen(code=code, name=new_vaccine_name)
+            db.session.add(antigen)
+            db.session.flush()
+            vt = VaccineType(code=code, name=new_vaccine_name, antigen_id=antigen.id, is_optional=True)
+            db.session.add(vt)
+            db.session.flush()
+            vaccine_type_id = vt.id
+        elif existing_vt_id:
+            vaccine_type_id = int(existing_vt_id)
+        else:
+            flash("Choose an existing vaccine or add a new one.", "error")
+            return redirect(url_for("admin.campaigns"))
+
+        campaign = Campaign(
+            name=name, vaccine_type_id=vaccine_type_id,
+            min_age_days=int(min_months) * 30, max_age_days=int(max_months) * 30,
+            start_date=start_date, end_date=end_date, created_by_id=current_user.id,
+        )
+        db.session.add(campaign)
+        db.session.flush()
+        for b in Barangay.query.filter(Barangay.id.in_(
+                [int(v) for v in request.form.getlist("barangay_ids")])).all():
+            campaign.barangays.append(b)
+        db.session.commit()
+        log_activity(f"Created campaign: {campaign.name}")
+        flash(f'Campaign "{campaign.name}" created.', "success")
+        return redirect(url_for("admin.campaigns"))
+
+    today = date.today()
+    campaigns_list = Campaign.query.order_by(Campaign.start_date.desc()).all()
+    for c in campaigns_list:
+        c.is_active_now = c.is_active
+    existing_vaccines = (VaccineType.query.filter(~VaccineType.code.in_(_KNOWN_DOSE_CODES))
+                          .order_by(VaccineType.name).all())
+    return render_template("admin_campaigns.html", **_admin_ctx(
+        "campaigns", page_title="Campaigns", campaigns=campaigns_list, today=today,
+        existing_vaccines=existing_vaccines, barangays=Barangay.query.order_by(Barangay.name).all(),
+    ))
+
+
+@admin_bp.route("/campaigns/<int:campaign_id>", methods=["GET", "POST"])
+def campaign_detail(campaign_id):
+    campaign = db.session.get(Campaign, campaign_id) or abort(404)
+    if request.method == "POST":
+        campaign.name = (request.form.get("name") or campaign.name).strip()
+        start_date_str = request.form.get("start_date")
+        end_date_str = request.form.get("end_date")
+        new_start = datetime.strptime(start_date_str, "%Y-%m-%d").date() if start_date_str else campaign.start_date
+        new_end = datetime.strptime(end_date_str, "%Y-%m-%d").date() if end_date_str else campaign.end_date
+        if new_end < new_start:
+            flash("End date can't be before the start date.", "error")
+            return redirect(url_for("admin.campaign_detail", campaign_id=campaign.id))
+        campaign.start_date, campaign.end_date = new_start, new_end
+        min_months = request.form.get("min_age_months")
+        max_months = request.form.get("max_age_months")
+        if min_months:
+            campaign.min_age_days = int(min_months) * 30
+        if max_months:
+            campaign.max_age_days = int(max_months) * 30
+        barangay_ids = {int(v) for v in request.form.getlist("barangay_ids")}
+        current = set(campaign.barangays.all())
+        desired = set(Barangay.query.filter(Barangay.id.in_(barangay_ids)).all())
+        for b in current - desired:
+            campaign.barangays.remove(b)
+        for b in desired - current:
+            campaign.barangays.append(b)
+        db.session.commit()
+        log_activity(f"Updated campaign: {campaign.name}")
+        flash("Campaign updated.", "success")
+        return redirect(url_for("admin.campaign_detail", campaign_id=campaign.id))
+
+    rows, totals = campaign_reach(campaign)
+    return render_template("admin_campaign_detail.html", **_admin_ctx(
+        "campaigns", page_title=campaign.name, campaign=campaign, rows=rows, totals=totals,
+        barangays=Barangay.query.order_by(Barangay.name).all(),
+        selected_barangay_ids={b.id for b in campaign.barangays.all()},
     ))
 
 

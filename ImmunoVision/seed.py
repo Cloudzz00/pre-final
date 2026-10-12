@@ -13,7 +13,7 @@ import data_processor as dp
 from app import app
 from models import (
     db, Barangay, VaccineAntigen, VaccineType, User, Child, VaccinationRecord,
-    RiskAssessment, InventoryBatch, VaccineRequest, ActivityLog,
+    RiskAssessment, InventoryBatch, VaccineRequest, ActivityLog, Campaign,
 )
 
 BHW_FIRST = ["Ana", "Rosa", "Carmen", "Lita", "Ben", "Cora", "Nora", "Elsa", "Fe", "Grace",
@@ -201,6 +201,43 @@ def seed(reset=False):
                 vr.reviewed_by_id = rhu.id
                 vr.reviewed_at = vr.requested_at + timedelta(days=1)
             db.session.add(vr)
+        db.session.commit()
+
+        # Demonstrates the Campaign feature live: a Measles-Rubella catch-up
+        # drive, created exactly the way an Admin would from /admin/campaigns
+        # (a brand-new vaccine, not one of the 15 core/optional doses). Dates
+        # are relative to today so the campaign reads as "Active" whenever
+        # this seed is run, not pinned to a date that will eventually pass.
+        print("Seeding a sample supplementary campaign (MR Catch-up)...")
+        mr_antigen = VaccineAntigen(code="MR", name="Measles-Rubella")
+        db.session.add(mr_antigen)
+        db.session.commit()
+        mr_vaccine = VaccineType(code="MR", name="Measles-Rubella", antigen_id=mr_antigen.id, is_optional=True)
+        db.session.add(mr_vaccine)
+        db.session.commit()
+        mr_campaign = Campaign(
+            name="MR Catch-up 2026", vaccine_type_id=mr_vaccine.id,
+            min_age_days=270, max_age_days=1825,  # 9 months - 5 years
+            start_date=date.today() - timedelta(days=30), end_date=date.today() + timedelta(days=30),
+            created_by_id=admin.id,
+        )
+        db.session.add(mr_campaign)
+        db.session.commit()
+        # A plausible partial reach: about 4 in 10 eligible children across a
+        # handful of barangays already have it recorded, so the campaign's
+        # own reach report has real numbers to show instead of starting empty.
+        rng4 = random.Random(11)
+        reach_barangays = set(rng4.sample(dp.BARANGAYS, 6))
+        eligible = [c for c in Child.query.all()
+                    if mr_campaign.min_age_days <= c.age_in_days <= mr_campaign.max_age_days
+                    and c.barangay.name in reach_barangays]
+        for child in eligible:
+            if rng4.random() < 0.4:
+                db.session.add(VaccinationRecord(
+                    child_id=child.id, vaccine_type_id=mr_vaccine.id, campaign_id=mr_campaign.id,
+                    date_administered=date.today() - timedelta(days=rng4.randint(0, 29)),
+                    status="completed", administered_by_id=rhu.id,
+                ))
         db.session.commit()
 
         # Guardian contact details are left blank in the prototype - a real

@@ -1,0 +1,72 @@
+{% extends "layout_app.html" %}
+{% from "_icons.html" import icon %}
+{% block content %}
+<div class="page-head">
+  <h2>{{ campaign.name }}</h2>
+  <a href="{{ url_for('admin.campaigns') }}" class="btn btn-outline btn-sm">&lsaquo; Back to Campaigns</a>
+</div>
+
+<div class="stat-grid">
+  <div class="stat-card"><div class="stat-icon bg-blue">{{ icon('baby', 21) }}</div><div class="stat-value">{{ totals.eligible }}</div><div class="stat-label">Eligible Children</div><div class="stat-caption">During the active window</div></div>
+  <div class="stat-card"><div class="stat-icon bg-green">{{ icon('check-circle', 21) }}</div><div class="stat-value">{{ totals.received }}</div><div class="stat-label">Received</div><div class="stat-caption">{{ totals.pct }}% of eligible</div></div>
+  <div class="stat-card"><div class="stat-icon bg-teal">{{ icon('syringe', 21) }}</div><div class="stat-value">{{ campaign.vaccine_type.name }}</div><div class="stat-label">Vaccine</div>{% if campaign.is_locked %}<div class="stat-caption">Locked &mdash; doses already recorded</div>{% endif %}</div>
+</div>
+
+<div class="card card-pad">
+  <div class="card-title">Reach by Barangay</div>
+  <div class="card-sub">Eligibility is evaluated against this campaign's own active window, so the numbers stay accurate however long after it closes this is viewed.</div>
+  <div class="table-wrap">
+  <table class="data-table">
+    <thead><tr><th>Barangay</th><th>Eligible</th><th>Received</th><th>Coverage</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td>{{ r.barangay }}</td>
+        <td>{{ r.eligible }}</td>
+        <td>{{ r.received }}</td>
+        <td><span class="progress-track"><span class="progress-fill {{ 'green' if r.pct >= 80 else 'amber' if r.pct >= 50 else 'red' }}" style="width:{{ r.pct }}%"></span></span>{{ r.pct }}%</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="4"><div class="empty-state"><div class="ic">{{ icon('syringe', 34) }}</div><div class="t">No barangays in scope</div></div></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="card card-pad">
+  <div class="card-title">Settings</div>
+  <form method="post" action="{{ url_for('admin.campaign_detail', campaign_id=campaign.id) }}">
+    <div class="form-group"><label>Campaign Name</label><input class="form-control" name="name" value="{{ campaign.name }}" required></div>
+
+    <div class="form-group"><label>Vaccine</label>
+      <input class="form-control" value="{{ campaign.vaccine_type.name }}" disabled>
+      {% if campaign.is_locked %}
+      <span class="text-muted" style="font-size:11.5px;">Can't be changed &mdash; doses have already been recorded under this campaign.</span>
+      {% else %}
+      <span class="text-muted" style="font-size:11.5px;">Locks automatically once the first dose is recorded.</span>
+      {% endif %}
+    </div>
+
+    <div class="form-grid-2">
+      <div class="form-group"><label>Target Age: Min (months)</label><input class="form-control" type="number" min="0" name="min_age_months" value="{{ campaign.min_age_days // 30 }}"></div>
+      <div class="form-group"><label>Target Age: Max (months)</label><input class="form-control" type="number" min="0" name="max_age_months" value="{{ campaign.max_age_days // 30 }}"></div>
+      <div class="form-group"><label>Active From</label><input class="form-control" type="date" name="start_date" value="{{ campaign.start_date.isoformat() }}"></div>
+      <div class="form-group"><label>Active Until</label><input class="form-control" type="date" name="end_date" value="{{ campaign.end_date.isoformat() }}"></div>
+    </div>
+
+    <div class="form-group"><label>Barangay Scope</label>
+      <span class="text-muted" style="font-size:11.5px;display:block;margin-bottom:6px;">Leave all unchecked to apply to every barangay.</span>
+      <div class="checkbox-list">
+        {% for b in barangays %}
+        <label class="checkbox-row"><input type="checkbox" name="barangay_ids" value="{{ b.id }}" {% if b.id in selected_barangay_ids %}checked{% endif %}> {{ b.name }}</label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="modal-footer" style="padding:20px 0 0;border-top:1px solid var(--border);margin-top:20px;">
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

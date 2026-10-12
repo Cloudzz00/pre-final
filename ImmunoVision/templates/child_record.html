@@ -109,6 +109,20 @@
       {% endfor %}
     </div>
     {% endif %}
+    {% if detail.campaigns %}
+    <div class="card-title" style="margin-top:20px;">Campaigns</div>
+    <div class="card-sub">Supplementary immunization activities (SIA catch-up drives) — tracked separately from the core schedule, never affects risk status.</div>
+    <div class="dose-list">
+      {% for d in detail.campaigns %}
+      <div class="dose-row {{ 'given' if d.date else '' }}">
+        <span class="dot"></span>
+        <span class="dname">{{ d.vaccine }} &mdash; {{ d.name }}</span>
+        <span class="dnote">{{ d.date.strftime('%b %d, %Y') if d.date else 'Not recorded' }}</span>
+        <span class="dstatus">{% if d.date %}{{ icon('check', 14) }} Given{% else %}&mdash;{% endif %}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
   </div>
 
   <div>
