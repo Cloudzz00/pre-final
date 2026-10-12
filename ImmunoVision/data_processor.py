@@ -45,10 +45,12 @@ BARANGAYS = [
 ]
 
 # The 7 vaccine antigens tracked in Vaccine Inventory / Vaccine Requests.
+# "Pentavalent" (DPT-Hib-HepB) replaces the outdated standalone "DPT" name -
+# the modern formulation combines five antigens, not the original three.
 VACCINE_ANTIGENS = [
     ("BCG", "BCG"),
     ("HEPB", "Hepatitis B"),
-    ("DPT", "DPT-Hib-HepB"),
+    ("PENTA", "Pentavalent"),
     ("OPV", "OPV"),
     ("PCV", "PCV"),
     ("IPV", "IPV"),
@@ -59,27 +61,27 @@ VACCINE_ANTIGENS = [
 # consequence of a missed dose rather than only the dose code. Wording follows
 # the DOH EPI programme description.
 ANTIGEN_PROTECTS = {
-    "BCG":  "Tuberculosis",
-    "HEPB": "Hepatitis B",
-    "DPT":  "Diphtheria, pertussis, tetanus, Hib, hepatitis B",
-    "OPV":  "Polio",
-    "PCV":  "Pneumococcal disease (pneumonia, meningitis)",
-    "IPV":  "Polio",
-    "MMR":  "Measles, mumps, rubella",
+    "BCG":   "Tuberculosis",
+    "HEPB":  "Hepatitis B",
+    "PENTA": "Diphtheria, pertussis, tetanus, Hib, hepatitis B",
+    "OPV":   "Polio",
+    "PCV":   "Pneumococcal disease (pneumonia, meningitis)",
+    "IPV":   "Polio",
+    "MMR":   "Measles, mumps, rubella",
 }
 
 
 def vaccines_for_missed(missed_codes):
     """Human-readable vaccine names for the missed dose codes, de-duplicated.
 
-    Groups multiple doses of the same vaccine: a child missing DPT1, DPT2, DPT3
-    shows 'DPT-Hib-HepB' once, not three times."""
+    Groups multiple doses of the same vaccine: a child missing PENTA1, PENTA2,
+    PENTA3 shows 'Pentavalent' once, not three times."""
     antigen_of = {code: ant for code, _n, ant, _d, _r in VACCINE_SCHEDULE}
     name_of = {code: name for code, name, _a, _d, _r in VACCINE_SCHEDULE}
     seen, out = set(), []
     for code in missed_codes:
         ant = antigen_of.get(code, "")
-        # Group by antigen so DPT1/DPT2/DPT3 → one entry
+        # Group by antigen so PENTA1/PENTA2/PENTA3 → one entry
         if ant and ant not in seen:
             seen.add(ant)
             # Use the first dose name as the label, strip the dose number
@@ -94,8 +96,9 @@ def vaccines_for_missed(missed_codes):
 def diseases_for_missed(missed_codes):
     """Diseases the missed doses would have protected against, de-duplicated.
 
-    A child missing four DPT-series doses is exposed to one set of diseases, not
-    four, so the antigens are collapsed before the names are listed."""
+    A child missing four Pentavalent-series doses is exposed to one set of
+    diseases, not four, so the antigens are collapsed before the names are
+    listed."""
     antigen_of = {code: ant for code, _n, ant, _d, _r in VACCINE_SCHEDULE}
     seen, out = set(), []
     for code in missed_codes:
@@ -112,18 +115,21 @@ def diseases_for_missed(missed_codes):
 
 
 # Per-dose schedule (code, name, antigen_code, dose_number, recommended_age_days).
-# Matches the RHU's own registry column layout exactly (see data/raw/*.csv):
-# BCG, Hepa B-BD, DPT-Hib-HepB x3, OPV x3, PCV x3, IPV x2, MMR x2.
+# Column order matches the RHU's own registry export exactly (see
+# data/raw/*.csv and _DOSE_COL_ORDER below), which still prints "DPT-Hib-HepB"
+# as its column header - that's just the source file's own label and doesn't
+# need to match these codes/names, which use current DOH terminology.
+# BCG, Hepa B-BD, Pentavalent x3, OPV x3, PCV x3, IPV x2, MMR x2.
 VACCINE_SCHEDULE = [
     ("BCG", "BCG", "BCG", 1, 0),
     ("HEPA-BD", "Hepa B-BD", "HEPB", 1, 0),
-    ("DPT1", "DPT-Hib-HepB 1st Dose", "DPT", 1, 42),
+    ("PENTA1", "Pentavalent 1st Dose", "PENTA", 1, 42),
     ("OPV1", "OPV 1st Dose", "OPV", 1, 42),
     ("PCV1", "PCV 1st Dose", "PCV", 1, 42),
-    ("DPT2", "DPT-Hib-HepB 2nd Dose", "DPT", 2, 70),
+    ("PENTA2", "Pentavalent 2nd Dose", "PENTA", 2, 70),
     ("OPV2", "OPV 2nd Dose", "OPV", 2, 70),
     ("PCV2", "PCV 2nd Dose", "PCV", 2, 70),
-    ("DPT3", "DPT-Hib-HepB 3rd Dose", "DPT", 3, 98),
+    ("PENTA3", "Pentavalent 3rd Dose", "PENTA", 3, 98),
     ("OPV3", "OPV 3rd Dose", "OPV", 3, 98),
     ("PCV3", "PCV 3rd Dose", "PCV", 3, 98),
     ("IPV1", "IPV 1st Dose", "IPV", 1, 98),
@@ -200,7 +206,7 @@ _DATE_FORMATS = ["%Y-%m-%d", "%m/%d/%y", "%m/%d/%Y"]
 _MISSING_SENTINELS = {"", "null", "none", "move out", "n/a", "na"}
 _FIRST_DATA_COL = 6  # ID, RegDate, DOB, Name, Sex, Barangay come before the dose columns
 _DOSE_COL_ORDER = [
-    "BCG", "HEPA-BD", "DPT1", "DPT2", "DPT3", "OPV1", "OPV2", "OPV3",
+    "BCG", "HEPA-BD", "PENTA1", "PENTA2", "PENTA3", "OPV1", "OPV2", "OPV3",
     "PCV1", "PCV2", "PCV3", "IPV1", "IPV2", "VITAMIN_A", "MNP", "MMR1", "MMR2",
 ]
 
@@ -429,9 +435,9 @@ FEATURE_MODEL_ROLE = {
 # Three bands rather than seven precise numbers: the evidence supports an
 # ordering, not two-decimal precision.
 ANTIGEN_SEVERITY = {
-    "MMR":  1.00,   # measles, threshold ~95%
-    "DPT":  1.00,   # pentavalent, carries pertussis at ~92-94%
-    "OPV":  0.85,   # polio, threshold ~80-86%
+    "MMR":   1.00,   # measles, threshold ~95%
+    "PENTA": 1.00,   # pentavalent, carries pertussis at ~92-94%
+    "OPV":   0.85,   # polio, threshold ~80-86%
     "IPV":  0.85,   # polio
     "BCG":  0.70,   # severe childhood TB; individual protection
     "HEPB": 0.70,   # perinatal transmission; individual protection

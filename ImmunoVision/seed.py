@@ -171,7 +171,7 @@ def seed(reset=False):
 
         print("Seeding vaccine inventory...")
         rng2 = random.Random(5)
-        stock_plan = {"BCG": (245, 100), "HEPB": (18, 50), "DPT": (180, 60), "OPV": (0, 60),
+        stock_plan = {"BCG": (245, 100), "HEPB": (18, 50), "PENTA": (180, 60), "OPV": (0, 60),
                       "PCV": (23, 60), "IPV": (140, 50), "MMR": (95, 40)}
         for code, (qty, reorder) in stock_plan.items():
             db.session.add(InventoryBatch(

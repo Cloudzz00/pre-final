@@ -265,7 +265,7 @@
 Chart.defaults.maintainAspectRatio = false;
 Chart.defaults.responsive = true;
 const vaccineColors = {
-  'BCG': '#2563eb', 'Hepa B-BD': '#0ea5e9', 'DPT-Hib-HepB': '#0d9488',
+  'BCG': '#2563eb', 'Hepa B-BD': '#0ea5e9', 'Pentavalent': '#0d9488',
   'OPV': '#7c3aed', 'PCV': '#a855f7', 'IPV': '#4f46e5', 'MMR': '#0891b2'
 };
 const labels = {{ by_vaccine|map(attribute='vaccine')|list|tojson }};
@@ -307,7 +307,7 @@ new Chart(document.getElementById('reportChart'), {
 {% else %}
 <script>
 const vaccineColors = {
-  'BCG': '#2563eb', 'Hepa B-BD': '#0ea5e9', 'DPT-Hib-HepB': '#0d9488',
+  'BCG': '#2563eb', 'Hepa B-BD': '#0ea5e9', 'Pentavalent': '#0d9488',
   'OPV': '#7c3aed', 'PCV': '#a855f7', 'IPV': '#4f46e5', 'MMR': '#0891b2'
 };
 document.querySelectorAll('.vaccine-fill').forEach(el => {

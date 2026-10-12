@@ -41,11 +41,11 @@
       <div class="form-group"><label>Hepa B-BD (date given)</label><input class="form-control" type="date" name="dose_HEPA-BD" value="{{ doses['HEPA-BD'].isoformat() if doses['HEPA-BD'] else '' }}"></div>
     </div>
 
-    <div class="section-divider-bar">DPT-Hib-HepB</div>
+    <div class="section-divider-bar">Pentavalent (Penta)</div>
     <div class="form-grid-2">
-      <div class="form-group"><label>DPT-1 (1st dose)</label><input class="form-control" type="date" name="dose_DPT1" value="{{ doses.DPT1.isoformat() if doses.DPT1 else '' }}"></div>
-      <div class="form-group"><label>DPT-2 (2nd dose)</label><input class="form-control" type="date" name="dose_DPT2" value="{{ doses.DPT2.isoformat() if doses.DPT2 else '' }}"></div>
-      <div class="form-group"><label>DPT-3 (3rd dose)</label><input class="form-control" type="date" name="dose_DPT3" value="{{ doses.DPT3.isoformat() if doses.DPT3 else '' }}"></div>
+      <div class="form-group"><label>Penta-1 (1st dose)</label><input class="form-control" type="date" name="dose_PENTA1" value="{{ doses.PENTA1.isoformat() if doses.PENTA1 else '' }}"></div>
+      <div class="form-group"><label>Penta-2 (2nd dose)</label><input class="form-control" type="date" name="dose_PENTA2" value="{{ doses.PENTA2.isoformat() if doses.PENTA2 else '' }}"></div>
+      <div class="form-group"><label>Penta-3 (3rd dose)</label><input class="form-control" type="date" name="dose_PENTA3" value="{{ doses.PENTA3.isoformat() if doses.PENTA3 else '' }}"></div>
     </div>
 
     <div class="section-divider-bar">OPV</div>

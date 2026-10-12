@@ -361,13 +361,13 @@ def coverage_by_vaccine(barangay_id=None):
 # green/amber/red: those carry coverage-status meaning everywhere else in the
 # system, and a red bar here would read as "failing" when it only means "IPV".
 ANTIGEN_COLOURS = {
-    "BCG":  "#2563eb",
-    "HEPB": "#0ea5e9",
-    "DPT":  "#0d9488",
-    "OPV":  "#7c3aed",
-    "PCV":  "#a855f7",
-    "IPV":  "#4f46e5",
-    "MMR":  "#0891b2",
+    "BCG":   "#2563eb",
+    "HEPB":  "#0ea5e9",
+    "PENTA": "#0d9488",
+    "OPV":   "#7c3aed",
+    "PCV":   "#a855f7",
+    "IPV":   "#4f46e5",
+    "MMR":   "#0891b2",
 }
 
 
@@ -376,7 +376,7 @@ def dose_age_label(days):
 
     Ages follow the DOH Expanded Program on Immunization schedule. Shown on the
     chart because the dose names alone do not reveal which doses share a visit -
-    DPT 1st, OPV 1st and PCV 1st are all given at the same 6-week appointment."""
+    Penta 1st, OPV 1st and PCV 1st are all given at the same 6-week appointment."""
     if days <= 0:
         return "birth"
     if days < 180:
@@ -524,8 +524,8 @@ def vaccine_colours(rows):
     """Bar colour per dose, grouped by antigen.
 
     Doses of the same vaccine share a colour, which makes each series visible as
-    a group - DPT holding steady across three doses reads differently from OPV
-    declining across the same three visits."""
+    a group - Pentavalent holding steady across three doses reads differently
+    from OPV declining across the same three visits."""
     antigen_of = {name: ant for _c, name, ant, _d, _r in dp.VACCINE_SCHEDULE}
     return [ANTIGEN_COLOURS.get(antigen_of.get(r["vaccine"], ""), "#64748b") for r in rows]
 
