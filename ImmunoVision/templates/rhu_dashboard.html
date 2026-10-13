@@ -107,10 +107,10 @@
           {# Capped to the chart's height beside it so the two cards end level. #}
           <div class="table-wrap" style="max-height:{{ (by_barangay|length * 35 + 52)|int }}px;">
             <table class="data-table plain-head compact">
-              <thead><tr><th>Barangay</th><th>Children</th><th>Fully Imm.</th><th>At-Risk</th><th title="High risk tier">High</th><th title="Medium risk tier">Medium</th><th title="Low risk tier">Low</th><th>Coverage</th></tr></thead>
+              <thead><tr><th>Barangay</th><th>Children</th><th>Fully Imm.</th><th title="High risk tier">High</th><th title="Medium risk tier">Medium</th><th title="Low risk tier">Low</th><th>Coverage</th></tr></thead>
               <tbody>
               {% for r in by_barangay %}
-              <tr><td>{{ r.barangay }}</td><td>{{ r.children }}</td><td>{{ r.fully_immunized }}</td><td>{{ r.at_risk }}</td>
+              <tr><td>{{ r.barangay }}</td><td>{{ r.children }}</td><td>{{ r.fully_immunized }}</td>
               <td class="rt-high">{{ r.tiers.high }}</td>
               <td class="rt-med">{{ r.tiers.medium }}</td>
               <td class="rt-low">{{ r.tiers.low }}</td>
