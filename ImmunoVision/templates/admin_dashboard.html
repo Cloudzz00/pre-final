@@ -84,7 +84,7 @@
       <div class="card-sub">{% if selected_barangay %}{{ selected_barangay.name }} only{% else %}All 19 barangays, lowest coverage first{% endif %}</div>
     <div class="table-wrap auto-height">
     <table class="data-table compact">
-      <thead><tr><th>Barangay</th><th>Children</th><th>Immunized</th><th>At-Risk</th><th style="width:30%;">Coverage</th></tr></thead>
+      <thead><tr><th>Barangay</th><th>Children</th><th>Immunized</th><th>At-Risk</th><th title="High / Medium / Low risk tier">Risk Levels</th><th style="width:26%;">Coverage</th></tr></thead>
       <tbody>
         {% for r in barangay_rows %}
         <tr>
@@ -92,6 +92,9 @@
           <td>{{ r.children }}</td>
           <td>{{ r.fully_immunized }}</td>
           <td>{{ r.at_risk }}</td>
+          <td><span class="risk-tiers" title="{{ r.tiers.high }} High &middot; {{ r.tiers.medium }} Medium &middot; {{ r.tiers.low }} Low">
+            <span class="rt-high">{{ r.tiers.high }}</span><span class="rt-sep">/</span><span class="rt-med">{{ r.tiers.medium }}</span><span class="rt-sep">/</span><span class="rt-low">{{ r.tiers.low }}</span>
+          </span></td>
           <td>
             <div class="cov-cell">
               <span class="progress-track">
@@ -141,12 +144,40 @@
       <a href="{{ url_for('admin.assign_barangay') }}" class="settings-row" style="text-decoration:none;">
         <div class="left"><div class="ic">{{ icon('map-pin', 18) }}</div><div class="label">Assign Barangay</div></div><div>&rsaquo;</div>
       </a>
+      <a href="{{ url_for('admin.campaigns') }}" class="settings-row" style="text-decoration:none;">
+        <div class="left"><div class="ic">{{ icon('calendar', 18) }}</div><div class="label">Campaigns</div></div><div>&rsaquo;</div>
+      </a>
       <a href="{{ url_for('admin.municipality_map') }}" class="settings-row" style="text-decoration:none;">
         <div class="left"><div class="ic">{{ icon('map', 18) }}</div><div class="label">Municipality Map</div></div><div>&rsaquo;</div>
       </a>
       <a href="{{ url_for('admin.vaccine_alerts') }}" class="settings-row" style="text-decoration:none;">
         <div class="left"><div class="ic">{{ icon('package', 18) }}</div><div class="label">Vaccine Alerts</div></div><div>&rsaquo;</div>
       </a>
+    </div>
+
+    <div class="card card-pad" style="margin-bottom:16px;">
+      <div class="flex-between" style="margin-bottom:4px;">
+        <div>
+          <div class="card-title mb-0">Active Campaigns</div>
+          <div class="card-sub mb-0">Supplementary immunization drives open right now</div>
+        </div>
+        <a class="btn btn-outline btn-sm" href="{{ url_for('admin.campaigns') }}">{{ icon('calendar', 14) }} Manage</a>
+      </div>
+      <div style="margin-top:10px;">
+        {% for c in active_campaigns %}
+        <a class="stock-row" style="text-decoration:none;color:inherit;" href="{{ url_for('admin.campaign_detail', campaign_id=c.id) }}">
+          <div class="sname">{{ c.name }}</div>
+          <div class="smeter">
+            <span class="progress-track"><span class="progress-fill {{ coverage_color(c.pct, c.eligible) }}" style="width:{{ c.pct }}%"></span></span>
+          </div>
+          <div class="sqty"><b>{{ c.received }}</b> <span class="text-muted">/ {{ c.eligible }}</span></div>
+          <span class="badge badge-gray">{{ c.days_left }}d left</span>
+        </a>
+        {% else %}
+        <div class="empty-state"><div class="ic">{{ icon('calendar', 28) }}</div>
+          <div class="t">No campaigns active right now</div></div>
+        {% endfor %}
+      </div>
     </div>
 
     {# User accounts and the audit trail moved to the ICTMO administrator -

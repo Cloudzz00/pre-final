@@ -318,6 +318,17 @@ def dashboard_stats(barangay_id=None, max_age_days=None):
     }
 
 
+def _risk_tier_counts(children, risk):
+    """High/Medium/Low tier counts for a list of children, same tiering
+    risk_distribution() uses, so a barangay row and the donut chart never
+    disagree on how a child is banded."""
+    counts = Counter()
+    for c in children:
+        latest = risk.get(c.id)
+        counts[dp.risk_tier(latest.risk_probability) if latest else "Low Risk"] += 1
+    return {"high": counts["High Risk"], "medium": counts["Medium Risk"], "low": counts["Low Risk"]}
+
+
 def coverage_by_barangay():
     by_barangay = defaultdict(list)
     for c in Child.query.all():
@@ -331,7 +342,8 @@ def coverage_by_barangay():
         at_risk = sum(1 for c in children
                       if (ra := risk.get(c.id)) and ra.risk_label == "At-Risk")
         rows.append({"barangay": b.name, "children": total, "fully_immunized": fully, "at_risk": at_risk,
-                      "coverage": round((fully / total) * 100, 1) if total else 0.0})
+                      "coverage": round((fully / total) * 100, 1) if total else 0.0,
+                      "tiers": _risk_tier_counts(children, risk)})
     rows.sort(key=lambda r: r["coverage"], reverse=True)
     return rows
 
@@ -366,6 +378,22 @@ def campaign_reach(campaign):
     rows.sort(key=lambda r: r["pct"])
     totals["pct"] = round(totals["received"] / totals["eligible"] * 100, 1) if totals["eligible"] else 0.0
     return rows, totals
+
+
+def active_campaigns_summary():
+    """One reach total per campaign that's inside its active window right
+    now, for the dashboard panel - the full per-barangay breakdown stays on
+    the campaign's own detail page rather than being duplicated here."""
+    today = date.today()
+    campaigns = (Campaign.query.filter(Campaign.start_date <= today, Campaign.end_date >= today)
+                 .order_by(Campaign.end_date).all())
+    out = []
+    for c in campaigns:
+        _, totals = campaign_reach(c)
+        out.append({"id": c.id, "name": c.name, "vaccine": c.vaccine_type.name,
+                     "eligible": totals["eligible"], "received": totals["received"], "pct": totals["pct"],
+                     "days_left": (c.end_date - today).days})
+    return out
 
 
 def coverage_by_vaccine(barangay_id=None):
@@ -1108,7 +1136,8 @@ def report_figures(barangay_id=None, as_of=None):
         at_risk = sum(1 for c in kids if (ra := risk.get(c.id)) and ra.risk_label == "At-Risk")
         rows.append({"barangay": names.get(bid, "—"), "children": len(kids),
                      "fully_immunized": fully, "at_risk": at_risk,
-                     "coverage": round(fully / len(kids) * 100, 1) if kids else 0.0})
+                     "coverage": round(fully / len(kids) * 100, 1) if kids else 0.0,
+                     "tiers": _risk_tier_counts(kids, risk)})
     rows.sort(key=lambda r: r["coverage"], reverse=True)
 
     total = len(children)
@@ -1787,7 +1816,7 @@ def dashboard():
         by_barangay=by_barangay, by_vaccine=by_vaccine, trend=trend,
         vaccine_colours=vaccine_colours(by_vaccine), vaccine_labels=schedule_labels(by_vaccine),
         insights=chart_insights(by_vaccine, by_barangay, trend),
-        below_target=below_target, change=change,
+        below_target=below_target, change=change, active_campaigns=active_campaigns_summary(),
     ))
 
 
@@ -2510,6 +2539,7 @@ def dashboard():
         by_vaccine=by_vaccine, trend=trend, staffing=staffing,
         vaccine_colours=vaccine_colours(by_vaccine), vaccine_labels=schedule_labels(by_vaccine),
         insights=chart_insights(by_vaccine, barangay_rows, trend),
+        active_campaigns=active_campaigns_summary(),
         months=MONTH_NAMES, years=data_years(), month=month, year=year,
         as_of=as_of, period_label=period_label, period_clamped=clamped,
         barangays=Barangay.query.order_by(Barangay.name).all(),

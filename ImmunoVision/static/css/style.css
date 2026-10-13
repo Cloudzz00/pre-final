@@ -1134,6 +1134,15 @@ html { scroll-behavior: smooth; }
 }
 .insight .ic-svg { flex-shrink: 0; margin-top: 2px; color: var(--text-muted); }
 
+/* Per-barangay High/Medium/Low risk-tier split in the Coverage by Barangay
+   table. Three numbers, not three columns, so adding tier detail doesn't
+   force the table any wider. */
+.risk-tiers { display: inline-flex; align-items: baseline; gap: 3px; font-size: 12.5px; white-space: nowrap; }
+.risk-tiers .rt-high { color: var(--red); font-weight: 700; }
+.risk-tiers .rt-med { color: var(--amber); font-weight: 700; }
+.risk-tiers .rt-low { color: var(--green); font-weight: 700; }
+.risk-tiers .rt-sep { color: var(--text-muted); }
+
 /* Features computed but not weighted by the prototype scorer - available to a
    trained model, so shown but visually secondary. */
 .feature-unweighted { background: var(--slate-bg-2); }
