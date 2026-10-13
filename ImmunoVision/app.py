@@ -2181,7 +2181,10 @@ def campaign_worklist(campaign_id):
     campaign = db.session.get(Campaign, campaign_id) or abort(404)
     barangay_id = request.args.get("barangay_id", type=int)
     pending_only = request.args.get("pending") == "1"
+    search = request.args.get("q", "").strip()
     kids = eligible_children_for_campaign(campaign, barangay_id)
+    if search:
+        kids = [c for c in kids if search.lower() in c.full_name.lower()]
     recs = {r.child_id: r.date_administered for r in
             VaccinationRecord.query.filter_by(campaign_id=campaign.id).all()}
     rows = [{"child": c, "dose_date": recs.get(c.id)} for c in kids]
@@ -2191,7 +2194,7 @@ def campaign_worklist(campaign_id):
     return render_template("campaign_worklist.html", **_rhu_ctx(
         "dashboard", page_title=campaign.name, campaign=campaign, rows=rows,
         barangays=Barangay.query.order_by(Barangay.name).all(),
-        selected_barangay_id=barangay_id, pending_only=pending_only,
+        selected_barangay_id=barangay_id, pending_only=pending_only, search=search,
         back_url=url_for("rhu.dashboard"),
     ))
 
@@ -2217,7 +2220,8 @@ def campaign_record_dose(campaign_id, child_id):
         flash(f"Saved {child.full_name}'s dose.", "success")
     return redirect(url_for("rhu.campaign_worklist", campaign_id=campaign.id,
                              barangay_id=request.form.get("barangay_id") or None,
-                             pending=request.form.get("pending") or None))
+                             pending=request.form.get("pending") or None,
+                             q=request.form.get("q") or None))
 
 
 @rhu_bp.route("/notifications")
@@ -2509,7 +2513,10 @@ def campaign_worklist(campaign_id):
     if not campaign.barangay_eligible(bid):
         abort(404)
     pending_only = request.args.get("pending") == "1"
+    search = request.args.get("q", "").strip()
     kids = eligible_children_for_campaign(campaign, bid)
+    if search:
+        kids = [c for c in kids if search.lower() in c.full_name.lower()]
     recs = {r.child_id: r.date_administered for r in
             VaccinationRecord.query.filter_by(campaign_id=campaign.id).all()}
     rows = [{"child": c, "dose_date": recs.get(c.id)} for c in kids]
@@ -2518,7 +2525,7 @@ def campaign_worklist(campaign_id):
     rows.sort(key=lambda r: (r["dose_date"] is not None, r["child"].full_name))
     return render_template("campaign_worklist.html", **_bhw_ctx(
         "dashboard", page_title=campaign.name, campaign=campaign, rows=rows,
-        barangays=None, selected_barangay_id=bid, pending_only=pending_only,
+        barangays=None, selected_barangay_id=bid, pending_only=pending_only, search=search,
         back_url=url_for("bhw.dashboard"),
     ))
 
@@ -2545,7 +2552,8 @@ def campaign_record_dose(campaign_id, child_id):
         log_activity(f"Recorded {campaign.name} dose for {child_label(child)}")
         flash(f"Saved {child.full_name}'s dose.", "success")
     return redirect(url_for("bhw.campaign_worklist", campaign_id=campaign.id,
-                             pending=request.form.get("pending") or None))
+                             pending=request.form.get("pending") or None,
+                             q=request.form.get("q") or None))
 
 
 @bhw_bp.route("/notifications")

@@ -14,24 +14,27 @@
   this never changes a child's risk status. To edit the campaign's own details, use Admin &rsaquo; Campaigns.
 </p>
 
-<div class="filter-bar">
-  <span class="flabel">{{ icon('map-pin', 14) }} FILTER</span>
-  <form method="get" action="{{ request.path }}" style="display:flex;gap:10px;">
-    {% if barangays %}
-    <select class="form-control select-sm" name="barangay_id" onchange="this.form.submit()" aria-label="Filter by barangay">
-      <option value="">All barangays in scope</option>
-      {% for b in barangays %}
-      <option value="{{ b.id }}" {% if selected_barangay_id == b.id %}selected{% endif %}>{{ b.name }}</option>
-      {% endfor %}
-    </select>
-    {% endif %}
-    <label style="display:flex;align-items:center;gap:7px;font-size:13px;color:var(--text-secondary);">
-      <input type="checkbox" name="pending" value="1" {% if pending_only %}checked{% endif %} onchange="this.form.submit()">
-      Needs dose only
-    </label>
-  </form>
+<form class="filter-bar" method="get" action="{{ request.path }}">
+  <div class="search-input-wrap">
+    <span class="si-icon">{{ icon('search', 16) }}</span>
+    <input type="text" name="q" value="{{ search }}" placeholder="Search by name...">
+  </div>
+  {% if barangays %}
+  <select class="form-control select-sm" name="barangay_id" aria-label="Filter by barangay">
+    <option value="">All barangays in scope</option>
+    {% for b in barangays %}
+    <option value="{{ b.id }}" {% if selected_barangay_id == b.id %}selected{% endif %}>{{ b.name }}</option>
+    {% endfor %}
+  </select>
+  {% endif %}
+  <label style="display:flex;align-items:center;gap:7px;font-size:13px;color:var(--text-secondary);">
+    <input type="checkbox" name="pending" value="1" {% if pending_only %}checked{% endif %}>
+    Needs dose only
+  </label>
+  <button class="btn btn-outline btn-sm" type="submit">Filter</button>
+  {% if search or selected_barangay_id or pending_only %}<a class="link" href="{{ request.path }}">&times; Clear filters</a>{% endif %}
   <span class="text-muted" style="margin-left:auto;font-size:12.5px;">{{ rows|length }} children</span>
-</div>
+</form>
 
 <div class="card card-pad">
   <div class="table-wrap auto-height">
@@ -50,6 +53,7 @@
             <form method="post" action="{{ url_for((role ~ '.campaign_record_dose'), campaign_id=campaign.id, child_id=r.child.id) }}" style="display:flex;align-items:center;gap:8px;">
               <input type="hidden" name="barangay_id" value="{{ selected_barangay_id or '' }}">
               <input type="hidden" name="pending" value="{{ '1' if pending_only else '' }}">
+              <input type="hidden" name="q" value="{{ search }}">
               <input class="form-control" type="date" name="dose_date" value="{{ r.dose_date.isoformat() if r.dose_date else '' }}" style="max-width:160px;">
               <button class="btn btn-outline btn-sm" type="submit">{{ icon('check', 14) }} Save</button>
               {% if r.dose_date %}<span class="badge badge-green">Given</span>{% endif %}
