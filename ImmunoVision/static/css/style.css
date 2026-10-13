@@ -1128,12 +1128,11 @@ html { scroll-behavior: smooth; }
 /* Computed insight beneath a chart. Every figure in it is derived from the same
    data the chart plots, so the two cannot drift apart. */
 .insight {
-  display: flex; align-items: flex-start; gap: 9px; margin-top: 14px;
-  padding: 11px 14px; border-radius: var(--radius-sm);
-  background: var(--primary-light); border-left: 3px solid var(--primary);
-  font-size: 13px; line-height: 1.6; color: var(--text-primary);
+  display: flex; align-items: flex-start; gap: 8px; margin-top: 14px;
+  padding-top: 12px; border-top: 1px solid var(--border);
+  font-size: 13px; line-height: 1.6; color: var(--text-secondary);
 }
-.insight .ic-svg { flex-shrink: 0; margin-top: 2px; color: var(--primary); }
+.insight .ic-svg { flex-shrink: 0; margin-top: 2px; color: var(--text-muted); }
 
 /* Features computed but not weighted by the prototype scorer - available to a
    trained model, so shown but visually secondary. */
