@@ -20,20 +20,19 @@
     <input type="text" name="q" value="{{ search }}" placeholder="Search by name...">
   </div>
   {% if barangays %}
-  <select class="form-control select-sm" name="barangay_id" aria-label="Filter by barangay">
+  <select class="form-control select-sm" name="barangay_id" onchange="this.form.submit()" aria-label="Filter by barangay">
     <option value="">All barangays in scope</option>
     {% for b in barangays %}
     <option value="{{ b.id }}" {% if selected_barangay_id == b.id %}selected{% endif %}>{{ b.name }}</option>
     {% endfor %}
   </select>
   {% endif %}
-  <label style="display:flex;align-items:center;gap:7px;font-size:13px;color:var(--text-secondary);">
-    <input type="checkbox" name="pending" value="1" {% if pending_only %}checked{% endif %}>
+  <label style="display:flex;align-items:center;gap:7px;font-size:13px;color:var(--text-secondary);white-space:nowrap;">
+    <input type="checkbox" name="pending" value="1" onchange="this.form.submit()" {% if pending_only %}checked{% endif %}>
     Needs dose only
   </label>
-  <button class="btn btn-outline btn-sm" type="submit">Filter</button>
-  {% if search or selected_barangay_id or pending_only %}<a class="link" href="{{ request.path }}">&times; Clear filters</a>{% endif %}
-  <span class="text-muted" style="margin-left:auto;font-size:12.5px;">{{ rows|length }} children</span>
+  {% if search or (barangays and selected_barangay_id) or pending_only %}<a class="link" href="{{ request.path }}">&times; Clear filters</a>{% endif %}
+  <span class="text-muted" style="margin-left:auto;font-size:12.5px;white-space:nowrap;">{{ rows|length }} children</span>
 </form>
 
 <div class="card card-pad">
