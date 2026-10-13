@@ -84,7 +84,7 @@
       <div class="card-sub">{% if selected_barangay %}{{ selected_barangay.name }} only{% else %}All 19 barangays, lowest coverage first{% endif %}</div>
     <div class="table-wrap auto-height">
     <table class="data-table compact">
-      <thead><tr><th>Barangay</th><th>Children</th><th>Immunized</th><th>At-Risk</th><th title="High / Medium / Low risk tier">Risk Levels</th><th style="width:26%;">Coverage</th></tr></thead>
+      <thead><tr><th>Barangay</th><th>Children</th><th>Immunized</th><th>At-Risk</th><th title="High risk tier">High</th><th title="Medium risk tier">Medium</th><th title="Low risk tier">Low</th><th style="width:22%;">Coverage</th></tr></thead>
       <tbody>
         {% for r in barangay_rows %}
         <tr>
@@ -92,9 +92,9 @@
           <td>{{ r.children }}</td>
           <td>{{ r.fully_immunized }}</td>
           <td>{{ r.at_risk }}</td>
-          <td><span class="risk-tiers" title="{{ r.tiers.high }} High &middot; {{ r.tiers.medium }} Medium &middot; {{ r.tiers.low }} Low">
-            <span class="rt-high">{{ r.tiers.high }}</span><span class="rt-sep">/</span><span class="rt-med">{{ r.tiers.medium }}</span><span class="rt-sep">/</span><span class="rt-low">{{ r.tiers.low }}</span>
-          </span></td>
+          <td class="rt-high">{{ r.tiers.high }}</td>
+          <td class="rt-med">{{ r.tiers.medium }}</td>
+          <td class="rt-low">{{ r.tiers.low }}</td>
           <td>
             <div class="cov-cell">
               <span class="progress-track">
