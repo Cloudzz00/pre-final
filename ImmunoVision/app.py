@@ -510,14 +510,23 @@ def chart_insights(by_vaccine, by_barangay, trend):
         worst = max(real, key=shortfall)
         lowest = min(real, key=lambda r: r["coverage"])
         behind = sum(1 for r in real if r["coverage"] < COVERAGE_TARGET)
-        out["barangay"] = (
+        lede = (
             f"Across the {len(real)} barangays, "
             f"{'all' if behind == len(real) else behind} are below the "
-            f"{COVERAGE_TARGET}% target. {lowest['barangay']} has the lowest rate at "
-            f"{lowest['coverage']}%, but {worst['barangay']} carries the largest gap "
-            f" about {round(shortfall(worst))} of its {worst['children']} children "
-            f"short of target."
+            f"{COVERAGE_TARGET}% target."
         )
+        if worst["barangay"] == lowest["barangay"]:
+            out["barangay"] = (
+                f"{lede} {lowest['barangay']} is worst on both counts: the lowest rate, "
+                f"at {lowest['coverage']}%, and the largest gap, about "
+                f"{round(shortfall(worst))} of its {worst['children']} children short of target."
+            )
+        else:
+            out["barangay"] = (
+                f"{lede} {lowest['barangay']} has the lowest rate at {lowest['coverage']}%, "
+                f"but {worst['barangay']} carries the largest gap, about "
+                f"{round(shortfall(worst))} of its {worst['children']} children short of target."
+            )
 
     if len(trend) >= 2:
         first_y, first_p, _ = trend[0]
