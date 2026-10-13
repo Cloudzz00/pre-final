@@ -380,20 +380,52 @@ def campaign_reach(campaign):
     return rows, totals
 
 
-def active_campaigns_summary():
+def active_campaigns_summary(barangay_id=None):
     """One reach total per campaign that's inside its active window right
     now, for the dashboard panel - the full per-barangay breakdown stays on
-    the campaign's own detail page rather than being duplicated here."""
+    the campaign's own detail page rather than being duplicated here.
+
+    With barangay_id set (the BHW dashboard), each total is narrowed to that
+    one barangay's row from campaign_reach(), and a campaign out of scope or
+    with nobody eligible there is left out rather than shown as a zero."""
     today = date.today()
     campaigns = (Campaign.query.filter(Campaign.start_date <= today, Campaign.end_date >= today)
                  .order_by(Campaign.end_date).all())
+    barangay_name = db.session.get(Barangay, barangay_id).name if barangay_id else None
     out = []
     for c in campaigns:
-        _, totals = campaign_reach(c)
+        if barangay_id is not None and not c.barangay_eligible(barangay_id):
+            continue
+        rows, totals = campaign_reach(c)
+        if barangay_id is not None:
+            row = next((r for r in rows if r["barangay"] == barangay_name), None)
+            if row is None or row["eligible"] == 0:
+                continue
+            eligible, received, pct = row["eligible"], row["received"], row["pct"]
+        else:
+            eligible, received, pct = totals["eligible"], totals["received"], totals["pct"]
         out.append({"id": c.id, "name": c.name, "vaccine": c.vaccine_type.name,
-                     "eligible": totals["eligible"], "received": totals["received"], "pct": totals["pct"],
+                     "eligible": eligible, "received": received, "pct": pct,
                      "days_left": (c.end_date - today).days})
     return out
+
+
+def eligible_children_for_campaign(campaign, barangay_id=None):
+    """Children eligible for this campaign right now, by today's age and
+    barangay - the same test eligible_campaigns_for_child() applies from the
+    child's side, so a row here is exactly a child whose Edit Child form
+    would offer this campaign's dose field. Used by the campaign worklist,
+    a focused alternative to opening each child's full record. Distinct from
+    campaign_reach(), which counts anyone eligible at any point during the
+    campaign's window for historical reach reporting."""
+    q = Child.query
+    if barangay_id is not None:
+        q = q.filter_by(barangay_id=barangay_id)
+    elif campaign.barangays.count():
+        q = q.filter(Child.barangay_id.in_([b.id for b in campaign.barangays.all()]))
+    kids = [c for c in q.all() if campaign.age_eligible(c.age_in_days)]
+    kids.sort(key=lambda c: c.full_name)
+    return kids
 
 
 def coverage_by_vaccine(barangay_id=None):
@@ -2140,6 +2172,54 @@ def export_report_csv():
                     headers={"Content-Disposition": f"attachment; filename={filename}"})
 
 
+@rhu_bp.route("/campaigns/<int:campaign_id>")
+def campaign_worklist(campaign_id):
+    """A focused list of just the children eligible for one campaign right
+    now, one date field each, so recording a round of campaign doses doesn't
+    mean opening each child's full Edit Child form and scrolling past the
+    entire core schedule to reach the one field that matters today."""
+    campaign = db.session.get(Campaign, campaign_id) or abort(404)
+    barangay_id = request.args.get("barangay_id", type=int)
+    pending_only = request.args.get("pending") == "1"
+    kids = eligible_children_for_campaign(campaign, barangay_id)
+    recs = {r.child_id: r.date_administered for r in
+            VaccinationRecord.query.filter_by(campaign_id=campaign.id).all()}
+    rows = [{"child": c, "dose_date": recs.get(c.id)} for c in kids]
+    if pending_only:
+        rows = [r for r in rows if not r["dose_date"]]
+    rows.sort(key=lambda r: (r["dose_date"] is not None, r["child"].full_name))
+    return render_template("campaign_worklist.html", **_rhu_ctx(
+        "dashboard", page_title=campaign.name, campaign=campaign, rows=rows,
+        barangays=Barangay.query.order_by(Barangay.name).all(),
+        selected_barangay_id=barangay_id, pending_only=pending_only,
+        back_url=url_for("rhu.dashboard"),
+    ))
+
+
+@rhu_bp.route("/campaigns/<int:campaign_id>/record/<int:child_id>", methods=["POST"])
+def campaign_record_dose(campaign_id, child_id):
+    campaign = db.session.get(Campaign, campaign_id) or abort(404)
+    child = db.session.get(Child, child_id) or abort(404)
+    if not (campaign.age_eligible(child.age_in_days) and campaign.barangay_eligible(child.barangay_id)):
+        abort(400)
+    date_str = request.form.get("dose_date")
+    administered = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else None
+    rec = child.vaccination_records.filter_by(campaign_id=campaign.id).first()
+    if rec is None:
+        if administered is not None:
+            rec = VaccinationRecord(child_id=child.id, vaccine_type_id=campaign.vaccine_type_id, campaign_id=campaign.id)
+            db.session.add(rec)
+    if rec is not None:
+        rec.date_administered = administered
+        rec.status = "completed" if administered else "pending"
+        db.session.commit()
+        log_activity(f"Recorded {campaign.name} dose for {child_label(child)}")
+        flash(f"Saved {child.full_name}'s dose.", "success")
+    return redirect(url_for("rhu.campaign_worklist", campaign_id=campaign.id,
+                             barangay_id=request.form.get("barangay_id") or None,
+                             pending=request.form.get("pending") or None))
+
+
 @rhu_bp.route("/notifications")
 def notifications():
     notes = get_notifications("rhu")
@@ -2212,6 +2292,7 @@ def dashboard():
         due_calendar=due_calendar,
         pending_requests=(VaccineRequest.query.filter_by(barangay_id=bid, status="pending")
                           .order_by(VaccineRequest.requested_at.desc()).first()),
+        active_campaigns=active_campaigns_summary(bid),
     ))
 
 
@@ -2417,6 +2498,54 @@ def export_report_csv():
     filename = f"immunovision_{scope.split()[0].lower()}_{as_of:%Y%m%d}.csv"
     return Response(buf.getvalue(), mimetype="text/csv",
                     headers={"Content-Disposition": f"attachment; filename={filename}"})
+
+
+@bhw_bp.route("/campaigns/<int:campaign_id>")
+def campaign_worklist(campaign_id):
+    """Same focused worklist as the RHU version, locked to the BHW's own
+    barangay - no filter control needed since there is only ever one scope."""
+    campaign = db.session.get(Campaign, campaign_id) or abort(404)
+    bid = current_user.barangay_id
+    if not campaign.barangay_eligible(bid):
+        abort(404)
+    pending_only = request.args.get("pending") == "1"
+    kids = eligible_children_for_campaign(campaign, bid)
+    recs = {r.child_id: r.date_administered for r in
+            VaccinationRecord.query.filter_by(campaign_id=campaign.id).all()}
+    rows = [{"child": c, "dose_date": recs.get(c.id)} for c in kids]
+    if pending_only:
+        rows = [r for r in rows if not r["dose_date"]]
+    rows.sort(key=lambda r: (r["dose_date"] is not None, r["child"].full_name))
+    return render_template("campaign_worklist.html", **_bhw_ctx(
+        "dashboard", page_title=campaign.name, campaign=campaign, rows=rows,
+        barangays=None, selected_barangay_id=bid, pending_only=pending_only,
+        back_url=url_for("bhw.dashboard"),
+    ))
+
+
+@bhw_bp.route("/campaigns/<int:campaign_id>/record/<int:child_id>", methods=["POST"])
+def campaign_record_dose(campaign_id, child_id):
+    campaign = db.session.get(Campaign, campaign_id) or abort(404)
+    child = db.session.get(Child, child_id) or abort(404)
+    if child.barangay_id != current_user.barangay_id:
+        abort(403)
+    if not (campaign.age_eligible(child.age_in_days) and campaign.barangay_eligible(child.barangay_id)):
+        abort(400)
+    date_str = request.form.get("dose_date")
+    administered = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else None
+    rec = child.vaccination_records.filter_by(campaign_id=campaign.id).first()
+    if rec is None:
+        if administered is not None:
+            rec = VaccinationRecord(child_id=child.id, vaccine_type_id=campaign.vaccine_type_id, campaign_id=campaign.id)
+            db.session.add(rec)
+    if rec is not None:
+        rec.date_administered = administered
+        rec.status = "completed" if administered else "pending"
+        db.session.commit()
+        log_activity(f"Recorded {campaign.name} dose for {child_label(child)}")
+        flash(f"Saved {child.full_name}'s dose.", "success")
+    return redirect(url_for("bhw.campaign_worklist", campaign_id=campaign.id,
+                             pending=request.form.get("pending") or None))
 
 
 @bhw_bp.route("/notifications")

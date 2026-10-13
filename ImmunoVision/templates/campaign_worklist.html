@@ -1,0 +1,67 @@
+{% extends "layout_app.html" %}
+{% from "_icons.html" import icon %}
+{% block content %}
+<div class="banner">
+  <div>
+    <h2>{{ campaign.name }}</h2>
+    <p>{{ campaign.vaccine_type.name }} &middot; {{ campaign.start_date.strftime('%b %d') }} &ndash; {{ campaign.end_date.strftime('%b %d, %Y') }}</p>
+  </div>
+  <a class="btn btn-banner btn-sm" href="{{ back_url }}">{{ icon('chevron-left', 14) }} Back to Dashboard</a>
+</div>
+
+<p class="text-muted" style="font-size:12.5px;margin:-6px 0 14px;">
+  Children currently eligible for this campaign by age and barangay. Enter the date a dose was given and save &mdash;
+  this never changes a child's risk status. To edit the campaign's own details, use Admin &rsaquo; Campaigns.
+</p>
+
+<div class="filter-bar">
+  <span class="flabel">{{ icon('map-pin', 14) }} FILTER</span>
+  <form method="get" action="{{ request.path }}" style="display:flex;gap:10px;">
+    {% if barangays %}
+    <select class="form-control select-sm" name="barangay_id" onchange="this.form.submit()" aria-label="Filter by barangay">
+      <option value="">All barangays in scope</option>
+      {% for b in barangays %}
+      <option value="{{ b.id }}" {% if selected_barangay_id == b.id %}selected{% endif %}>{{ b.name }}</option>
+      {% endfor %}
+    </select>
+    {% endif %}
+    <label style="display:flex;align-items:center;gap:7px;font-size:13px;color:var(--text-secondary);">
+      <input type="checkbox" name="pending" value="1" {% if pending_only %}checked{% endif %} onchange="this.form.submit()">
+      Needs dose only
+    </label>
+  </form>
+  <span class="text-muted" style="margin-left:auto;font-size:12.5px;">{{ rows|length }} children</span>
+</div>
+
+<div class="card card-pad">
+  <div class="table-wrap auto-height">
+    <table class="data-table compact">
+      <thead><tr><th>Child</th>{% if barangays %}<th>Barangay</th>{% endif %}<th>Age</th><th>Dose Given</th><th></th></tr></thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td>
+            <a class="link" href="{{ url_for((role ~ '.child_record'), child_id=r.child.id) }}">{{ r.child.display_name }}</a>
+            <div class="text-muted" style="font-size:11.5px;">{{ r.child.barangay.name[:2]|upper }}-{{ '%03d'|format(r.child.id) }}</div>
+          </td>
+          {% if barangays %}<td>{{ r.child.barangay.name }}</td>{% endif %}
+          <td>{{ r.child.age_display }}</td>
+          <td>
+            <form method="post" action="{{ url_for((role ~ '.campaign_record_dose'), campaign_id=campaign.id, child_id=r.child.id) }}" style="display:flex;align-items:center;gap:8px;">
+              <input type="hidden" name="barangay_id" value="{{ selected_barangay_id or '' }}">
+              <input type="hidden" name="pending" value="{{ '1' if pending_only else '' }}">
+              <input class="form-control" type="date" name="dose_date" value="{{ r.dose_date.isoformat() if r.dose_date else '' }}" style="max-width:160px;">
+              <button class="btn btn-outline btn-sm" type="submit">{{ icon('check', 14) }} Save</button>
+              {% if r.dose_date %}<span class="badge badge-green">Given</span>{% endif %}
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="{{ 4 if barangays else 3 }}"><div class="empty-state"><div class="ic">{{ icon('check-circle', 28) }}</div>
+          <div class="t">{% if pending_only %}Everyone eligible has received their dose{% else %}No children currently eligible{% endif %}</div></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

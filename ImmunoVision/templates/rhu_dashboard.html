@@ -236,14 +236,14 @@
           </div>
           <div style="margin-top:10px;">
             {% for c in active_campaigns %}
-            <div class="stock-row">
+            <a class="stock-row" style="text-decoration:none;color:inherit;" href="{{ url_for('rhu.campaign_worklist', campaign_id=c.id) }}">
               <div class="sname">{{ c.name }}</div>
               <div class="smeter">
                 <span class="progress-track"><span class="progress-fill {{ coverage_color(c.pct, c.eligible) }}" style="width:{{ c.pct }}%"></span></span>
               </div>
               <div class="sqty"><b>{{ c.received }}</b> <span class="text-muted">/ {{ c.eligible }}</span></div>
               <span class="badge badge-gray">{{ c.days_left }}d left</span>
-            </div>
+            </a>
             {% else %}
             <div class="empty-state"><div class="ic">{{ icon('calendar', 28) }}</div>
               <div class="t">No campaigns active right now</div></div>
