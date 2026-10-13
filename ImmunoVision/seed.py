@@ -1,5 +1,5 @@
 """One-shot database seed: reference data, demo user accounts, the real
-RHU registry data for Guibal and Macayug (data/raw/*.csv), a simulated
+RHU registry data for Guibel and Macayug (data/raw/*.csv), a simulated
 child population for the other 17 barangays, starting vaccine
 inventory, and a handful of sample vaccine requests.
 
@@ -22,7 +22,7 @@ BHW_LAST = ["Reyes", "Bueno", "Torres", "Gomez", "Santos", "Cruz", "Diaz", "Flor
             "Lopez", "Ramos", "Silva", "Cortez", "Aquino", "Rivera", "Salazar", "Navarro", "Castro", "Rosales"]
 
 FEATURED_BHW = {
-    "Guibal": ("Ana", "Reyes", "areyes"),
+    "Guibel": ("Ana", "Reyes", "areyes"),
     "Macayug": ("Miguel", "Torres", "mtorres"),
 }
 

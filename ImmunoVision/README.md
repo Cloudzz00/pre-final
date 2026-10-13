@@ -56,7 +56,7 @@ All use the password `password123`.
 | ------------- | ----------- | ---------------------- |
 | Administrator | `jdelacruz` | Admin dashboard        |
 | RHU Personnel | `msantos`   | RHU dashboard          |
-| BHW           | `areyes`    | BHW dashboard (Guibal) |
+| BHW           | `areyes`    | BHW dashboard (Guibel) |
 
 Sign-in is by credentials alone — the account's own role decides which portal
 it opens.
@@ -79,7 +79,7 @@ it opens.
 
 ## Data
 
-- `data/raw/` — the two real barangay registry exports (Guibal, Macayug),
+- `data/raw/` — the two real barangay registry exports (Guibel, Macayug),
   387 children. Names are anonymised on load.
 - The other 17 barangays are a simulated demo population (176 children),
   labelled as prototype data in the UI.

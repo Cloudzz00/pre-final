@@ -39,7 +39,7 @@ MODEL_PATH = os.path.join(BASE_DIR, "data", "risk_model.joblib")
 
 BARANGAYS = [
     "Awai", "Bolo", "Capaoay", "Casibong", "Imelda",
-    "Guibal", "Labney", "Magsaysay", "Lobong", "Macayug",
+    "Guibel", "Labney", "Magsaysay", "Lobong", "Macayug",
     "Bagong Pag-asa", "San Guillermo", "San Jose", "San Juan",
     "San Roque", "San Vicente", "Santa Cruz", "Santa Maria", "Santo Tomas",
 ]
@@ -199,7 +199,7 @@ REQUEST_PENDING, REQUEST_APPROVED, REQUEST_REJECTED, REQUEST_FULFILLED = (
 # date formats ("2024-01-08" and "5/8/24"), sentinel non-dates ("NULL",
 # "MOVE OUT" for relocated children, blank), missing child names, missing
 # sequential IDs, and inconsistent barangay spelling/sub-locality suffixes
-# (e.g. "Guibal (Centro)", "Centro, Guibal", "Guibal Pandes"). This section
+# (e.g. "Guibel (Centro)", "Centro, Guibel", "Guibel Pandes"). This section
 # normalizes all of that into clean Python records.
 
 _DATE_FORMATS = ["%Y-%m-%d", "%m/%d/%y", "%m/%d/%Y"]
@@ -241,7 +241,7 @@ def _clean_sex(value):
 def _clean_barangay(raw_value, file_scope_barangay):
     """The RHU's own per-barangay ledgers occasionally record a
     purok/sitio suffix or a neighboring locality name in the Barangay
-    column (e.g. "Guibal (Centro)", "Nambalangan"). Since each raw file
+    column (e.g. "Guibel (Centro)", "Nambalangan"). Since each raw file
     IS that barangay's official registry, every row is canonicalized to
     the file's own barangay -- the raw value is preserved in the
     address field for traceability rather than silently discarded.
