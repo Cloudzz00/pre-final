@@ -18,6 +18,25 @@
   <div class="stat-card dashboard-stat"><div class="stat-icon bg-purple dashboard-stat-icon">{{ icon('activity', 21) }}</div><div><div class="stat-value">{{ stats.coverage_rate }}%</div><div class="stat-label">Coverage Rate</div><div class="stat-caption">Target: 95%</div></div></div>
 </div>
 
+{% if active_campaigns %}
+<div class="card card-pad" style="margin-top:18px;">
+  <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('calendar', 18) }}</span><div class="card-title mb-0">Active Campaigns</div></div>
+  <div class="card-sub mb-0" style="margin-left:43px;">Supplementary immunization drives open right now in Barangay {{ current_user.barangay.name }}</div>
+  <div style="margin-top:12px;">
+    {% for c in active_campaigns %}
+    <a class="stock-row" style="text-decoration:none;color:inherit;" href="{{ url_for('bhw.campaign_worklist', campaign_id=c.id) }}">
+      <div class="sname">{{ c.name }}</div>
+      <div class="smeter">
+        <span class="progress-track"><span class="progress-fill {{ coverage_color(c.pct, c.eligible) }}" style="width:{{ c.pct }}%"></span></span>
+      </div>
+      <div class="sqty"><b>{{ c.received }}</b> <span class="text-muted">/ {{ c.eligible }}</span></div>
+      <span class="badge badge-gray">{{ c.days_left }}d left</span>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 <style>
 .dashboard-action-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(520px,1.45fr);gap:18px;margin:18px 0;align-items:stretch}
 .followup-card,.due-calendar-card{min-width:0}
@@ -138,25 +157,6 @@
     </div>
   </div>
 </div>
-
-{% if active_campaigns %}
-<div class="card card-pad" style="margin-top:18px;">
-  <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('calendar', 18) }}</span><div class="card-title mb-0">Active Campaigns</div></div>
-  <div class="card-sub mb-0" style="margin-left:43px;">Supplementary immunization drives open right now in Barangay {{ current_user.barangay.name }}</div>
-  <div style="margin-top:12px;">
-    {% for c in active_campaigns %}
-    <a class="stock-row" style="text-decoration:none;color:inherit;" href="{{ url_for('bhw.campaign_worklist', campaign_id=c.id) }}">
-      <div class="sname">{{ c.name }}</div>
-      <div class="smeter">
-        <span class="progress-track"><span class="progress-fill {{ coverage_color(c.pct, c.eligible) }}" style="width:{{ c.pct }}%"></span></span>
-      </div>
-      <div class="sqty"><b>{{ c.received }}</b> <span class="text-muted">/ {{ c.eligible }}</span></div>
-      <span class="badge badge-gray">{{ c.days_left }}d left</span>
-    </a>
-    {% endfor %}
-  </div>
-</div>
-{% endif %}
 
 <!-- COVERAGE + RISK -->
 
