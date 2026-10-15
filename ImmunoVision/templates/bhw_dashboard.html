@@ -125,19 +125,15 @@
 
   <div class="card card-pad due-calendar-card">
     <div class="card-head">
-      <div>
-        <div class="dashboard-card-title"><span class="dashboard-section-icon icon-blue">{{ icon('calendar', 18) }}</span><div class="card-title mb-0">Vaccination Due Calendar</div></div>
-        <div class="card-sub mb-0" style="margin-left:43px;">See which children need vaccines on a specific date.</div>
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;margin-left:auto;">
-        <a href="{{ url_for('bhw.due_vaccines') }}" class="btn btn-outline btn-sm">View All {{ icon('arrow-right', 13) }}</a>
-        <div class="due-legend">
-          <span><i class="due-dot today"></i>Due Today</span>
-          <span><i class="due-dot upcoming"></i>Upcoming</span>
-          <span><i class="due-dot overdue"></i>Overdue</span>
-          <span><i class="due-dot scheduled"></i>Scheduled Visit</span>
-        </div>
-      </div>
+      <div class="dashboard-card-title"><span class="dashboard-section-icon icon-blue">{{ icon('calendar', 18) }}</span><div class="card-title mb-0">Vaccination Due Calendar</div></div>
+      <a href="{{ url_for('bhw.due_vaccines') }}" class="btn btn-outline btn-sm">View All {{ icon('arrow-right', 13) }}</a>
+    </div>
+    <div class="card-sub mb-0" style="margin-left:43px;">See which children need vaccines on a specific date.</div>
+    <div class="due-legend" style="margin-left:43px;margin-top:6px;">
+      <span><i class="due-dot today"></i>Due Today</span>
+      <span><i class="due-dot upcoming"></i>Upcoming</span>
+      <span><i class="due-dot overdue"></i>Overdue</span>
+      <span><i class="due-dot scheduled"></i>Scheduled Visit</span>
     </div>
     <div class="due-layout">
       <div class="calendar-panel">
