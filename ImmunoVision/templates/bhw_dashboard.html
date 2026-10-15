@@ -24,13 +24,14 @@
   <div class="card-sub mb-0" style="margin-left:43px;">Supplementary immunization drives open right now in Barangay {{ current_user.barangay.name }}</div>
   <div style="margin-top:12px;">
     {% for c in active_campaigns %}
-    <a class="stock-row" style="text-decoration:none;color:inherit;" href="{{ url_for('bhw.campaign_worklist', campaign_id=c.id) }}">
+    <a class="stock-row" href="{{ url_for('bhw.campaign_worklist', campaign_id=c.id) }}">
       <div class="sname">{{ c.name }}</div>
       <div class="smeter">
         <span class="progress-track"><span class="progress-fill {{ coverage_color(c.pct, c.eligible) }}" style="width:{{ c.pct }}%"></span></span>
       </div>
       <div class="sqty"><b>{{ c.received }}</b> <span class="text-muted">/ {{ c.eligible }}</span></div>
       <span class="badge badge-gray">{{ c.days_left }}d left</span>
+      <span class="row-chevron">&rsaquo;</span>
     </a>
     {% endfor %}
   </div>
