@@ -1528,6 +1528,29 @@ def _create_child(form, barangay_locked):
     return child
 
 
+def _write_dose(child, vt, rec, administered):
+    """Sets one non-campaign dose's date/status, creating the
+    VaccinationRecord if it doesn't exist yet. Shared by the full Edit
+    Child form (which resolves `rec` up front for all doses at once) and
+    the dashboard's single-dose quick record. Returns a past-catch-up-
+    window warning name, or None."""
+    if rec is None:
+        rec = VaccinationRecord(child_id=child.id, vaccine_type_id=vt.id)
+        db.session.add(rec)
+    rec.date_administered = administered
+    rec.status = "completed" if administered else "pending"
+    # Optional doses like Rotavirus stop being given past a real age
+    # cutoff (rising intussusception risk in older infants), unlike the
+    # core schedule which stays catchable indefinitely. A record past
+    # that age is still saved as-given - it may be a real dose logged
+    # late - but the BHW is warned rather than told nothing.
+    if administered and vt.is_optional and vt.catch_up_deadline_days is not None:
+        age_at_dose = (administered - child.date_of_birth).days
+        if age_at_dose > vt.catch_up_deadline_days:
+            return vt.name
+    return None
+
+
 def _update_child(child, form):
     """Updates an existing child's basic info and any dose dates submitted
     on the Edit Child form, then recomputes their risk assessment so
@@ -1556,21 +1579,9 @@ def _update_child(child, form):
             continue
         date_str = form.get(f"dose_{code}")
         administered = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else None
-        rec = existing_by_vt_id.get(vt.id)
-        if rec is None:
-            rec = VaccinationRecord(child_id=child.id, vaccine_type_id=vt.id)
-            db.session.add(rec)
-        rec.date_administered = administered
-        rec.status = "completed" if administered else "pending"
-        # Optional doses like Rotavirus stop being given past a real age
-        # cutoff (rising intussusception risk in older infants), unlike the
-        # core schedule which stays catchable indefinitely. A record past
-        # that age is still saved as-given - it may be a real dose logged
-        # late - but the BHW is warned rather than told nothing.
-        if administered and vt.is_optional and vt.catch_up_deadline_days is not None:
-            age_at_dose = (administered - child.date_of_birth).days
-            if age_at_dose > vt.catch_up_deadline_days:
-                past_window_warnings.append(vt.name)
+        warning = _write_dose(child, vt, existing_by_vt_id.get(vt.id), administered)
+        if warning:
+            past_window_warnings.append(warning)
 
     # Campaign doses: a separate field per campaign (dose_campaign_<id>), not
     # per vaccine code - the same vaccine can recur across campaign runs, and
@@ -1654,7 +1665,8 @@ def _due_calendar(children, vt_lookup, days_behind=90, days_ahead=60):
             else:
                 status = "Scheduled"
             events.append({"date": due_date.isoformat(), "child_id": child.id,
-                            "child_name": child.display_name, "vaccine": name, "status": status})
+                            "child_name": child.display_name, "vaccine": name,
+                            "vaccine_code": code, "status": status})
     return events
 
 
@@ -2343,6 +2355,29 @@ def recompute_risk(child_id):
     log_activity(f"Re-assessed risk for {child_label(child)}: {result['label']}")
     flash(f"Risk re-assessed for {child.display_name}: {result['label']}", "success")
     return redirect(request.referrer or url_for("bhw.children"))
+
+
+@bhw_bp.route("/children/<int:child_id>/record-dose", methods=["POST"])
+def record_dose(child_id):
+    """Records one dose directly from the dashboard's Vaccination Due
+    Calendar, without opening the full Edit Child form - the same
+    single-field shortcut the campaign worklist gives for campaign doses,
+    but for routine schedule doses, which do feed into risk scoring."""
+    child = db.session.get(Child, child_id) or abort(404)
+    if child.barangay_id != current_user.barangay_id:
+        abort(403)
+    vt = VaccineType.query.filter_by(code=request.form.get("vaccine_code")).first() or abort(404)
+    date_str = request.form.get("date")
+    administered = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else date.today()
+    rec = child.vaccination_records.filter_by(vaccine_type_id=vt.id, campaign_id=None).first()
+    warning = _write_dose(child, vt, rec, administered)
+    db.session.commit()
+    result = _recompute_risk(child)
+    log_activity(f"Recorded {vt.name} dose for {child_label(child)}")
+    flash(f"Saved {child.display_name}'s {vt.name} dose. Risk re-assessed: {result['label']}", "success")
+    if warning:
+        flash(f"{warning} was recorded past its usual eligibility age — please double-check this dose.", "warning")
+    return redirect(url_for("bhw.dashboard"))
 
 
 @bhw_bp.route("/children/<int:child_id>")
