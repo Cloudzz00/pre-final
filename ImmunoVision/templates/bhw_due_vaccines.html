@@ -14,13 +14,17 @@
     <span class="si-icon">{{ icon('search', 16) }}</span>
     <input type="text" name="q" value="{{ search }}" placeholder="Search by name...">
   </div>
-  <select class="form-control select-sm" name="status" onchange="this.form.submit()" aria-label="Filter by status">
-    <option value="">All statuses</option>
-    <option value="Overdue" {% if status_filter=='Overdue' %}selected{% endif %}>Overdue</option>
-    <option value="Due Today" {% if status_filter=='Due Today' %}selected{% endif %}>Due Today</option>
-    <option value="Upcoming" {% if status_filter=='Upcoming' %}selected{% endif %}>Upcoming</option>
-    <option value="Scheduled" {% if status_filter=='Scheduled' %}selected{% endif %}>Scheduled</option>
-  </select>
+  <div class="filter-select">
+    <span class="filter-select-icon">{{ icon('calendar', 15) }}</span>
+    <select name="status" class="select-sm" onchange="this.form.submit()" aria-label="Filter by status">
+      <option value="">All statuses</option>
+      <option value="Overdue" {% if status_filter=='Overdue' %}selected{% endif %}>Overdue</option>
+      <option value="Due Today" {% if status_filter=='Due Today' %}selected{% endif %}>Due Today</option>
+      <option value="Upcoming" {% if status_filter=='Upcoming' %}selected{% endif %}>Upcoming</option>
+      <option value="Scheduled" {% if status_filter=='Scheduled' %}selected{% endif %}>Scheduled</option>
+    </select>
+    <span class="filter-chevron">{{ icon('chevron-left', 12, 2.5) }}</span>
+  </div>
   <span class="text-muted" style="margin-left:auto;font-size:12.5px;white-space:nowrap;">{{ events|length }} due</span>
 </form>
 
