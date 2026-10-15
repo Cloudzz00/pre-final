@@ -1673,9 +1673,7 @@ ROLE_HOME = {"ictmo": "ictmo.dashboard", "admin": "admin.dashboard", "rhu": "rhu
 
 @auth_bp.route("/")
 def index():
-    """Public landing page. Signed-in users go straight to their dashboard."""
-    if current_user.is_authenticated:
-        return redirect(url_for(ROLE_HOME[current_user.role]))
+    """Public landing page for all visitors, including signed-in users."""
 
     # The hero plots the real completion rate for each dose in schedule order.
     # It is the argument for the system: coverage holds through the first year
