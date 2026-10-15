@@ -2357,12 +2357,37 @@ def recompute_risk(child_id):
     return redirect(request.referrer or url_for("bhw.children"))
 
 
+@bhw_bp.route("/due-vaccines")
+def due_vaccines():
+    """Full-page version of the dashboard's Vaccination Due Calendar list -
+    every (child, dose) due, overdue, or coming up, with a date field and
+    Record button right on each row, so working through a day's worth of
+    doses doesn't mean opening each child's full Edit Child form. The
+    dashboard widget stays a read-only preview; this page is where the
+    recording actually happens."""
+    bid = current_user.barangay_id
+    search = request.args.get("q", "").strip()
+    status_filter = request.args.get("status", "")
+    vt_lookup = {vt.code: vt for vt in VaccineType.query.all()}
+    events = _due_calendar(filtered_children(bid), vt_lookup)
+    if search:
+        events = [e for e in events if search.lower() in e["child_name"].lower()]
+    if status_filter:
+        events = [e for e in events if e["status"] == status_filter]
+    events.sort(key=lambda e: e["date"])
+    return render_template("bhw_due_vaccines.html", **_bhw_ctx(
+        "dashboard", page_title="Vaccination Due List", events=events,
+        search=search, status_filter=status_filter, today_iso=date.today().isoformat(),
+        back_url=url_for("bhw.dashboard"),
+    ))
+
+
 @bhw_bp.route("/children/<int:child_id>/record-dose", methods=["POST"])
 def record_dose(child_id):
-    """Records one dose directly from the dashboard's Vaccination Due
-    Calendar, without opening the full Edit Child form - the same
-    single-field shortcut the campaign worklist gives for campaign doses,
-    but for routine schedule doses, which do feed into risk scoring."""
+    """Records one dose from the Vaccination Due List, without opening the
+    full Edit Child form - the same single-field shortcut the campaign
+    worklist gives for campaign doses, but for routine schedule doses,
+    which do feed into risk scoring."""
     child = db.session.get(Child, child_id) or abort(404)
     if child.barangay_id != current_user.barangay_id:
         abort(403)
@@ -2377,7 +2402,9 @@ def record_dose(child_id):
     flash(f"Saved {child.display_name}'s {vt.name} dose. Risk re-assessed: {result['label']}", "success")
     if warning:
         flash(f"{warning} was recorded past its usual eligibility age — please double-check this dose.", "warning")
-    return redirect(url_for("bhw.dashboard"))
+    return redirect(url_for("bhw.due_vaccines",
+                             q=request.form.get("q") or None,
+                             status=request.form.get("status") or None))
 
 
 @bhw_bp.route("/children/<int:child_id>")

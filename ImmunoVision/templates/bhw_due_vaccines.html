@@ -1,0 +1,56 @@
+{% extends "layout_app.html" %}
+{% from "_icons.html" import icon %}
+{% block content %}
+<div class="banner">
+  <div>
+    <h2>Vaccination Due List</h2>
+    <p>Every child with a dose due, overdue, or coming up in your barangay.</p>
+  </div>
+  <a class="btn btn-banner btn-sm" href="{{ back_url }}">{{ icon('chevron-left', 14) }} Back to Dashboard</a>
+</div>
+
+<form class="filter-bar" method="get" action="{{ request.path }}">
+  <div class="search-input-wrap">
+    <span class="si-icon">{{ icon('search', 16) }}</span>
+    <input type="text" name="q" value="{{ search }}" placeholder="Search by name...">
+  </div>
+  <select class="form-control select-sm" name="status" onchange="this.form.submit()" aria-label="Filter by status">
+    <option value="">All statuses</option>
+    <option value="Overdue" {% if status_filter=='Overdue' %}selected{% endif %}>Overdue</option>
+    <option value="Due Today" {% if status_filter=='Due Today' %}selected{% endif %}>Due Today</option>
+    <option value="Upcoming" {% if status_filter=='Upcoming' %}selected{% endif %}>Upcoming</option>
+    <option value="Scheduled" {% if status_filter=='Scheduled' %}selected{% endif %}>Scheduled</option>
+  </select>
+  <span class="text-muted" style="margin-left:auto;font-size:12.5px;white-space:nowrap;">{{ events|length }} due</span>
+</form>
+
+<div class="card card-pad">
+  <div class="table-wrap auto-height">
+    <table class="data-table compact">
+      <thead><tr><th>Child</th><th>Vaccine</th><th>Due Date</th><th>Status</th><th>Record Dose</th></tr></thead>
+      <tbody>
+        {% for e in events %}
+        <tr>
+          <td><a class="link" href="{{ url_for('bhw.child_record', child_id=e.child_id, from_dashboard=1) }}">{{ e.child_name }}</a></td>
+          <td>{{ e.vaccine }}</td>
+          <td>{{ e.date }}</td>
+          <td><span class="badge badge-{{ 'red' if e.status=='Overdue' else 'blue' if e.status=='Due Today' else 'amber' if e.status=='Upcoming' else 'gray' }}">{{ e.status }}</span></td>
+          <td>
+            <form method="post" action="{{ url_for('bhw.record_dose', child_id=e.child_id) }}" style="display:flex;align-items:center;gap:8px;">
+              <input type="hidden" name="vaccine_code" value="{{ e.vaccine_code }}">
+              <input type="hidden" name="q" value="{{ search }}">
+              <input type="hidden" name="status" value="{{ status_filter }}">
+              <input class="form-control" type="date" name="date" value="{{ today_iso }}" style="max-width:160px;">
+              <button class="btn btn-outline btn-sm" type="submit">{{ icon('check', 14) }} Record</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5"><div class="empty-state"><div class="ic">{{ icon('check-circle', 28) }}</div>
+          <div class="t">Nothing due right now</div></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

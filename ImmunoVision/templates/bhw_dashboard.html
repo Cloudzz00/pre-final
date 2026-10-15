@@ -64,13 +64,9 @@
 .due-list{border:1px solid var(--border);border-radius:12px;background:#fff;overflow:hidden;display:flex;flex-direction:column;min-height:240px}
 .due-list-head{padding:12px 13px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px}
 .due-list-head strong{font-size:13px}.due-list-head span{font-size:10px;font-weight:800;color:var(--text-secondary)}
-.due-items{overflow:auto;max-height:260px}.due-item{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border)}
+.due-items{overflow:auto;max-height:260px}.due-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border)}
 .due-item:last-child{border-bottom:0}.due-child{min-width:0}.due-child a{font-size:12px;font-weight:800;color:var(--accent);text-decoration:none}.due-child a:hover{text-decoration:underline}.due-vaccine{font-size:11px;color:var(--text-secondary);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
 .due-status{font-size:9px;font-weight:800;padding:4px 7px;border-radius:999px;white-space:nowrap}.due-status.today{background:#dbeafe;color:#1d4ed8}.due-status.upcoming{background:#fef3c7;color:#b45309}.due-status.overdue{background:#fee2e2;color:#dc2626}.due-status.due{background:#e0f2fe;color:#0369a1}
-.due-record-form{display:flex;align-items:center;gap:6px;flex:1 0 100%}
-.due-record-date{font-size:11px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;color:var(--text-primary);flex:1;min-width:0}
-.due-record-btn{font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;border:1px solid var(--primary);background:var(--primary);color:#fff;cursor:pointer;white-space:nowrap}
-.due-record-btn:hover{opacity:.9}
 .due-empty{padding:28px 14px;text-align:center;color:var(--text-secondary);font-size:12px}
 @media(max-width:1100px){.dashboard-action-grid{grid-template-columns:1fr}.due-layout{grid-template-columns:1fr}}
 
@@ -133,11 +129,14 @@
         <div class="dashboard-card-title"><span class="dashboard-section-icon icon-blue">{{ icon('calendar', 18) }}</span><div class="card-title mb-0">Vaccination Due Calendar</div></div>
         <div class="card-sub mb-0" style="margin-left:43px;">See which children need vaccines on a specific date.</div>
       </div>
-      <div class="due-legend">
-        <span><i class="due-dot today"></i>Due Today</span>
-        <span><i class="due-dot upcoming"></i>Upcoming</span>
-        <span><i class="due-dot overdue"></i>Overdue</span>
-        <span><i class="due-dot scheduled"></i>Scheduled Visit</span>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+        <a href="{{ url_for('bhw.due_vaccines') }}" class="btn btn-outline btn-sm">View All {{ icon('arrow-right', 13) }}</a>
+        <div class="due-legend">
+          <span><i class="due-dot today"></i>Due Today</span>
+          <span><i class="due-dot upcoming"></i>Upcoming</span>
+          <span><i class="due-dot overdue"></i>Overdue</span>
+          <span><i class="due-dot scheduled"></i>Scheduled Visit</span>
+        </div>
       </div>
     </div>
     <div class="due-layout">
@@ -291,7 +290,6 @@ new Chart(document.getElementById('riskDonut'), {
 
 const dueEvents = {{ due_calendar|tojson }};
 const childUrlTemplate = {{ url_for('bhw.child_record', child_id=0, from_dashboard=1)|tojson }};
-const recordDoseUrlTemplate = {{ url_for('bhw.record_dose', child_id=0)|tojson }};
 const eventByDate = {};
 dueEvents.forEach(e => {
   if (!eventByDate[e.date]) eventByDate[e.date] = [];
@@ -320,18 +318,11 @@ function renderDueList() {
     box.innerHTML = '<div class="due-empty">No scheduled vaccines or visits for this date.</div>';
     return;
   }
-  const todayIso = isoLocal(new Date());
   box.innerHTML = items.map(e => {
     const href = childUrlTemplate.replace('/0?', `/${e.child_id}?`);
-    const recordAction = recordDoseUrlTemplate.replace('/0/', `/${e.child_id}/`);
     return `<div class="due-item">
       <div class="due-child"><a href="${href}">${e.child_name}</a><div class="due-vaccine">${e.vaccine}</div></div>
       <span class="due-status ${statusClass(e.status)}">${e.status}</span>
-      <form class="due-record-form" method="post" action="${recordAction}">
-        <input type="hidden" name="vaccine_code" value="${e.vaccine_code}">
-        <input type="date" name="date" value="${todayIso}" class="due-record-date">
-        <button type="submit" class="due-record-btn" title="Record this dose">Record</button>
-      </form>
     </div>`;
   }).join('');
 }
