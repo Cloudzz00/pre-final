@@ -1,4 +1,4 @@
-<div class="modal-scrim" id="registerChildModal">
+<div class="modal-scrim" id="registerChildModal" data-bhw-age-rules="{{ 'true' if request.blueprint == 'bhw' else 'false' }}">
   <div class="modal-box wide">
     <div class="modal-head">
       <h3>Register New Child</h3>
@@ -60,9 +60,16 @@
         </div>
 
         <div class="section-divider-bar">Vaccines Already Given</div>
+        {% if request.blueprint == 'bhw' %}
+        <p id="bhwVaccineGuidance" role="status" aria-live="polite" style="font-size:13px;padding:10px 12px;border-radius:8px;background:var(--bg-secondary,#f1f5f9);margin-bottom:12px;">Select the child's date of birth to see vaccines due now and those not yet eligible.</p>
+        {% endif %}
         <p style="font-size:13px;color:var(--text-secondary);margin:0 0 14px;line-height:1.6;">
+          {% if request.blueprint == 'bhw' %}
+          Select vaccines already administered and enter their actual vaccination dates.
+          {% else %}
           Tick each vaccine that has already been given. It's recorded as given today by default —
           if that's wrong, change the date shown once you tick the box.
+          {% endif %}
         </p>
 
         {% set vaccine_groups = [
@@ -83,8 +90,10 @@
             <div class="vacc-check-card">
               <div class="vacc-check-row">
                 <input type="checkbox" id="chk_{{ code }}" name="dose_{{ code }}_given" value="1"
-                       onchange="toggleVaccDate('{{ code }}', this.checked)">
+                       {% if request.blueprint != 'bhw' %}onchange="toggleVaccDate('{{ code }}', this.checked)"{% endif %}
+                       {% if request.blueprint == 'bhw' %}data-bhw-vaccine-code="{{ code }}" data-due-days="{{ (vaccine_schedule | selectattr(0, 'equalto', code) | map(attribute=4) | first) if vaccine_schedule is defined else 0 }}" disabled{% endif %}>
                 <label for="chk_{{ code }}">{{ label }}</label>
+                {% if request.blueprint == 'bhw' %}<small data-bhw-status="{{ code }}" style="margin-left:auto;font-size:11px;color:var(--text-secondary);">Select DOB</small>{% endif %}
               </div>
               <div class="vacc-date-row" id="daterow_{{ code }}" hidden>
                 <span>Given on</span>
@@ -128,7 +137,71 @@
 
 <script>
 function toggleVaccDate(code, checked) {
-  var row = document.getElementById('daterow_' + code);
+  const modal = document.getElementById('registerChildModal');
+  if (!modal) return;
+  const row = modal.querySelector('[id="daterow_' + code + '"]');
   if (row) row.hidden = !checked;
+  {% if request.blueprint == 'bhw' %}
+  if (!checked) return;
+  const dobInput = modal.querySelector('[name="date_of_birth"]');
+  const checkbox = modal.querySelector('[id="chk_' + code + '"]');
+  const dateInput = modal.querySelector('[id="date_' + code + '"]');
+  if (!dobInput || !checkbox || !dateInput || !checkbox.hasAttribute('data-due-days')) return;
+  const dob = dobInput.value;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dob)) return;
+  const birth = new Date(dob + 'T00:00:00Z');
+  if (Number.isNaN(birth.getTime()) || birth.toISOString().slice(0, 10) !== dob) return;
+  const dueDays = Number(checkbox.dataset.dueDays);
+  if (!Number.isFinite(dueDays)) return;
+  birth.setUTCDate(birth.getUTCDate() + dueDays);
+  dateInput.value = birth.toISOString().slice(0, 10);
+  {% endif %}
 }
 </script>
+
+{% if request.blueprint == 'bhw' %}
+<script>
+(function () {
+  const modal = document.getElementById('registerChildModal');
+  if (!modal) return;
+  const dobInput = modal.querySelector('[name="date_of_birth"]');
+  const guidance = document.getElementById('bhwVaccineGuidance');
+  const checkboxes = Array.from(modal.querySelectorAll('[data-bhw-vaccine-code]'));
+  const DAY_MS = 86400000;
+  const today = new Date();
+  const todayUTC = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  dobInput.max = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, '0'), String(today.getDate()).padStart(2, '0')].join('-');
+
+  function updateEligibility() {
+    const raw = dobInput.value;
+    const birth = /^\d{4}-\d{2}-\d{2}$/.test(raw) ? new Date(raw + 'T00:00:00Z') : null;
+    const valid = birth && !Number.isNaN(birth.getTime()) && birth.toISOString().slice(0, 10) === raw && birth.getTime() <= todayUTC;
+    const ageDays = valid ? Math.floor((todayUTC - birth.getTime()) / DAY_MS) : -1;
+    const due = [];
+    checkboxes.forEach(function (checkbox) {
+      const days = Number(checkbox.dataset.dueDays);
+      const eligible = valid && ageDays >= days;
+      checkbox.disabled = !eligible;
+      if (!eligible && checkbox.checked) {
+        checkbox.checked = false;
+        toggleVaccDate(checkbox.dataset.bhwVaccineCode, false);
+      }
+      const status = modal.querySelector('[data-bhw-status="' + checkbox.dataset.bhwVaccineCode + '"]');
+      if (status) status.textContent = !valid ? 'Select DOB' : eligible ? (ageDays === days ? 'Due now' : 'Eligible / due') : 'At ' + (days === 365 ? '12 months' : days === 270 ? '9 months' : days / 7 + ' weeks');
+      if (eligible) due.push(checkbox.closest('.vacc-check-row').querySelector('label').textContent.trim());
+    });
+    guidance.textContent = !valid ? '' :
+      (due.length ? 'Due/Eligible Vaccines: ' + due.join(', ') : 'No scheduled vaccines are due yet.');
+  }
+  // Ensure the suggested date is applied when the BHW checks an eligible vaccine.
+  checkboxes.forEach(function (checkbox) {
+    checkbox.addEventListener('change', function () {
+      toggleVaccDate(checkbox.dataset.bhwVaccineCode, checkbox.checked);
+    });
+  });
+  dobInput.addEventListener('input', updateEligibility);
+  dobInput.addEventListener('change', updateEligibility);
+  updateEligibility();
+})();
+</script>
+{% endif %}

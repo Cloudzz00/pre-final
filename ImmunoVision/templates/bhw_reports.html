@@ -3,9 +3,9 @@
 {% from "_brand.html" import brand_mark %}
 {% block content %}
 {% set report_types = [
-  ('coverage', 'trending-up', 'Vaccination Coverage', 'How many children have completed each vaccine'),
-  ('atrisk', 'alert-triangle', 'Children Who Need a Visit', 'Which children in your barangay need follow-up'),
-  ('barangay', 'map-pin', 'Barangay Overview', 'Overall immunization status of your barangay'),
+  ('coverage', 'trending-up', 'Vaccination Coverage', ''),
+  ('atrisk', 'alert-triangle', 'Children Who Need a Visit', ''),
+  ('barangay', 'map-pin', 'Barangay Overview', ''),
 ] %}
 {% set current = report_types|selectattr('0', 'equalto', report_type)|first %}
 {% set lowest = by_vaccine|min(attribute='pct') if by_vaccine else none %}
@@ -13,15 +13,6 @@
 
 
 <div class="bhw-report-page">
-
-  {# ── Page header ── #}
-  <div class="report-hero">
-    <div>
-      <h2>Reports</h2>
-      <p>View vaccination coverage, follow-up cases, and barangay status.</p>
-    </div>
-    <div class="report-period-pill">{{ icon('map-pin', 13) }} {{ current_user.barangay.name if current_user.barangay else 'Unassigned' }}</div>
-  </div>
 
   {# ── Report type selector ── #}
   <div class="report-types no-print">
@@ -31,8 +22,7 @@
       <div class="ic">{{ icon(icon_name, 18) }}</div>
       <div>
         <div class="t">{{ title }}</div>
-        <div class="d">{{ desc }}</div>
-      </div>
+        </div>
     </a>
     {% endfor %}
   </div>
@@ -41,10 +31,7 @@
   <div class="report-toolbar no-print">
     <div class="toolbar-info">
       <span class="badge">{{ icon('calendar', 16) }}</span>
-      <div>
-        <b>Reporting period</b><br>
-        <span>{{ as_of.strftime('%B %d, %Y') }}</span>
-      </div>
+      <b>Reporting Period</b>
     </div>
     <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;">
       <form method="get" action="{{ url_for('bhw.reports') }}" class="toolbar-form">
@@ -77,9 +64,6 @@
           <div class="report-section-title">
             <span class="section-icon orange">{{ icon('users', 16) }}</span>
             Children Who Need a Visit
-          </div>
-          <div class="report-section-sub">
-            Children in your barangay who need a follow-up visit as of {{ as_of.strftime('%B %d, %Y') }}.
           </div>
         </div>
       </div>
@@ -134,19 +118,10 @@
       <div class="report-doc-head">
         <div>
           <div class="report-letterhead">{{ brand_mark(22, 6) }}<b style="color:var(--primary)">ImmunoVision</b></div>
-          <div class="report-kicker">{{ icon(current[1], 12) }} {{ current[2] }}</div>
           <h1 class="report-doc-title">Barangay {{ current_user.barangay.name }} Overview</h1>
           <p class="report-doc-sub">Overall immunization status · {{ as_of.strftime('%B %Y') }}</p>
         </div>
         <div class="generated-meta">{{ icon('clock', 12) }}<br>Generated {{ generated_at.strftime('%b %d, %Y %I:%M %p') }}</div>
-      </div>
-
-      <div class="report-insight">
-        <div class="insight-icon">{{ icon('map-pin', 16) }}</div>
-        <div>
-          <b>Barangay coverage</b>
-          <p>Your barangay has <b>{{ stats.coverage_rate }}%</b> overall vaccination coverage for the selected period.</p>
-        </div>
       </div>
 
       <div class="report-section-head">
@@ -155,11 +130,9 @@
             <span class="section-icon">{{ icon('bar-chart', 16) }}</span>
             Barangay Snapshot
           </div>
-          <div class="report-section-sub">Key figures for {{ current_user.barangay.name }}</div>
         </div>
       </div>
       <div class="snapshot-grid">
-        <div><span>Barangay</span><strong>{{ current_user.barangay.name }}</strong></div>
         <div><span>Coverage</span><strong>{{ stats.coverage_rate }}%</strong></div>
         <div><span>Fully Vaccinated</span><strong>{{ stats.fully_immunized }}</strong></div>
         <div><span>Need a Visit</span><strong>{{ stats.at_risk }}</strong></div>
@@ -170,7 +143,6 @@
       <div class="report-doc-head">
         <div>
           <div class="report-letterhead">{{ brand_mark(22, 6) }}<b style="color:var(--primary)">ImmunoVision</b></div>
-          <div class="report-kicker">{{ icon(current[1], 12) }} {{ current[2] }}</div>
           <h1 class="report-doc-title">Vaccination Coverage Report</h1>
           <p class="report-doc-sub">Barangay {{ current_user.barangay.name }} · {{ as_of.strftime('%B %Y') }}</p>
         </div>
@@ -182,19 +154,16 @@
           <div class="summary-icon">{{ icon('activity', 17) }}</div>
           <div class="v" style="color:var(--primary)">{{ stats.coverage_rate }}%</div>
           <div class="l">Vaccination Coverage</div>
-          <div class="d">Overall coverage against the 95% target</div>
         </div>
         <div class="summary-card green">
           <div class="summary-icon">{{ icon('check-circle', 17) }}</div>
           <div class="v" style="color:#16a34a">{{ stats.fully_immunized }}</div>
           <div class="l">Fully Vaccinated</div>
-          <div class="d">Children who have completed all doses</div>
         </div>
         <div class="summary-card orange">
           <div class="summary-icon">{{ icon('alert-triangle', 17) }}</div>
           <div class="v" style="color:#d97706">{{ stats.at_risk }}</div>
           <div class="l">Need a Visit</div>
-          <div class="d">Children flagged for follow-up</div>
         </div>
       </div>
 
@@ -204,7 +173,6 @@
             <span class="section-icon">{{ icon('bar-chart', 16) }}</span>
             Coverage by Vaccine
           </div>
-          <div class="report-section-sub">Coverage for each scheduled dose</div>
         </div>
         <div class="report-target">Target: 95%</div>
       </div>
