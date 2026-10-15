@@ -1,11 +1,11 @@
 {% extends "layout_app.html" %}
 {% block content %}
-<div class="page-head">
-  <h2>Edit Child Record — {{ child.display_name }}</h2>
-  <a href="{{ back_url }}" class="btn btn-outline btn-sm">‹ Back to Child Records</a>
+<div class="page-head" style="display:flex;flex-direction:column;align-items:flex-start;gap:10px;">
+  <a href="{{ back_url }}" class="btn btn-outline btn-sm">&larr; Back</a>
+  <h2 style="margin:0;">{{ child.display_name }}</h2>
 </div>
 
-<div class="card card-pad" style="max-width:900px;">
+<div class="card card-pad bhw-child-edit">
   {% if child.latest_risk %}
   <div class="alert-banner {{ 'warning' if child.latest_risk.risk_label == 'At-Risk' else '' }}" style="{% if child.latest_risk.risk_label != 'At-Risk' %}background:var(--green-bg);border-left-color:var(--green-light);{% endif %} margin-bottom:20px;">
     <div class="title" style="{% if child.latest_risk.risk_label != 'At-Risk' %}color:var(--green);{% endif %}">
@@ -15,8 +15,23 @@
   </div>
   {% endif %}
 
-  <form method="post" action="{{ form_action }}">
-    <div class="section-divider-bar" style="margin-top:0;">Basic Information</div>
+  <form method="post" action="{{ form_action }}" id="bhw-child-update-form">
+    <section class="bhw-basic-edit-box bhw-basic-summary-card">
+      <div class="bhw-basic-card-header">
+        <h3>Basic Information</h3>
+        <button type="button" class="btn btn-outline btn-sm" id="bhw-basic-toggle" aria-expanded="false">Edit</button>
+      </div>
+      <div class="bhw-basic-summary-grid" id="bhw-basic-summary">
+        <div><span>Full Name</span><strong>{{ child.full_name }}</strong></div>
+        <div><span>Sex</span><strong>{{ 'Male' if child.sex == 'M' else 'Female' }}</strong></div>
+        <div><span>Date of Registration</span><strong>{{ child.date_registered.strftime('%b %d, %Y') }}</strong></div>
+        <div><span>Date of Birth</span><strong>{{ child.date_of_birth.strftime('%b %d, %Y') }}</strong></div>
+        <div><span>Barangay</span><strong>{{ child.barangay.name }}</strong></div>
+        <div><span>Guardian Name</span><strong>{{ child.guardian_name or '—' }}</strong></div>
+        <div><span>Contact Number</span><strong>{{ child.guardian_contact or '—' }}</strong></div>
+        <div><span>Address</span><strong>{{ child.address or '—' }}</strong></div>
+      </div>
+      <fieldset id="bhw-basic-fields" class="bhw-basic-fields" disabled hidden>
     <div class="form-grid-2">
       <div class="form-group"><label>Full Name</label><input class="form-control" name="full_name" value="{{ child.full_name }}"></div>
       <div class="form-group"><label>Sex</label>
@@ -33,45 +48,47 @@
       <div class="form-group"><label>Guardian Name</label><input class="form-control" name="guardian_name" value="{{ child.guardian_name or '' }}"></div>
       <div class="form-group"><label>Contact Number</label><input class="form-control" name="guardian_contact" value="{{ child.guardian_contact or '' }}" placeholder="09XXXXXXXXX"></div>
       <div class="form-group"><label>Address</label><input class="form-control" name="address" value="{{ child.address or '' }}" placeholder="Purok, Barangay"></div>
-    </div>
+    </div>      </fieldset>
+    </section>
 
-    <div class="section-divider-bar">BCG &amp; Hepatitis B</div>
+    <div class="section-divider-bar">Vaccination Records — BCG &amp; Hepatitis B</div>
+    <p class="text-muted" style="font-size:12.5px;margin:-4px 0 14px;">Check a dose to fill in today’s date automatically. You can still edit the date or previously recorded doses.</p>
     <div class="form-grid-2">
-      <div class="form-group"><label>BCG (date given)</label><input class="form-control" type="date" name="dose_BCG" value="{{ doses.BCG.isoformat() if doses.BCG else '' }}"></div>
-      <div class="form-group"><label>Hepa B-BD (date given)</label><input class="form-control" type="date" name="dose_HEPA-BD" value="{{ doses['HEPA-BD'].isoformat() if doses['HEPA-BD'] else '' }}"></div>
+      <div class="form-group"><label>BCG (date given)</label><div class="dose-edit-row" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><label style="display:inline-flex;align-items:center;gap:7px;font-weight:400;margin:0;"><input type="checkbox" class="dose-check" data-date-target="dose_BCG" {% if doses['BCG'] %}checked{% endif %}> Given</label><input class="form-control dose-date" style="max-width:185px;" type="date" name="dose_BCG" value="{{ doses['BCG'].isoformat() if doses['BCG'] else '' }}" {% if not doses['BCG'] %}disabled{% endif %}></div></div>
+      <div class="form-group"><label>Hepa B-BD (date given)</label><div class="dose-edit-row" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><label style="display:inline-flex;align-items:center;gap:7px;font-weight:400;margin:0;"><input type="checkbox" class="dose-check" data-date-target="dose_HEPA-BD" {% if doses['HEPA-BD'] %}checked{% endif %}> Given</label><input class="form-control dose-date" style="max-width:185px;" type="date" name="dose_HEPA-BD" value="{{ doses['HEPA-BD'].isoformat() if doses['HEPA-BD'] else '' }}" {% if not doses['HEPA-BD'] %}disabled{% endif %}></div></div>
     </div>
 
     <div class="section-divider-bar">Pentavalent (Penta)</div>
     <div class="form-grid-2">
-      <div class="form-group"><label>Penta-1 (1st dose)</label><input class="form-control" type="date" name="dose_PENTA1" value="{{ doses.PENTA1.isoformat() if doses.PENTA1 else '' }}"></div>
-      <div class="form-group"><label>Penta-2 (2nd dose)</label><input class="form-control" type="date" name="dose_PENTA2" value="{{ doses.PENTA2.isoformat() if doses.PENTA2 else '' }}"></div>
-      <div class="form-group"><label>Penta-3 (3rd dose)</label><input class="form-control" type="date" name="dose_PENTA3" value="{{ doses.PENTA3.isoformat() if doses.PENTA3 else '' }}"></div>
+      <div class="form-group"><label>Penta-1 (1st dose)</label><div class="dose-edit-row" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><label style="display:inline-flex;align-items:center;gap:7px;font-weight:400;margin:0;"><input type="checkbox" class="dose-check" data-date-target="dose_PENTA1" {% if doses['PENTA1'] %}checked{% endif %}> Given</label><input class="form-control dose-date" style="max-width:185px;" type="date" name="dose_PENTA1" value="{{ doses['PENTA1'].isoformat() if doses['PENTA1'] else '' }}" {% if not doses['PENTA1'] %}disabled{% endif %}></div></div>
+      <div class="form-group"><label>Penta-2 (2nd dose)</label><div class="dose-edit-row" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><label style="display:inline-flex;align-items:center;gap:7px;font-weight:400;margin:0;"><input type="checkbox" class="dose-check" data-date-target="dose_PENTA2" {% if doses['PENTA2'] %}checked{% endif %}> Given</label><input class="form-control dose-date" style="max-width:185px;" type="date" name="dose_PENTA2" value="{{ doses['PENTA2'].isoformat() if doses['PENTA2'] else '' }}" {% if not doses['PENTA2'] %}disabled{% endif %}></div></div>
+      <div class="form-group"><label>Penta-3 (3rd dose)</label><div class="dose-edit-row" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><label style="display:inline-flex;align-items:center;gap:7px;font-weight:400;margin:0;"><input type="checkbox" class="dose-check" data-date-target="dose_PENTA3" {% if doses['PENTA3'] %}checked{% endif %}> Given</label><input class="form-control dose-date" style="max-width:185px;" type="date" name="dose_PENTA3" value="{{ doses['PENTA3'].isoformat() if doses['PENTA3'] else '' }}" {% if not doses['PENTA3'] %}disabled{% endif %}></div></div>
     </div>
 
     <div class="section-divider-bar">OPV</div>
     <div class="form-grid-2">
-      <div class="form-group"><label>OPV 1st Dose</label><input class="form-control" type="date" name="dose_OPV1" value="{{ doses.OPV1.isoformat() if doses.OPV1 else '' }}"></div>
-      <div class="form-group"><label>OPV 2nd Dose</label><input class="form-control" type="date" name="dose_OPV2" value="{{ doses.OPV2.isoformat() if doses.OPV2 else '' }}"></div>
-      <div class="form-group"><label>OPV 3rd Dose</label><input class="form-control" type="date" name="dose_OPV3" value="{{ doses.OPV3.isoformat() if doses.OPV3 else '' }}"></div>
+      <div class="form-group"><label>OPV 1st Dose</label><div class="dose-edit-row" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><label style="display:inline-flex;align-items:center;gap:7px;font-weight:400;margin:0;"><input type="checkbox" class="dose-check" data-date-target="dose_OPV1" {% if doses['OPV1'] %}checked{% endif %}> Given</label><input class="form-control dose-date" style="max-width:185px;" type="date" name="dose_OPV1" value="{{ doses['OPV1'].isoformat() if doses['OPV1'] else '' }}" {% if not doses['OPV1'] %}disabled{% endif %}></div></div>
+      <div class="form-group"><label>OPV 2nd Dose</label><div class="dose-edit-row" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><label style="display:inline-flex;align-items:center;gap:7px;font-weight:400;margin:0;"><input type="checkbox" class="dose-check" data-date-target="dose_OPV2" {% if doses['OPV2'] %}checked{% endif %}> Given</label><input class="form-control dose-date" style="max-width:185px;" type="date" name="dose_OPV2" value="{{ doses['OPV2'].isoformat() if doses['OPV2'] else '' }}" {% if not doses['OPV2'] %}disabled{% endif %}></div></div>
+      <div class="form-group"><label>OPV 3rd Dose</label><div class="dose-edit-row" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><label style="display:inline-flex;align-items:center;gap:7px;font-weight:400;margin:0;"><input type="checkbox" class="dose-check" data-date-target="dose_OPV3" {% if doses['OPV3'] %}checked{% endif %}> Given</label><input class="form-control dose-date" style="max-width:185px;" type="date" name="dose_OPV3" value="{{ doses['OPV3'].isoformat() if doses['OPV3'] else '' }}" {% if not doses['OPV3'] %}disabled{% endif %}></div></div>
     </div>
 
     <div class="section-divider-bar">PCV</div>
     <div class="form-grid-2">
-      <div class="form-group"><label>PCV 1st Dose</label><input class="form-control" type="date" name="dose_PCV1" value="{{ doses.PCV1.isoformat() if doses.PCV1 else '' }}"></div>
-      <div class="form-group"><label>PCV 2nd Dose</label><input class="form-control" type="date" name="dose_PCV2" value="{{ doses.PCV2.isoformat() if doses.PCV2 else '' }}"></div>
-      <div class="form-group"><label>PCV 3rd Dose</label><input class="form-control" type="date" name="dose_PCV3" value="{{ doses.PCV3.isoformat() if doses.PCV3 else '' }}"></div>
+      <div class="form-group"><label>PCV 1st Dose</label><div class="dose-edit-row" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><label style="display:inline-flex;align-items:center;gap:7px;font-weight:400;margin:0;"><input type="checkbox" class="dose-check" data-date-target="dose_PCV1" {% if doses['PCV1'] %}checked{% endif %}> Given</label><input class="form-control dose-date" style="max-width:185px;" type="date" name="dose_PCV1" value="{{ doses['PCV1'].isoformat() if doses['PCV1'] else '' }}" {% if not doses['PCV1'] %}disabled{% endif %}></div></div>
+      <div class="form-group"><label>PCV 2nd Dose</label><div class="dose-edit-row" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><label style="display:inline-flex;align-items:center;gap:7px;font-weight:400;margin:0;"><input type="checkbox" class="dose-check" data-date-target="dose_PCV2" {% if doses['PCV2'] %}checked{% endif %}> Given</label><input class="form-control dose-date" style="max-width:185px;" type="date" name="dose_PCV2" value="{{ doses['PCV2'].isoformat() if doses['PCV2'] else '' }}" {% if not doses['PCV2'] %}disabled{% endif %}></div></div>
+      <div class="form-group"><label>PCV 3rd Dose</label><div class="dose-edit-row" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><label style="display:inline-flex;align-items:center;gap:7px;font-weight:400;margin:0;"><input type="checkbox" class="dose-check" data-date-target="dose_PCV3" {% if doses['PCV3'] %}checked{% endif %}> Given</label><input class="form-control dose-date" style="max-width:185px;" type="date" name="dose_PCV3" value="{{ doses['PCV3'].isoformat() if doses['PCV3'] else '' }}" {% if not doses['PCV3'] %}disabled{% endif %}></div></div>
     </div>
 
     <div class="section-divider-bar">IPV</div>
     <div class="form-grid-2">
-      <div class="form-group"><label>IPV 1st Dose</label><input class="form-control" type="date" name="dose_IPV1" value="{{ doses.IPV1.isoformat() if doses.IPV1 else '' }}"></div>
-      <div class="form-group"><label>IPV 2nd Dose</label><input class="form-control" type="date" name="dose_IPV2" value="{{ doses.IPV2.isoformat() if doses.IPV2 else '' }}"></div>
+      <div class="form-group"><label>IPV 1st Dose</label><div class="dose-edit-row" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><label style="display:inline-flex;align-items:center;gap:7px;font-weight:400;margin:0;"><input type="checkbox" class="dose-check" data-date-target="dose_IPV1" {% if doses['IPV1'] %}checked{% endif %}> Given</label><input class="form-control dose-date" style="max-width:185px;" type="date" name="dose_IPV1" value="{{ doses['IPV1'].isoformat() if doses['IPV1'] else '' }}" {% if not doses['IPV1'] %}disabled{% endif %}></div></div>
+      <div class="form-group"><label>IPV 2nd Dose</label><div class="dose-edit-row" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><label style="display:inline-flex;align-items:center;gap:7px;font-weight:400;margin:0;"><input type="checkbox" class="dose-check" data-date-target="dose_IPV2" {% if doses['IPV2'] %}checked{% endif %}> Given</label><input class="form-control dose-date" style="max-width:185px;" type="date" name="dose_IPV2" value="{{ doses['IPV2'].isoformat() if doses['IPV2'] else '' }}" {% if not doses['IPV2'] %}disabled{% endif %}></div></div>
     </div>
 
     <div class="section-divider-bar">MMR</div>
     <div class="form-grid-2">
-      <div class="form-group"><label>MMR 1st Dose</label><input class="form-control" type="date" name="dose_MMR1" value="{{ doses.MMR1.isoformat() if doses.MMR1 else '' }}"></div>
-      <div class="form-group"><label>MMR 2nd Dose</label><input class="form-control" type="date" name="dose_MMR2" value="{{ doses.MMR2.isoformat() if doses.MMR2 else '' }}"></div>
+      <div class="form-group"><label>MMR 1st Dose</label><div class="dose-edit-row" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><label style="display:inline-flex;align-items:center;gap:7px;font-weight:400;margin:0;"><input type="checkbox" class="dose-check" data-date-target="dose_MMR1" {% if doses['MMR1'] %}checked{% endif %}> Given</label><input class="form-control dose-date" style="max-width:185px;" type="date" name="dose_MMR1" value="{{ doses['MMR1'].isoformat() if doses['MMR1'] else '' }}" {% if not doses['MMR1'] %}disabled{% endif %}></div></div>
+      <div class="form-group"><label>MMR 2nd Dose</label><div class="dose-edit-row" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><label style="display:inline-flex;align-items:center;gap:7px;font-weight:400;margin:0;"><input type="checkbox" class="dose-check" data-date-target="dose_MMR2" {% if doses['MMR2'] %}checked{% endif %}> Given</label><input class="form-control dose-date" style="max-width:185px;" type="date" name="dose_MMR2" value="{{ doses['MMR2'].isoformat() if doses['MMR2'] else '' }}" {% if not doses['MMR2'] %}disabled{% endif %}></div></div>
     </div>
 
     {% if optional_vaccines %}
@@ -79,7 +96,7 @@
     <p class="text-muted" style="font-size:12px;margin:-8px 0 12px;">Not part of the core registry schedule — record only if actually given. Some, like Rotavirus, are no longer given past a certain age; you'll be warned but the entry will still be saved.</p>
     <div class="form-grid-2">
       {% for code, name, antigen, dose_no, rec_days, deadline in optional_vaccines %}
-      <div class="form-group"><label>{{ name }}</label><input class="form-control" type="date" name="dose_{{ code }}" value="{{ doses[code].isoformat() if doses[code] else '' }}"></div>
+      <div class="form-group"><label>{{ name }}</label><div class="dose-edit-row" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><label style="display:inline-flex;align-items:center;gap:7px;font-weight:400;margin:0;"><input type="checkbox" class="dose-check" data-date-target="dose_{{ code }}" {% if doses[code] %}checked{% endif %}> Given</label><input class="form-control dose-date" style="max-width:185px;" type="date" name="dose_{{ code }}" value="{{ doses[code].isoformat() if doses[code] else '' }}" {% if not doses[code] %}disabled{% endif %}></div></div>
       {% endfor %}
     </div>
     {% endif %}
@@ -89,7 +106,7 @@
     <p class="text-muted" style="font-size:12px;margin:-8px 0 12px;">Supplementary immunization activities this child currently qualifies for. Tracked separately from the core schedule — never affects risk status.</p>
     <div class="form-grid-2">
       {% for c in active_campaigns %}
-      <div class="form-group"><label>{{ c.vaccine_type.name }} &mdash; {{ c.name }}</label><input class="form-control" type="date" name="dose_campaign_{{ c.id }}" value="{{ campaign_doses[c.id].isoformat() if campaign_doses[c.id] else '' }}"></div>
+      <div class="form-group"><label>{{ c.vaccine_type.name }} &mdash; {{ c.name }}</label><div class="dose-edit-row" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><label style="display:inline-flex;align-items:center;gap:7px;font-weight:400;margin:0;"><input type="checkbox" class="dose-check" data-date-target="dose_campaign_{{ c.id }}" {% if campaign_doses[c.id] %}checked{% endif %}> Given</label><input class="form-control dose-date" style="max-width:185px;" type="date" name="dose_campaign_{{ c.id }}" value="{{ campaign_doses[c.id].isoformat() if campaign_doses[c.id] else '' }}" {% if not campaign_doses[c.id] %}disabled{% endif %}></div></div>
       {% endfor %}
     </div>
     {% endif %}
@@ -107,8 +124,45 @@
 
     <div class="modal-footer" style="padding:20px 0 0;border-top:1px solid var(--border);margin-top:20px;">
       <a href="{{ back_url }}" class="btn btn-outline">Cancel</a>
-      <button type="submit" class="btn btn-primary">Save Changes</button>
+      <button type="submit" class="btn btn-primary">Update Record</button>
     </div>
   </form>
 </div>
+<script>
+(function () {
+  const basicToggle = document.getElementById('bhw-basic-toggle');
+  const basicSummary = document.getElementById('bhw-basic-summary');
+  const basicFields = document.getElementById('bhw-basic-fields');
+  const updateForm = document.getElementById('bhw-child-update-form');
+  if (basicToggle && basicSummary && basicFields && updateForm) {
+    basicToggle.addEventListener('click', function () {
+      const editing = basicFields.hidden;
+      basicFields.hidden = !editing;
+      basicFields.disabled = !editing;
+      basicSummary.hidden = editing;
+      basicToggle.textContent = editing ? 'Cancel Edit' : 'Edit';
+      basicToggle.setAttribute('aria-expanded', String(editing));
+    });
+    updateForm.addEventListener('submit', function () {
+      // Basic information must be submitted even when displayed as read-only.
+      basicFields.disabled = false;
+    });
+  }
+  const today = new Date();
+  const localToday = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  document.querySelectorAll('.dose-check').forEach(function (check) {
+    const field = document.querySelector('[name="' + check.dataset.dateTarget + '"]');
+    if (!field) return;
+    check.addEventListener('change', function () {
+      if (check.checked) {
+        field.disabled = false;
+        if (!field.value) field.value = localToday;
+      } else {
+        field.value = '';
+        field.disabled = true;
+      }
+    });
+  });
+})();
+</script>
 {% endblock %}
