@@ -1,14 +1,7 @@
 {% extends "layout_app.html" %}
 {% from "_icons.html" import icon %}
+{% block page_subtitle %}Every child with a dose due, overdue, or coming up in your barangay.{% endblock %}
 {% block content %}
-<div class="banner">
-  <div>
-    <h2>Vaccination Due List</h2>
-    <p>Every child with a dose due, overdue, or coming up in your barangay.</p>
-  </div>
-  <a class="btn btn-banner btn-sm" href="{{ back_url }}">{{ icon('chevron-left', 14) }} Back to Dashboard</a>
-</div>
-
 <form class="filter-bar" method="get" action="{{ request.path }}">
   <div class="search-input-wrap">
     <span class="si-icon">{{ icon('search', 16) }}</span>

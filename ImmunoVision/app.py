@@ -2378,7 +2378,6 @@ def due_vaccines():
     return render_template("bhw_due_vaccines.html", **_bhw_ctx(
         "dashboard", page_title="Vaccination Due List", events=events,
         search=search, status_filter=status_filter, today_iso=date.today().isoformat(),
-        back_url=url_for("bhw.dashboard"),
     ))
 
 
