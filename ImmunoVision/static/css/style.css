@@ -1011,6 +1011,16 @@ table.data-table.pin-first tbody tr:hover td:first-child { background: var(--sla
 .stock-row .sqty { font-size: 12.5px; white-space: nowrap; }
 .stock-row .sqty b { font-size: 15px; }
 
+/* A clickable stock-row (e.g. a campaign linking to its worklist) needs its
+   own affordance - the plain row above is never a link, so it has none. */
+a.stock-row {
+  grid-template-columns: auto 1fr auto auto auto;
+  cursor: pointer; border-radius: 8px; padding-left: 8px; padding-right: 8px; margin: 0 -8px;
+  transition: background .12s ease; text-decoration: none; color: inherit;
+}
+a.stock-row:hover { background: var(--slate-bg-2); }
+a.stock-row .row-chevron { color: var(--text-muted); font-size: 16px; line-height: 1; }
+
 /* Pending vaccine requests on the RHU dashboard. */
 .req-row {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
