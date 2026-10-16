@@ -59,6 +59,12 @@ class User(UserMixin, db.Model):
     notify_at_risk = db.Column(db.Boolean, default=True, nullable=False)
     notify_stock = db.Column(db.Boolean, default=True, nullable=False)
 
+    # Set when this user submits "Forgot password?" on the login page, cleared
+    # once ICTMO resets their password. There's no email/SMS in this app, so
+    # this is what stands in for a reset token: it just flags the account for
+    # an administrator to act on, surfaced via their notification bell.
+    password_reset_requested_at = db.Column(db.DateTime, nullable=True)
+
     # All barangays this BHW is assigned to (a single-barangay BHW just has one).
     # barangay_id above is always one of these - the one she's currently working in.
     assigned_barangays = db.relationship("Barangay", secondary=user_barangays,

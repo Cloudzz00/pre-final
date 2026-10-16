@@ -15,6 +15,7 @@ import io
 import os
 import random
 import re
+import secrets
 from collections import Counter, defaultdict
 from datetime import date, datetime, timedelta
 
@@ -1428,6 +1429,16 @@ def ictmo_notifications():
                       "time_label": "Ongoing", "unread": False,
                       "url": url_for("ictmo.users")})
 
+    reset_requests = [u for u in users if u.password_reset_requested_at]
+    if reset_requests:
+        notes.append({"category": "Accounts", "severity": "critical", "icon": "lock", "icon_bg": "bg-red",
+                      "title": f"{len(reset_requests)} Password Reset Request{'s' if len(reset_requests) > 1 else ''}",
+                      "body": "Waiting on a new password from you: "
+                              + ", ".join(u.full_name for u in reset_requests[:4])
+                              + (f" and {len(reset_requests) - 4} more." if len(reset_requests) > 4 else "."),
+                      "time_label": "Action needed", "unread": True,
+                      "url": url_for("ictmo.users")})
+
     return _apply_seen_state(notes, current_user)
 
 
@@ -1771,6 +1782,27 @@ def login():
             return redirect(request.args.get("next") or url_for(ROLE_HOME[user.role]))
         flash("Invalid username or password.", "error")
     return render_template("login.html")
+
+
+@auth_bp.route("/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+    """There's no email or SMS in this app, so this can't be a reset-link
+    flow. Instead it flags the account for ICTMO (who already provisions and
+    manages every account) to reset directly - they relay the new password
+    to the user offline, the way a small office actually handles this."""
+    if current_user.is_authenticated:
+        return redirect(url_for(ROLE_HOME[current_user.role]))
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        user = User.query.filter_by(username=username).first()
+        if user and user.is_active_flag:
+            user.password_reset_requested_at = datetime.utcnow()
+            db.session.commit()
+        # Same message either way - confirming or denying a username exists
+        # is an account-enumeration leak.
+        flash("If that username exists, your ICTMO administrator has been notified and will reset your password.", "success")
+        return redirect(url_for("auth.login"))
+    return render_template("forgot_password.html")
 
 
 @auth_bp.route("/logout")
@@ -3173,6 +3205,19 @@ def users():
         "users", page_title="User Management", users=all_users, stats=stats,
         barangays=Barangay.query.order_by(Barangay.name).all(),
     ))
+
+
+@ictmo_bp.route("/users/<int:user_id>/reset-password", methods=["POST"])
+def reset_user_password(user_id):
+    u = db.session.get(User, user_id) or abort(404)
+    temp_password = secrets.token_urlsafe(6)
+    u.set_password(temp_password)
+    u.password_reset_requested_at = None
+    db.session.commit()
+    log_activity(f"Reset password for user account: {u.username}")
+    flash(f"New temporary password for {u.full_name} ({u.username}): {temp_password} "
+          "— share this with them directly now, it won't be shown again.", "success")
+    return redirect(url_for("ictmo.users"))
 
 
 @ictmo_bp.route("/users/<int:user_id>/toggle", methods=["POST"])
