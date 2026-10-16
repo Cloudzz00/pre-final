@@ -1537,29 +1537,6 @@ def _create_child(form, barangay_locked):
     return child
 
 
-def _write_dose(child, vt, rec, administered):
-    """Sets one non-campaign dose's date/status, creating the
-    VaccinationRecord if it doesn't exist yet. Shared by the full Edit
-    Child form (which resolves `rec` up front for all doses at once) and
-    the dashboard's single-dose quick record. Returns a past-catch-up-
-    window warning name, or None."""
-    if rec is None:
-        rec = VaccinationRecord(child_id=child.id, vaccine_type_id=vt.id)
-        db.session.add(rec)
-    rec.date_administered = administered
-    rec.status = "completed" if administered else "pending"
-    # Optional doses like Rotavirus stop being given past a real age
-    # cutoff (rising intussusception risk in older infants), unlike the
-    # core schedule which stays catchable indefinitely. A record past
-    # that age is still saved as-given - it may be a real dose logged
-    # late - but the BHW is warned rather than told nothing.
-    if administered and vt.is_optional and vt.catch_up_deadline_days is not None:
-        age_at_dose = (administered - child.date_of_birth).days
-        if age_at_dose > vt.catch_up_deadline_days:
-            return vt.name
-    return None
-
-
 def _update_child(child, form):
     """Updates an existing child's basic info and any dose dates submitted
     on the Edit Child form, then recomputes their risk assessment so
@@ -1588,9 +1565,21 @@ def _update_child(child, form):
             continue
         date_str = form.get(f"dose_{code}")
         administered = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else None
-        warning = _write_dose(child, vt, existing_by_vt_id.get(vt.id), administered)
-        if warning:
-            past_window_warnings.append(warning)
+        rec = existing_by_vt_id.get(vt.id)
+        if rec is None:
+            rec = VaccinationRecord(child_id=child.id, vaccine_type_id=vt.id)
+            db.session.add(rec)
+        rec.date_administered = administered
+        rec.status = "completed" if administered else "pending"
+        # Optional doses like Rotavirus stop being given past a real age
+        # cutoff (rising intussusception risk in older infants), unlike the
+        # core schedule which stays catchable indefinitely. A record past
+        # that age is still saved as-given - it may be a real dose logged
+        # late - but the BHW is warned rather than told nothing.
+        if administered and vt.is_optional and vt.catch_up_deadline_days is not None:
+            age_at_dose = (administered - child.date_of_birth).days
+            if age_at_dose > vt.catch_up_deadline_days:
+                past_window_warnings.append(vt.name)
 
     # Campaign doses: a separate field per campaign (dose_campaign_<id>), not
     # per vaccine code - the same vaccine can recur across campaign runs, and
@@ -1652,8 +1641,8 @@ def _due_calendar(children, vt_lookup, days_behind=90, days_ahead=60):
     """Every not-yet-administered dose falling within the given window,
     one event per (child, dose), for the BHW dashboard's due-vaccines
     calendar widget. Status buckets match the calendar's legend:
-    Overdue (past due), Due Today, Upcoming (within a week), Scheduled
-    (further out but still in the visible window)."""
+    Overdue (past due), Due Today, Upcoming (future doses).
+    Home Visit is reserved for a separately recorded visit date."""
     today = date.today()
     events = []
     for child in children:
@@ -1669,13 +1658,17 @@ def _due_calendar(children, vt_lookup, days_behind=90, days_ahead=60):
                 status = "Overdue"
             elif delta == 0:
                 status = "Due Today"
-            elif delta <= 7:
-                status = "Upcoming"
             else:
-                status = "Scheduled"
+                status = "Upcoming"
             events.append({"date": due_date.isoformat(), "child_id": child.id,
                             "child_name": child.display_name, "vaccine": name,
                             "vaccine_code": code, "status": status})
+        # Include the BHW's explicitly scheduled home visit, independently
+        # of vaccine due dates. Keep it visible even outside the dose window.
+        if child.next_visit_date is not None:
+            events.append({"date": child.next_visit_date.isoformat(),
+                           "child_id": child.id, "child_name": child.display_name,
+                           "vaccine": "Home Visit", "status": "Home Visit"})
     return events
 
 
@@ -1689,9 +1682,7 @@ ROLE_HOME = {"ictmo": "ictmo.dashboard", "admin": "admin.dashboard", "rhu": "rhu
 
 @auth_bp.route("/")
 def index():
-    """Public landing page. Signed-in users go straight to their dashboard."""
-    if current_user.is_authenticated:
-        return redirect(url_for(ROLE_HOME[current_user.role]))
+    """Public landing page for all visitors, including signed-in users."""
 
     # The hero plots the real completion rate for each dose in schedule order.
     # It is the argument for the system: coverage holds through the first year
@@ -1993,7 +1984,7 @@ def edit_child(child_id):
     campaign_doses = {c.id: (rec.date_administered if (rec := child.vaccination_records.filter_by(
         campaign_id=c.id).first()) else None) for c in active_campaigns}
     return render_template("edit_child.html", **_rhu_ctx(
-        "children", page_title="Edit Child Record", child=child, doses=doses,
+        "children", page_title="Update Child Record", child=child, doses=doses,
         optional_vaccines=dp.OPTIONAL_VACCINE_SCHEDULE,
         active_campaigns=active_campaigns, campaign_doses=campaign_doses,
         back_url=url_for("rhu.children"), form_action=url_for("rhu.edit_child", child_id=child.id),
@@ -2371,15 +2362,66 @@ def dashboard():
 def children():
     bid = current_user.barangay_id
     if request.method == "POST":
+        # BHW Add Child only: reject future-age checkboxes even if the browser
+        # restrictions are bypassed. Historical administration dates remain editable.
+        try:
+            dob = datetime.strptime(request.form.get("date_of_birth", ""), "%Y-%m-%d").date()
+        except ValueError:
+            flash("Please enter a valid date of birth.", "danger")
+            return redirect(url_for("bhw.children", add=1))
+        age_days = (date.today() - dob).days
+        if age_days < 0:
+            flash("Date of birth cannot be in the future.", "danger")
+            return redirect(url_for("bhw.children", add=1))
+        premature = [name for code, name, _ant, _num, due_days in dp.VACCINE_SCHEDULE
+                     if request.form.get(f"dose_{code}_given") and age_days < due_days]
+        if premature:
+            flash("Not yet age-eligible: " + ", ".join(premature) + ". Please review the date of birth.", "danger")
+            return redirect(url_for("bhw.children", add=1))
         new_child = _create_child(request.form, barangay_locked=bid)
         flash("Child registered successfully.", "success")
         return redirect(url_for("bhw.children", new_child=new_child.id))
     risk_level = request.args.get("risk_level", "")
     search = request.args.get("q", "").strip()
+    selected_year = request.args.get("year", "")
+    selected_sort = request.args.get("sort", "newest")
+    age_group = request.args.get("age_group", "active")
+    if selected_sort not in ("newest", "oldest", "youngest", "oldest_child"):
+        selected_sort = "newest"
+    if age_group not in ("active", "older", "all"):
+        age_group = "active"
     q = Child.query.filter_by(barangay_id=bid)
     if search:
         q = q.filter(Child.full_name.ilike(f"%{search}%"))
-    kids = q.order_by(Child.id).all()
+    if selected_year:
+        if selected_year.isdigit() and len(selected_year) == 4:
+            q = q.filter(Child.date_registered >= date(int(selected_year), 1, 1),
+                         Child.date_registered < date(int(selected_year) + 1, 1, 1))
+        else:
+            selected_year = ""
+    # Calendar-month cutoff: the 12-month birthday is still in the active view.
+    today = date.today()
+    def twelve_month_birthday(dob):
+        try:
+            return dob.replace(year=dob.year + 1)
+        except ValueError:  # Feb 29 in a non-leap year
+            return dob.replace(year=dob.year + 1, day=28)
+    kids = q.all()
+    if age_group == "active":
+        kids = [c for c in kids if twelve_month_birthday(c.date_of_birth) >= today]
+    elif age_group == "older":
+        kids = [c for c in kids if twelve_month_birthday(c.date_of_birth) < today]
+    if selected_sort == "newest":
+        kids.sort(key=lambda c: (c.date_registered or date.min, c.created_at or datetime.min, c.id), reverse=True)
+    elif selected_sort == "oldest":
+        kids.sort(key=lambda c: (c.date_registered or date.min, c.created_at or datetime.min, c.id))
+    elif selected_sort == "youngest":
+        kids.sort(key=lambda c: (c.date_of_birth, c.id), reverse=True)
+    else:
+        kids.sort(key=lambda c: (c.date_of_birth, c.id))
+    registration_years = sorted({str(y[0]) for y in db.session.query(
+        func.strftime('%Y', Child.date_registered)).filter(
+        Child.barangay_id == bid, Child.date_registered.isnot(None)).distinct().all() if y[0]}, reverse=True)
 
     # Just registered: show what she can act on today instead of making her
     # open the new record and scan all 15 doses to find out.
@@ -2396,6 +2438,7 @@ def children():
     return render_template("bhw_children.html", **_bhw_ctx(
         "children", page_title="Child Records", children=kids, barangays=None,
         vaccine_schedule=dp.VACCINE_SCHEDULE, vt_lookup=vt_lookup, selected_risk=risk_level, search=search,
+        selected_year=selected_year, selected_sort=selected_sort, age_group=age_group, registration_years=registration_years,
         dose_matrix=_dose_matrix(kids, vt_lookup), risk_labels=_risk_labels(kids),
         due_now_child=due_now_child, due_now_doses=due_now_doses,
     ))
@@ -2425,6 +2468,12 @@ def due_vaccines():
     status_filter = request.args.get("status", "")
     vt_lookup = {vt.code: vt for vt in VaccineType.query.all()}
     events = _due_calendar(filtered_children(bid), vt_lookup)
+    # Home visits are separate calendar entries, not vaccine doses.
+    events = [e for e in events if e.get("vaccine_code")]
+    # Keep the existing Scheduled filter without changing dashboard statuses.
+    for e in events:
+        if e["status"] == "Upcoming" and (date.fromisoformat(e["date"]) - date.today()).days > 7:
+            e["status"] = "Scheduled"
     if search:
         events = [e for e in events if search.lower() in e["child_name"].lower()]
     if status_filter:
@@ -2513,7 +2562,7 @@ def edit_child(child_id):
     campaign_doses = {c.id: (rec.date_administered if (rec := child.vaccination_records.filter_by(
         campaign_id=c.id).first()) else None) for c in active_campaigns}
     return render_template("edit_child.html", **_bhw_ctx(
-        "children", page_title="Edit Child Record", child=child, doses=doses,
+        "children", page_title="Update Child Record", child=child, doses=doses,
         optional_vaccines=dp.OPTIONAL_VACCINE_SCHEDULE,
         active_campaigns=active_campaigns, campaign_doses=campaign_doses,
         back_url=url_for("bhw.children"), form_action=url_for("bhw.edit_child", child_id=child.id),
@@ -2525,10 +2574,36 @@ def vaccine_gaps():
     bid = current_user.barangay_id
     vaccine_filter = request.args.get("vaccine", "")
     return render_template("bhw_vaccine_gaps.html", **_bhw_ctx(
-        "vaccine_gaps", page_title="Vaccine Gaps", dist=vaccine_risk_distribution(bid),
+        "vaccine_gaps", page_title="Vaccine Gaps", today=date.today(), dist=vaccine_risk_distribution(bid),
         at_risk_rows=vaccine_risk_table(bid, vaccine_code=vaccine_filter or None),
         vaccine_filter=vaccine_filter, antigen_options=dp.VACCINE_ANTIGENS,
     ))
+
+
+@bhw_bp.route("/vaccine-gaps/schedule-visit", methods=["POST"])
+def schedule_visit():
+    """Save a BHW follow-up date for a child in their assigned barangay."""
+    try:
+        child_id = int(request.form.get("child_id", ""))
+    except (ValueError, TypeError):
+        abort(400)
+    child = db.session.get(Child, child_id)
+    if child is None:
+        abort(404)
+    if child.barangay_id != current_user.barangay_id:
+        abort(403)
+    try:
+        visit_date = date.fromisoformat(request.form.get("visit_date", ""))
+    except (ValueError, TypeError):
+        flash("Please select a valid visit date.", "warning")
+        return redirect(url_for("bhw.vaccine_gaps"))
+    if visit_date < date.today():
+        flash("Visit date cannot be in the past.", "warning")
+        return redirect(url_for("bhw.vaccine_gaps"))
+    child.next_visit_date = visit_date
+    db.session.commit()
+    flash(f"Visit scheduled for {child.display_name} on {visit_date.strftime('%b %d, %Y')}.", "success")
+    return redirect(url_for("bhw.vaccine_gaps"))
 
 
 @bhw_bp.route("/continuation")
@@ -3200,6 +3275,6 @@ def ensure_demo_data():
 
 if __name__ == "__main__":
     ensure_demo_data()
-    print("ImmunoVision running at http://127.0.0.1:5000")
+    print("ImmunoVision running at http://127.0.0.1:5001")
     print("Log in with  msantos / password123  (RHU)\n")
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5001, debug=True)

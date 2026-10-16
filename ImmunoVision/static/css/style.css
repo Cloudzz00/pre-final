@@ -1011,16 +1011,6 @@ table.data-table.pin-first tbody tr:hover td:first-child { background: var(--sla
 .stock-row .sqty { font-size: 12.5px; white-space: nowrap; }
 .stock-row .sqty b { font-size: 15px; }
 
-/* A clickable stock-row (e.g. a campaign linking to its worklist) needs its
-   own affordance - the plain row above is never a link, so it has none. */
-a.stock-row {
-  grid-template-columns: auto 1fr auto auto auto;
-  cursor: pointer; border-radius: 8px; padding-left: 8px; padding-right: 8px; margin: 0 -8px;
-  transition: background .12s ease; text-decoration: none; color: inherit;
-}
-a.stock-row:hover { background: var(--slate-bg-2); }
-a.stock-row .row-chevron { color: var(--text-muted); font-size: 16px; line-height: 1; }
-
 /* Pending vaccine requests on the RHU dashboard. */
 .req-row {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
@@ -1528,3 +1518,90 @@ html { scroll-behavior: smooth; }
   .report-doc-title { font-size: 20px; }
   .chart-panel { break-inside: avoid; }
 }
+
+/* BHW Reports PDF: preserve the same per-vaccine colors as the screen.
+   Print backgrounds use !important because the browser print stylesheet must
+   override default backgrounds, not the vaccine-specific palette. */
+@media print {
+  .bhw-report-page .coverage-bar-cell { display: table-cell !important; }
+  .bhw-report-page .mini-track, .bhw-report-page .mini-fill {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .bhw-report-page .mini-track { background: #e8eef5 !important; }
+  .bhw-report-page .mini-fill { background: #64748b !important; min-height: 8px; }
+  .bhw-report-page .vaccine-fill[data-vaccine="BCG"] { background: #2563eb !important; }
+  .bhw-report-page .vaccine-fill[data-vaccine^="Hepa B-BD"] { background: #0ea5e9 !important; }
+  .bhw-report-page .vaccine-fill[data-vaccine^="Pentavalent"] { background: #0d9488 !important; }
+  .bhw-report-page .vaccine-fill[data-vaccine^="OPV"] { background: #7c3aed !important; }
+  .bhw-report-page .vaccine-fill[data-vaccine^="PCV"] { background: #a855f7 !important; }
+  .bhw-report-page .vaccine-fill[data-vaccine^="IPV"] { background: #4f46e5 !important; }
+  .bhw-report-page .vaccine-fill[data-vaccine^="MMR"] { background: #0891b2 !important; }
+
+  /* Compact the printable coverage report so the chart is less likely to
+     spill onto a mostly empty second page. No changes to screen layout. */
+  .bhw-report-page .report-doc { font-size: 11px; }
+  .bhw-report-page .report-doc-head { padding-bottom: 8px; margin-bottom: 8px; }
+  .bhw-report-page .report-letterhead { margin-bottom: 3px; }
+  .bhw-report-page .report-summary { margin: 9px 0; gap: 8px; }
+  .bhw-report-page .summary-card { padding: 8px 10px; }
+  .bhw-report-page .summary-card .summary-icon { width: 22px; height: 22px; margin-bottom: 3px; }
+  .bhw-report-page .summary-card .v { font-size: 20px; }
+  .bhw-report-page .summary-card .l { font-size: 10px; margin-top: 2px; }
+  .bhw-report-page .report-section-head { margin-top: 9px; margin-bottom: 6px; }
+  .bhw-report-page .coverage-table th { padding: 5px 8px; font-size: 9px; }
+  .bhw-report-page .coverage-table td { padding: 5px 8px; font-size: 10px; }
+  .bhw-report-page .coverage-table tr { break-inside: avoid; }
+  .bhw-report-page .status-pill { padding: 2px 6px; font-size: 9px; }
+  .bhw-report-page .chart-panel { margin-top: 8px; padding: 8px; break-inside: avoid; }
+  .bhw-report-page .chart-panel .report-section-head { margin-top: 0; }
+  .bhw-report-page .chart-box { height: 175px !important; }
+}
+
+/* BHW Reports: compact navigation and actions; report title lives in document. */
+.bhw-report-page .report-toolbar { justify-content: space-between; }
+.bhw-report-page .report-type-card { min-height: 62px; }
+.bhw-report-page .report-doc-head { align-items: center; }
+.bhw-report-page .report-summary .summary-card { padding: 14px 16px; }
+@media (max-width: 720px) {
+  .bhw-report-page .report-toolbar > div { width: 100%; }
+}
+
+/* BHW Reports: compact screen spacing without affecting RHU or PDF layout. */
+@media screen {
+  .bhw-report-page .report-toolbar { padding: 10px 16px; min-height: 64px; }
+  .bhw-report-page .toolbar-info .badge { width: 32px; height: 32px; }
+  .bhw-report-page .report-summary { margin: 14px 0; }
+  .bhw-report-page .summary-card { padding: 12px 16px; }
+  .bhw-report-page .summary-card .summary-icon { margin-bottom: 7px; width: 30px; height: 30px; }
+  .bhw-report-page .summary-card .l { margin-top: 4px; }
+}
+
+/* BHW child record: one basic-information summary and larger, easy-to-tap dose controls. */
+.child-basic-grid > div { padding: 9px 0; line-height: 1.5; border-bottom: 1px solid var(--border); }
+.child-basic-grid > div strong { color: var(--text-secondary); font-weight: 600; margin-right: 6px; }
+.bhw-child-edit .dose-edit-row { min-height: 46px; gap: 14px !important; }
+.bhw-child-edit .dose-edit-row label { display: inline-flex !important; align-items: center; gap: 10px !important; cursor: pointer; min-height: 38px; }
+.bhw-child-edit input.dose-check { appearance: auto; width: 22px; height: 22px; min-width: 22px; min-height: 22px; margin: 0; accent-color: var(--role-accent); cursor: pointer; }
+.bhw-child-edit .dose-date { max-width: 200px !important; min-height: 40px; background: #fff; }
+.bhw-child-edit .dose-date:disabled { background: var(--slate-bg); opacity: .65; }
+@media (max-width: 520px) { .bhw-child-edit .dose-edit-row { align-items: flex-start !important; } }
+
+/* BHW Child Records: full-width editing and clear single basic-info section */
+.bhw-child-edit { width: 100%; max-width: none; margin-left: 0; margin-right: 0; }
+.bhw-child-edit .form-grid-2 { gap: 14px 22px; }
+.bhw-basic-edit-box { border: 1px solid #dbe4f0; border-radius: 12px; padding: 20px; background: #fbfdff; margin-bottom: 24px; }
+.bhw-basic-edit-heading { font-size: 16px; font-weight: 750; color: var(--text-primary); padding-bottom: 12px; margin-bottom: 16px; border-bottom: 1px solid #dbe4f0; }
+.bhw-child-edit .dose-check { width: 22px; height: 22px; min-width: 22px; accent-color: var(--primary); cursor: pointer; }
+@media (max-width: 640px) { .bhw-basic-edit-box { padding: 14px; } }
+
+/* BHW Child Records: read-only basic information until Edit is clicked */
+.bhw-basic-card-header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; }
+.bhw-basic-card-header h3 { margin:0; font-size:16px; font-weight:750; }
+.bhw-basic-summary-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px 28px; }
+.bhw-basic-summary-grid > div { min-width:0; }
+.bhw-basic-summary-grid span { display:block; font-size:12px; color:var(--text-secondary); margin-bottom:5px; }
+.bhw-basic-summary-grid strong { display:block; font-size:14px; font-weight:650; overflow-wrap:anywhere; }
+.bhw-basic-fields { border:0; margin:0; padding:0; min-width:0; }
+.bhw-basic-fields[hidden], .bhw-basic-summary-grid[hidden] { display:none !important; }
+@media (max-width:650px) { .bhw-basic-summary-grid { grid-template-columns:1fr; gap:14px; } }
