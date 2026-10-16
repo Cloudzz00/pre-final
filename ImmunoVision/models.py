@@ -52,6 +52,13 @@ class User(UserMixin, db.Model):
     # last time this user looked," not "created after some timestamp."
     last_seen_notification_titles = db.Column(db.Text, nullable=True)
 
+    # Which notification bell categories this user wants to see. notify_email
+    # has no delivery channel behind it yet (the app never sends email) - it's
+    # stored so the preference survives, not because anything reads it today.
+    notify_email = db.Column(db.Boolean, default=True, nullable=False)
+    notify_at_risk = db.Column(db.Boolean, default=True, nullable=False)
+    notify_stock = db.Column(db.Boolean, default=True, nullable=False)
+
     # All barangays this BHW is assigned to (a single-barangay BHW just has one).
     # barangay_id above is always one of these - the one she's currently working in.
     assigned_barangays = db.relationship("Barangay", secondary=user_barangays,

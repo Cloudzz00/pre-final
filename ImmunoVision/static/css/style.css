@@ -624,7 +624,7 @@ table.data-table tbody tr:hover { background: var(--slate-bg-2); }
 .settings-row .ic { width: 36px; height: 36px; border-radius: 10px; background: var(--slate-bg); display: flex; align-items: center; justify-content: center; color: var(--text-secondary); }
 .settings-row .label { font-weight: 600; font-size: 13.5px; }
 .settings-row .val { font-size: 12.5px; color: var(--text-secondary); }
-.toggle { position: relative; width: 42px; height: 24px; border-radius: 999px; background: var(--border-strong); flex-shrink: 0; cursor: pointer; }
+.toggle { position: relative; width: 42px; height: 24px; border-radius: 999px; background: var(--border-strong); flex-shrink: 0; cursor: pointer; border: 0; padding: 0; appearance: none; -webkit-appearance: none; }
 .toggle.on { background: var(--primary); }
 .toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: left .15s; }
 .toggle.on::after { left: 21px; }

@@ -1341,6 +1341,15 @@ def get_notifications(role, barangay_id=None):
                   "title": "Monthly Report Due",
                   "body": f"The {date.today().strftime('%B %Y')} monthly immunization report is due at month end.",
                   "time_label": "This week", "unread": False})
+
+    # Respect this user's notification preferences from Settings. Stock
+    # Alerts off hides both Stock and Expiry (both are inventory concerns);
+    # At-Risk Alerts off hides the Risk category. Other categories (Request,
+    # System) aren't covered by a toggle and always show.
+    if not current_user.notify_stock:
+        notes = [n for n in notes if n["category"] not in ("Stock", "Expiry")]
+    if not current_user.notify_at_risk:
+        notes = [n for n in notes if n["category"] != "Risk"]
     return _apply_seen_state(notes, current_user)
 
 
@@ -1779,6 +1788,52 @@ def logout():
     log_activity("Logged out")
     logout_user()
     return redirect(url_for("auth.login"))
+
+
+ROLE_SETTINGS = {"ictmo": "ictmo.settings", "admin": "admin.settings", "rhu": "rhu.settings", "bhw": "bhw.settings"}
+
+
+@auth_bp.route("/account/profile", methods=["POST"])
+@login_required
+def update_profile():
+    full_name = request.form.get("full_name", "").strip()
+    if full_name:
+        current_user.full_name = full_name
+        db.session.commit()
+        log_activity("Updated profile")
+        flash("Profile updated.", "success")
+    else:
+        flash("Name cannot be empty.", "error")
+    return redirect(url_for(ROLE_SETTINGS[current_user.role]))
+
+
+@auth_bp.route("/account/password", methods=["POST"])
+@login_required
+def update_password():
+    current_password = request.form.get("current_password", "")
+    new_password = request.form.get("new_password", "")
+    confirm_password = request.form.get("confirm_password", "")
+    if not current_user.check_password(current_password):
+        flash("Current password is incorrect.", "error")
+    elif len(new_password) < 8:
+        flash("New password must be at least 8 characters.", "error")
+    elif new_password != confirm_password:
+        flash("New password and confirmation don't match.", "error")
+    else:
+        current_user.set_password(new_password)
+        db.session.commit()
+        log_activity("Changed password")
+        flash("Password updated.", "success")
+    return redirect(url_for(ROLE_SETTINGS[current_user.role]))
+
+
+@auth_bp.route("/account/notifications/<pref>", methods=["POST"])
+@login_required
+def toggle_notification(pref):
+    column = {"email": "notify_email", "at_risk": "notify_at_risk", "stock": "notify_stock"}.get(pref) or abort(404)
+    setattr(current_user, column, not getattr(current_user, column))
+    db.session.commit()
+    return redirect(url_for(ROLE_SETTINGS[current_user.role]))
 
 
 # ---------------------------------------------------------------------------

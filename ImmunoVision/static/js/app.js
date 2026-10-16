@@ -1,4 +1,4 @@
-// Shared UI behavior: sidebar collapse, modals, pill-tabs, toggles.
+// Shared UI behavior: sidebar collapse, modals, pill-tabs.
 (function () {
   const sidebar = document.getElementById("sidebar");
   const toggleBtn = document.getElementById("sidebarToggle");
@@ -109,11 +109,6 @@
         }
       }
     }
-  });
-
-  // Toggle switches: [data-toggle] flips .on class (visual only unless data-toggle-name present -> posts to endpoint)
-  document.querySelectorAll(".toggle[data-toggle]").forEach((t) => {
-    t.addEventListener("click", () => t.classList.toggle("on"));
   });
 
   // Generic confirm-on-click for destructive actions
