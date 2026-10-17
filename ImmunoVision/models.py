@@ -40,7 +40,7 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(64), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     full_name = db.Column(db.String(150), nullable=False)
-    role = db.Column(db.String(20), nullable=False)  # ictmo | admin | rhu | bhw
+    role = db.Column(db.String(20), nullable=False)  # admin | rhu | bhw
     barangay_id = db.Column(db.Integer, db.ForeignKey("barangays.id"), nullable=True)
     is_active_flag = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -60,9 +60,10 @@ class User(UserMixin, db.Model):
     notify_stock = db.Column(db.Boolean, default=True, nullable=False)
 
     # Set when this user submits "Forgot password?" on the login page, cleared
-    # once ICTMO resets their password. There's no email/SMS in this app, so
-    # this is what stands in for a reset token: it just flags the account for
-    # an administrator to act on, surfaced via their notification bell.
+    # once the RHU administrator resets their password. There's no email/SMS
+    # in this app, so this is what stands in for a reset token: it just flags
+    # the account for an administrator to act on, surfaced via their
+    # notification bell.
     password_reset_requested_at = db.Column(db.DateTime, nullable=True)
 
     # All barangays this BHW is assigned to (a single-barangay BHW just has one).
@@ -82,7 +83,7 @@ class User(UserMixin, db.Model):
 
     @property
     def role_label(self):
-        return {"ictmo": "ICTMO Administrator", "admin": "RHU Administrator", "rhu": "RHU Personnel",
+        return {"admin": "RHU Administrator", "rhu": "RHU Personnel",
                 "bhw": "Barangay Health Worker"}.get(self.role, self.role)
 
 

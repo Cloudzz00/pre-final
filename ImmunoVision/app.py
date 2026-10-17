@@ -60,7 +60,6 @@ def create_app():
     app.register_blueprint(rhu_bp)
     app.register_blueprint(bhw_bp)
     app.register_blueprint(admin_bp)
-    app.register_blueprint(ictmo_bp)
     app.register_blueprint(api_bp)
 
     @login_manager.user_loader
@@ -148,15 +147,12 @@ BHW_NAV = [
 ]
 ADMIN_NAV = [
     ("dashboard", "home", "Dashboard", "admin.dashboard"),
+    ("users", "users", "User Management", "admin.users"),
     ("assign", "map-pin", "Assign Barangay", "admin.assign_barangay"),
     ("campaigns", "syringe", "Campaigns", "admin.campaigns"),
     ("map", "map", "Municipality Map", "admin.municipality_map"),
     ("vaccines", "package", "Vaccine Alerts", "admin.vaccine_alerts"),
-]
-ICTMO_NAV = [
-    ("dashboard", "home", "Dashboard", "ictmo.dashboard"),
-    ("users", "users", "User Management", "ictmo.users"),
-    ("logs", "history", "Activity Logs", "ictmo.logs"),
+    ("logs", "history", "Activity Logs", "admin.logs"),
 ]
 
 
@@ -1355,14 +1351,12 @@ def get_notifications(role, barangay_id=None):
 
 
 def admin_notifications():
-    """Staffing-coverage alerts for the RHU administrator.
-
-    Deliberately not vaccine stock or clinical risk - those belong to RHU and
-    BHW users who can act on them. Account-level alerts (disabled accounts,
-    stale logins) moved to the ICTMO administrator along with User Management
-    itself; this keeps only the staffing question the RHU administrator still
-    owns: is every barangay covered by a health worker."""
+    """Staffing, coverage, and account-governance alerts for the RHU
+    Administrator - barangay staffing, vaccine stock policy, and municipal
+    oversight, plus account provisioning and audit oversight all live under
+    this one role."""
     notes = []
+    today = date.today()
     users = User.query.all()
 
     unassigned = [u for u in users if u.role == "bhw" and not u.barangay_id]
@@ -1385,19 +1379,6 @@ def admin_notifications():
                       "time_label": "Ongoing", "unread": True,
                       "url": url_for("admin.assign_barangay")})
 
-    return _apply_seen_state(notes, current_user)
-
-
-def ictmo_notifications():
-    """Account and system-governance alerts for the ICTMO administrator.
-
-    This is the identity/access half of what used to be admin_notifications():
-    accounts the ICTMO provisions and must keep an eye on, not the RHU's
-    day-to-day staffing-coverage question (that stays on the RHU admin side)."""
-    notes = []
-    today = date.today()
-    users = User.query.all()
-
     disabled = [u for u in users if not u.is_active_flag]
     if disabled:
         notes.append({"category": "Accounts", "severity": "warning", "icon": "x-circle", "icon_bg": "bg-orange",
@@ -1406,7 +1387,7 @@ def ictmo_notifications():
                               + ", ".join(u.full_name for u in disabled[:4])
                               + (f" and {len(disabled) - 4} more." if len(disabled) > 4 else "."),
                       "time_label": "Ongoing", "unread": True,
-                      "url": url_for("ictmo.users")})
+                      "url": url_for("admin.users")})
 
     never = [u for u in users if u.is_active_flag and not u.last_login_at]
     if never:
@@ -1416,7 +1397,7 @@ def ictmo_notifications():
                               + ", ".join(u.full_name for u in never[:4])
                               + (f" and {len(never) - 4} more." if len(never) > 4 else "."),
                       "time_label": "Ongoing", "unread": True,
-                      "url": url_for("ictmo.users")})
+                      "url": url_for("admin.users")})
 
     stale = [u for u in users if u.is_active_flag and u.last_login_at
              and (today - u.last_login_at.date()).days > 30]
@@ -1427,7 +1408,7 @@ def ictmo_notifications():
                               + ", ".join(u.full_name for u in stale[:4])
                               + (f" and {len(stale) - 4} more." if len(stale) > 4 else "."),
                       "time_label": "Ongoing", "unread": False,
-                      "url": url_for("ictmo.users")})
+                      "url": url_for("admin.users")})
 
     reset_requests = [u for u in users if u.password_reset_requested_at]
     if reset_requests:
@@ -1437,7 +1418,7 @@ def ictmo_notifications():
                               + ", ".join(u.full_name for u in reset_requests[:4])
                               + (f" and {len(reset_requests) - 4} more." if len(reset_requests) > 4 else "."),
                       "time_label": "Action needed", "unread": True,
-                      "url": url_for("ictmo.users")})
+                      "url": url_for("admin.users")})
 
     return _apply_seen_state(notes, current_user)
 
@@ -1688,7 +1669,7 @@ def _due_calendar(children, vt_lookup, days_behind=90, days_ahead=60):
 # ---------------------------------------------------------------------------
 
 auth_bp = Blueprint("auth", __name__)
-ROLE_HOME = {"ictmo": "ictmo.dashboard", "admin": "admin.dashboard", "rhu": "rhu.dashboard", "bhw": "bhw.dashboard"}
+ROLE_HOME = {"admin": "admin.dashboard", "rhu": "rhu.dashboard", "bhw": "bhw.dashboard"}
 
 
 @auth_bp.route("/")
@@ -1773,7 +1754,7 @@ def login():
         # The account's own role decides where it lands — the user never picks it.
         if user and user.check_password(password):
             if not user.is_active_flag:
-                flash("This account has been disabled. Contact your ICTMO administrator.", "error")
+                flash("This account has been disabled. Contact your RHU administrator.", "error")
                 return render_template("login.html")
             login_user(user)
             user.last_login_at = datetime.utcnow()
@@ -1787,9 +1768,10 @@ def login():
 @auth_bp.route("/forgot-password", methods=["GET", "POST"])
 def forgot_password():
     """There's no email or SMS in this app, so this can't be a reset-link
-    flow. Instead it flags the account for ICTMO (who already provisions and
-    manages every account) to reset directly - they relay the new password
-    to the user offline, the way a small office actually handles this."""
+    flow. Instead it flags the account for the RHU administrator (who already
+    provisions and manages every account) to reset directly - they relay the
+    new password to the user offline, the way a small office actually
+    handles this."""
     if current_user.is_authenticated:
         return redirect(url_for(ROLE_HOME[current_user.role]))
     if request.method == "POST":
@@ -1800,7 +1782,7 @@ def forgot_password():
             db.session.commit()
         # Same message either way - confirming or denying a username exists
         # is an account-enumeration leak.
-        flash("If that username exists, your ICTMO administrator has been notified and will reset your password.", "success")
+        flash("If that username exists, your RHU administrator has been notified and will reset your password.", "success")
         return redirect(url_for("auth.login"))
     return render_template("forgot_password.html")
 
@@ -1813,7 +1795,7 @@ def logout():
     return redirect(url_for("auth.login"))
 
 
-ROLE_SETTINGS = {"ictmo": "ictmo.settings", "admin": "admin.settings", "rhu": "rhu.settings", "bhw": "bhw.settings"}
+ROLE_SETTINGS = {"admin": "admin.settings", "rhu": "rhu.settings", "bhw": "bhw.settings"}
 
 
 @auth_bp.route("/account/profile", methods=["POST"])
@@ -2830,11 +2812,11 @@ def _admin_guard():
 
 @admin_bp.route("/dashboard")
 def dashboard():
-    # Municipality-wide oversight. AGGREGATES ONLY - counts and percentages per
-    # barangay, never child-level records. The RHU administrator oversees
-    # municipal performance and barangay staffing, but has no need to see
-    # individual children or manage accounts (that moved to ICTMO), so the
-    # minimum necessary data is exposed here.
+    # Municipality-wide clinical oversight is AGGREGATES ONLY - counts and
+    # percentages per barangay, never child-level records; the RHU
+    # administrator has no need to see individual children. Account
+    # governance (user stats, recent activity) is included below in full,
+    # since that's this role's own data to manage, not clinical data.
     # Deliberately the same functions the RHU dashboard and Coverage Analytics
     # use, so every live view of municipal performance reports identical
     # figures. (report_figures() is reserved for the Reports page, which is
@@ -2879,19 +2861,29 @@ def dashboard():
     # contradict each other, and yearly coverage can be computed for real.
     trend = yearly_trend()
 
-    # Barangay staffing: the one thing left in the right rail once accounts
-    # moved to ICTMO. Same source the Coverage notification uses, summarised
-    # here rather than making the administrator visit Assign Barangay to find
-    # out whether anything needs attention.
-    all_users = User.query.filter_by(role="bhw").all()
-    covered = {u.barangay_id for u in all_users if u.barangay_id}
+    # Barangay staffing: the Assign Barangay question, summarised here rather
+    # than making the administrator visit that page to find out whether
+    # anything needs attention.
+    bhw_users = User.query.filter_by(role="bhw").all()
+    covered = {u.barangay_id for u in bhw_users if u.barangay_id}
     all_barangays = Barangay.query.order_by(Barangay.name).all()
     staffing = {
         "covered": sum(1 for b in all_barangays if b.id in covered),
         "total": len(all_barangays),
         "uncovered": [b.name for b in all_barangays if b.id not in covered],
-        "unassigned_bhws": [u.full_name for u in all_users if not u.barangay_id],
+        "unassigned_bhws": [u.full_name for u in bhw_users if not u.barangay_id],
     }
+
+    # Account governance: who has access, and what they've been doing with it.
+    all_users = User.query.all()
+    user_stats = {"total": len(all_users), "admin": sum(1 for u in all_users if u.role == "admin"),
+                  "rhu": sum(1 for u in all_users if u.role == "rhu"), "bhw": sum(1 for u in all_users if u.role == "bhw"),
+                  "active": sum(1 for u in all_users if u.is_active_flag),
+                  "disabled": sum(1 for u in all_users if not u.is_active_flag),
+                  "logins_today": sum(1 for u in all_users if u.last_login_at and u.last_login_at.date() == datetime.utcnow().date())}
+    role_dist = {"admin": user_stats["admin"], "rhu": user_stats["rhu"], "bhw": user_stats["bhw"]}
+    recent = ActivityLog.query.order_by(ActivityLog.created_at.desc()).limit(7).all()
+    recent_activity = [{"log": r, "category": log_category(r.action)} for r in recent]
 
     return render_template("admin_dashboard.html", **_admin_ctx(
         "dashboard", page_title="Dashboard",
@@ -2904,6 +2896,7 @@ def dashboard():
         as_of=as_of, period_label=period_label, period_clamped=clamped,
         barangays=Barangay.query.order_by(Barangay.name).all(),
         selected_barangay=selected, selected_barangay_id=barangay_id,
+        stats=user_stats, role_dist=role_dist, users=all_users, recent_activity=recent_activity,
     ))
 
 
@@ -3123,67 +3116,14 @@ def update_warning_levels():
     return redirect(url_for("admin.vaccine_alerts"))
 
 
-# ---------------------------------------------------------------------------
-# ICTMO blueprint
-# ---------------------------------------------------------------------------
-# The municipality's Information and Communications Technology Management
-# Office/Officer: a real LGU office separate from the RHU, holding identity
-# and access governance (user accounts, audit trail) for every department it
-# serves. Splitting this off the RHU administrator means account provisioning
-# and security auditing is owned by the office actually equipped to judge it,
-# while the RHU administrator keeps only health-program decisions (barangay
-# staffing, stock policy, municipal oversight). ICTMO never sees child or
-# clinical records - it administers the system, not the program.
-
-ictmo_bp = Blueprint("ictmo", __name__, url_prefix="/ictmo")
-
-
-def _ictmo_ctx(active, **extra):
-    notes = ictmo_notifications()
-    return dict(role="ictmo", nav_items=build_nav(ICTMO_NAV), active=active, current_user=current_user,
-                settings_url=url_for("ictmo.settings"),
-                unread_count=sum(1 for n in notes if n["unread"]),
-                notif_url=url_for("ictmo.notifications"), **extra)
-
-
-@ictmo_bp.before_request
-@login_required
-@role_required("ictmo")
-def _ictmo_guard():
-    pass
-
-
-@ictmo_bp.route("/dashboard")
-def dashboard():
-    users = User.query.all()
-    stats = {"total": len(users), "ictmo": sum(1 for u in users if u.role == "ictmo"),
-             "admin": sum(1 for u in users if u.role == "admin"),
-             "rhu": sum(1 for u in users if u.role == "rhu"), "bhw": sum(1 for u in users if u.role == "bhw"),
-             "active": sum(1 for u in users if u.is_active_flag),
-             "disabled": sum(1 for u in users if not u.is_active_flag),
-             "logins_today": sum(1 for u in users if u.last_login_at and u.last_login_at.date() == datetime.utcnow().date())}
-    role_dist = {"admin": stats["admin"], "rhu": stats["rhu"], "bhw": stats["bhw"], "ictmo": stats["ictmo"]}
-
-    # Account oversight is ICTMO's job, same reasoning the RHU admin dashboard
-    # used to apply to the whole audit trail: summarise Activity Logs here
-    # rather than making this page a second copy of it.
-    recent = (ActivityLog.query.order_by(ActivityLog.created_at.desc()).limit(7).all())
-    recent_activity = [{"log": r, "category": log_category(r.action)} for r in recent]
-
-    return render_template("ictmo_dashboard.html", **_ictmo_ctx(
-        "dashboard", page_title="Dashboard", stats=stats, role_dist=role_dist, users=users,
-        recent_activity=recent_activity, now=datetime.now(),
-    ))
-
-
-@ictmo_bp.route("/users", methods=["GET", "POST"])
+@admin_bp.route("/users", methods=["GET", "POST"])
 def users():
     if request.method == "POST":
         role = request.form.get("role")
         username = request.form.get("username").strip()
         if User.query.filter_by(username=username).first():
             flash("Username already exists.", "error")
-            return redirect(url_for("ictmo.users"))
+            return redirect(url_for("admin.users"))
         u = User(username=username, full_name=f"{request.form.get('first_name')} {request.form.get('last_name')}".strip(),
                  role=role, barangay_id=(int(request.form.get("barangay_id"))
                                          if role == "bhw" and request.form.get("barangay_id") else None))
@@ -3195,19 +3135,19 @@ def users():
             db.session.commit()
         log_activity(f"Created user account: {u.full_name} ({u.role_label})")
         flash(f"User {u.full_name} created.", "success")
-        return redirect(url_for("ictmo.users"))
+        return redirect(url_for("admin.users"))
 
     all_users = User.query.order_by(User.id).all()
     stats = {"total": len(all_users), "active": sum(1 for u in all_users if u.is_active_flag),
              "bhw": sum(1 for u in all_users if u.role == "bhw"),
              "rhu": sum(1 for u in all_users if u.role in ("rhu", "admin"))}
-    return render_template("ictmo_users.html", **_ictmo_ctx(
+    return render_template("admin_users.html", **_admin_ctx(
         "users", page_title="User Management", users=all_users, stats=stats,
         barangays=Barangay.query.order_by(Barangay.name).all(),
     ))
 
 
-@ictmo_bp.route("/users/<int:user_id>/reset-password", methods=["POST"])
+@admin_bp.route("/users/<int:user_id>/reset-password", methods=["POST"])
 def reset_user_password(user_id):
     u = db.session.get(User, user_id) or abort(404)
     temp_password = secrets.token_urlsafe(6)
@@ -3217,10 +3157,10 @@ def reset_user_password(user_id):
     log_activity(f"Reset password for user account: {u.username}")
     flash(f"New temporary password for {u.full_name} ({u.username}): {temp_password} "
           "— share this with them directly now, it won't be shown again.", "success")
-    return redirect(url_for("ictmo.users"))
+    return redirect(url_for("admin.users"))
 
 
-@ictmo_bp.route("/users/<int:user_id>/toggle", methods=["POST"])
+@admin_bp.route("/users/<int:user_id>/toggle", methods=["POST"])
 def toggle_user(user_id):
     u = db.session.get(User, user_id) or abort(404)
     if u.id == current_user.id:
@@ -3229,10 +3169,10 @@ def toggle_user(user_id):
     db.session.commit()
     log_activity(f"{'Enabled' if u.is_active_flag else 'Disabled'} user account: {u.username}")
     flash(f"User {u.username} {'enabled' if u.is_active_flag else 'disabled'}.", "success")
-    return redirect(url_for("ictmo.users"))
+    return redirect(url_for("admin.users"))
 
 
-@ictmo_bp.route("/logs")
+@admin_bp.route("/logs")
 def logs():
     """Audit trail. Filterable by category and by user account, and the two
     combine - ?user=7&type=Record is "what this person did to child records"."""
@@ -3263,7 +3203,7 @@ def logs():
     row_offset = (page - 1) * per_page
     page_entries = entries[row_offset:row_offset + per_page]
 
-    return render_template("ictmo_logs.html", **_ictmo_ctx(
+    return render_template("admin_logs.html", **_admin_ctx(
         "logs", page_title="Activity Logs", entries=page_entries, type_filter=type_filter,
         categories=["All"] + [name for name, _ in LOG_CATEGORIES],
         users=User.query.order_by(User.full_name).all(),
@@ -3271,19 +3211,6 @@ def logs():
         page=page, total_pages=total_pages, total_entries=total_entries,
         per_page=per_page, row_offset=row_offset,
     ))
-
-
-@ictmo_bp.route("/notifications")
-def notifications():
-    notes = ictmo_notifications()
-    ctx = _ictmo_ctx("notifications", page_title="Notifications", notes=notes)
-    _mark_notifications_seen(notes, current_user)
-    return render_template("admin_notifications.html", **ctx)
-
-
-@ictmo_bp.route("/settings")
-def settings():
-    return render_template("admin_settings.html", **_ictmo_ctx("settings", page_title="Settings"))
 
 
 # ---------------------------------------------------------------------------
