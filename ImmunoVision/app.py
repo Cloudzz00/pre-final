@@ -916,6 +916,10 @@ def _child_vaccine_severity(c, antigen_of, records, vt_lookup):
             "missed_codes": missed_codes, "missed_antigens": {antigen_of.get(code) for code in missed_codes},
             "unprotected": dp.diseases_for_missed(missed_codes),
             "next_dose": _next_dose_for(c, vt_lookup),
+            # Past the Continuation Predictor's first-year window, a missed
+            # dose isn't "about to fall off track" anymore - it's a DOH
+            # catch-up case, which is a different kind of visit.
+            "is_catch_up": c.age_in_days > CONTINUATION_WINDOW_DAYS,
             "recommendation": "Home Visit" if tier == "Visit Urgently" else "Schedule Visit"}
 
 
@@ -2587,9 +2591,14 @@ def edit_child(child_id):
 def vaccine_gaps():
     bid = current_user.barangay_id
     vaccine_filter = request.args.get("vaccine", "")
+    scope = request.args.get("scope", "")
+    rows = vaccine_risk_table(bid, vaccine_code=vaccine_filter or None)
+    catchup_count = sum(1 for r in rows if r["is_catch_up"])
+    if scope == "catchup":
+        rows = [r for r in rows if r["is_catch_up"]]
     return render_template("bhw_vaccine_gaps.html", **_bhw_ctx(
         "vaccine_gaps", page_title="Vaccine Gaps", today=date.today(), dist=vaccine_risk_distribution(bid),
-        at_risk_rows=vaccine_risk_table(bid, vaccine_code=vaccine_filter or None),
+        at_risk_rows=rows, catchup_count=catchup_count, scope=scope,
         vaccine_filter=vaccine_filter, antigen_options=dp.VACCINE_ANTIGENS,
     ))
 
