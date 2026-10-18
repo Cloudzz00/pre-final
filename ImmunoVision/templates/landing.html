@@ -97,10 +97,22 @@
    sit below it. */
 /* The map sits on a light panel: its polygons and borders are drawn for a light
    background, and dropping them straight onto the gradient reads as pasted on. */
+.lp-mapcard { position: relative; }
 .lp-mapcard svg {
   width: 100%; height: auto; display: block; max-height: 380px;
   filter: drop-shadow(0 8px 24px rgba(3,10,26,.45));
 }
+.lp-map-shape { cursor: pointer; transition: filter .12s ease, stroke-width .12s ease; }
+.lp-map-shape:hover, .lp-map-shape:focus-visible { filter: brightness(1.18); stroke-width: 5; outline: none; }
+.lp-map-tooltip {
+  position: absolute; left: 0; top: 0; z-index: 5; pointer-events: none;
+  background: var(--navy-950); color: #fff; font-size: 12.5px; font-weight: 700;
+  padding: 7px 12px; border-radius: 8px; white-space: nowrap;
+  box-shadow: 0 6px 18px rgba(3,10,26,.4);
+  opacity: 0; transform: translate(-50%, calc(-100% - 12px));
+  transition: opacity .1s ease;
+}
+.lp-map-tooltip.is-visible { opacity: 1; }
 
 /* ---- sections ---- */
 .lp-section { padding: 76px 0; }
@@ -367,12 +379,14 @@
              aria-label="Map of San Jacinto's {{ barangay_count }} barangays shaded by immunization coverage.">
           {% set fills = {'green': '#22c55e', 'amber': '#f59e0b', 'red': '#ef4444', 'none': '#cbd5e1'} %}
           {% for b in map_shapes %}
-          <path d="{{ b.d }}" fill="{{ fills.get(b.color, '#94a3b8') }}" fill-opacity=".9"
-                stroke="rgba(255,255,255,.55)" stroke-width="3" stroke-linejoin="round">
+          <path class="lp-map-shape" d="{{ b.d }}" fill="{{ fills.get(b.color, '#94a3b8') }}" fill-opacity=".9"
+                stroke="rgba(255,255,255,.55)" stroke-width="3" stroke-linejoin="round"
+                data-name="{{ b.barangay }}" data-coverage="{{ b.coverage }}" data-dot="{{ fills.get(b.color, '#94a3b8') }}">
             <title>{{ b.barangay }}: {{ b.coverage }}%</title>
           </path>
           {% endfor %}
         </svg>
+        <div class="lp-map-tooltip" id="lpMapTooltip"></div>
       </div>
 
 
@@ -733,6 +747,25 @@
   root.addEventListener('mouseleave', restart);
   go(0);
   restart();
+})();
+
+(function () {
+  var card = document.querySelector('.lp-mapcard');
+  var tooltip = document.getElementById('lpMapTooltip');
+  if (!card || !tooltip) return;
+  card.querySelectorAll('.lp-map-shape').forEach(function (shape) {
+    shape.addEventListener('mousemove', function (e) {
+      var rect = card.getBoundingClientRect();
+      tooltip.style.left = (e.clientX - rect.left) + 'px';
+      tooltip.style.top = (e.clientY - rect.top) + 'px';
+      tooltip.innerHTML = shape.dataset.name + ' &middot; ' +
+        '<span class="pct" style="color:' + shape.dataset.dot + '">' + shape.dataset.coverage + '%</span>';
+      tooltip.classList.add('is-visible');
+    });
+    shape.addEventListener('mouseleave', function () {
+      tooltip.classList.remove('is-visible');
+    });
+  });
 })();
 </script>
 {% endblock %}
