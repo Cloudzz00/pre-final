@@ -68,8 +68,7 @@
         <button type="submit" class="btn btn-primary">{{ icon('refresh', 14) }} Update</button>
       </form>
       <div class="report-actions">
-        <button type="button" class="btn btn-primary" onclick="window.print()">{{ icon('printer', 14) }} Print</button>
-        <button type="button" class="btn btn-outline" onclick="window.print()">{{ icon('file-text', 14) }} PDF</button>
+        <button type="button" class="btn btn-primary" onclick="window.print()">{{ icon('printer', 14) }} Print / Save as PDF</button>
         <a class="btn btn-outline" href="{{ url_for('rhu.export_report_csv', barangay_id=selected_barangay, period=selected_period) }}">{{ icon('download', 14) }} Excel</a>
       </div>
     </div>
