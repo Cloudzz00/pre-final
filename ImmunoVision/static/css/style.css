@@ -483,6 +483,10 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
   opacity: 0.86;
   z-index: 0;
 }
+/* BHW's teal was reading as a flat green block over the photo; ease it back
+   so the photo carries more of the banner and the tint just colors it. */
+body[data-role="bhw"] .banner::after { opacity: 0.5; }
+body[data-role="bhw"] .banner::before { filter: brightness(0.88); }
 .banner > * { position: relative; z-index: 1; }
 .banner h2 { margin: 0 0 4px; font-size: 22px; font-weight: 800; }
 .banner p { margin: 0; opacity: 0.9; font-size: 13.5px; }
