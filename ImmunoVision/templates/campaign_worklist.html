@@ -43,7 +43,7 @@
           {% if barangays %}<td>{{ r.child.barangay.name }}</td>{% endif %}
           <td>{{ r.child.age_display }}</td>
           <td>
-            <form method="post" action="{{ url_for((role ~ '.campaign_record_dose'), campaign_id=campaign.id, child_id=r.child.id) }}" style="display:flex;align-items:center;gap:8px;">
+            <form method="post" action="{{ url_for((role ~ '.campaign_record_dose'), campaign_id=campaign.id, child_id=r.child.id) }}" style="display:flex;align-items:center;justify-content:flex-end;gap:8px;">
               <input type="hidden" name="barangay_id" value="{{ selected_barangay_id or '' }}">
               <input type="hidden" name="pending" value="{{ '1' if pending_only else '' }}">
               <input type="hidden" name="q" value="{{ search }}">
