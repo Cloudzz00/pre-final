@@ -475,7 +475,7 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
   position: absolute;
   inset: 0;
   background: linear-gradient(120deg, var(--role-accent), var(--role-accent-dark));
-  opacity: 0.86;
+  opacity: 0.55;
   z-index: 0;
 }
 .banner > * { position: relative; z-index: 1; }
