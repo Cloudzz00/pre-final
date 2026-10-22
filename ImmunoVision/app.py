@@ -9,11 +9,9 @@ engineering, and the ML model live in data_processor.py.
 Run: python app.py
 """
 import csv
-import hashlib
 import json
 import io
 import os
-import random
 import re
 import secrets
 from collections import Counter, defaultdict
@@ -702,11 +700,10 @@ TREND_MIN_COHORT = 20
 
 
 def yearly_trend(barangay_id=None):
-    """Coverage at the end of each year, computed from actual dose dates.
-
-    Unlike monthly_trend() this is real, not simulated: coverage as at 31
-    December of each year the data covers, using the same point-in-time
-    calculation as the Reports page. The last point is capped at today."""
+    """Coverage at the end of each year, computed from actual dose dates:
+    coverage as at 31 December of each year the data covers, using the same
+    point-in-time calculation as the Reports page. The last point is capped
+    at today."""
     today = date.today()
     out = []
     for y in sorted(data_years()):
@@ -722,31 +719,45 @@ def yearly_trend(barangay_id=None):
     return out
 
 
-def monthly_trend(barangay_id=None, current_rate=None):
-    """SIMULATED 12-month trend.
+def monthly_doses_administered(barangay_id=None, months=12, as_of=None):
+    """Real count of vaccine doses actually administered per calendar month,
+    for the `months` months ending at as_of (oldest first; defaults to the
+    12 months up to today).
 
-    The database holds a current snapshot, not month-by-month history, so this
-    cannot be measured - it is generated from a fixed seed to give the chart a
-    plausible shape. Templates label it as simulated; do not present it as
-    recorded data. Once coverage is snapshotted monthly this can be replaced
-    with a real series."""
-    if current_rate is None:
-        current_rate = dashboard_stats(barangay_id)["coverage_rate"]
-    seed = int(hashlib.md5(f"trend-{barangay_id or 'all'}".encode()).hexdigest(), 16) % (2**32)
-    rng = random.Random(seed)
-    today = date.today()
-    months = []
-    for i in range(11, -1, -1):
-        m = (today.month - i - 1) % 12 + 1
-        y = today.year - ((today.month - i - 1) // 12 if today.month - i - 1 < 0 else 0)
-        months.append(date(y, m, 1).strftime("%b"))
-    start = max(50.0, current_rate - rng.uniform(10, 18))
-    values = []
-    for i in range(12):
-        base = start + (current_rate - start) * (i / 11)
-        values.append(round(max(0, min(100, base + rng.uniform(-2.5, 2.5))), 1))
-    values[-1] = current_rate
-    return list(zip(months, values))
+    A rate (coverage %) gets noisy at monthly/per-barangay granularity --
+    that is exactly why yearly_trend() above has to drop small cohorts. A
+    raw count has no denominator to get noisy, so it stays meaningful even
+    for one small barangay in one month. Counts every VaccinationRecord
+    with a recorded date_administered, core and optional doses alike.
+
+    Takes as_of so this tracks whatever Period/Year is selected on the
+    Reports page, rather than always showing the 12 months up to today
+    regardless of what historical snapshot is being viewed."""
+    as_of = as_of or date.today()
+    y, m = as_of.year, as_of.month
+    window = []
+    for _ in range(months):
+        window.append((y, m))
+        m -= 1
+        if m == 0:
+            m, y = 12, y - 1
+    window.reverse()
+    start = date(window[0][0], window[0][1], 1)
+
+    q = db.session.query(VaccinationRecord.date_administered).join(
+        Child, VaccinationRecord.child_id == Child.id
+    ).filter(
+        VaccinationRecord.date_administered.isnot(None),
+        VaccinationRecord.date_administered >= start,
+        VaccinationRecord.date_administered <= as_of,
+    )
+    if barangay_id:
+        q = q.filter(Child.barangay_id == barangay_id)
+
+    counts = Counter()
+    for (d,) in q.all():
+        counts[(d.year, d.month)] += 1
+    return [(date(y, m, 1).strftime("%b %Y"), counts.get((y, m), 0)) for y, m in window]
 
 
 def risk_distribution(barangay_id=None, max_age_days=None):
@@ -2226,6 +2237,7 @@ def reports():
         extra["barangay_obj"] = barangay_obj
     elif report_type == "monthly":
         extra["trend"] = yearly_trend(barangay_id)
+        extra["doses_by_month"] = monthly_doses_administered(barangay_id, as_of=as_of)
 
     return render_template("rhu_reports.html", **_rhu_ctx(
         "reports", page_title="Reports", report_type=report_type,
@@ -2713,6 +2725,7 @@ def reports():
         "reports", page_title="Reports", report_type=request.args.get("type", "coverage"),
         stats=fig, by_vaccine=report_by_vaccine(bid, as_of), generated_at=datetime.now(),
         at_risk_rows=vaccine_risk_table(bid, limit=50),
+        doses_by_month=monthly_doses_administered(bid, as_of=as_of),
         periods=month_options(), selected_period=period,
         years=data_years(), selected_year=year, as_of=as_of,
     ))

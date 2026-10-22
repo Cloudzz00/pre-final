@@ -303,6 +303,14 @@
       <div class="data-note">Not enough prior years of data in {{ scope_name }} to chart a trend yet.</div>
       {% endif %}
 
+      <div class="chart-panel" style="margin-top:16px;">
+        <div class="report-section-head" style="margin-bottom:8px;margin-top:0;">
+          <div class="report-section-title" style="font-size:14px;">Doses Administered, 12 Months to {{ as_of.strftime('%b %Y') }}</div>
+          <div class="report-target">{{ doses_by_month|sum(attribute=1) }} total</div>
+        </div>
+        <div class="chart-box"><canvas id="dosesChart"></canvas></div>
+      </div>
+
     {# ── 5. Coverage Report (default) ── #}
     {% else %}
       <div class="report-doc-head">
@@ -396,15 +404,24 @@ new Chart(document.getElementById('reportChart'), {
   options: { plugins: { legend: { display: false } }, scales: { y: { max: 100 } } }
 });
 </script>
-{% elif report_type == 'monthly' and trend|length > 1 %}
+{% elif report_type == 'monthly' %}
 <script src="{{ url_for('static', filename='js/vendor/chart.umd.js') }}"></script>
 <script>Chart.defaults.maintainAspectRatio = false; Chart.defaults.responsive = true;
+{% if trend|length > 1 %}
 new Chart(document.getElementById('reportChart'), {
   type: 'line',
   data: { labels: [{% for label, rate, n in trend %}{{ label|tojson }},{% endfor %}],
     datasets: [{ data: [{% for label, rate, n in trend %}{{ rate }},{% endfor %}],
       borderColor: '#14b8a6', backgroundColor: 'rgba(20,184,166,.12)', fill: true, tension: .3 }] },
   options: { plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' } } } }
+});
+{% endif %}
+new Chart(document.getElementById('dosesChart'), {
+  type: 'bar',
+  data: { labels: [{% for label, n in doses_by_month %}{{ label|tojson }},{% endfor %}],
+    datasets: [{ data: [{% for label, n in doses_by_month %}{{ n }},{% endfor %}],
+      backgroundColor: '#2563eb', borderRadius: 5 }] },
+  options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
 });
 </script>
 {% endif %}

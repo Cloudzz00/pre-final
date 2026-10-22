@@ -229,6 +229,14 @@
         </div>
         <div class="chart-box"><canvas id="reportChart"></canvas></div>
       </div>
+
+      <div class="chart-panel" style="margin-top:16px;">
+        <div class="report-section-head" style="margin-bottom:8px;">
+          <div class="report-section-title" style="font-size:14px;">Doses Administered, 12 Months to {{ as_of.strftime('%b %Y') }}</div>
+          <div class="report-target">{{ doses_by_month|sum(attribute=1) }} total</div>
+        </div>
+        <div class="chart-box"><canvas id="dosesChart"></canvas></div>
+      </div>
     {% endif %}
 
   </main>
@@ -279,6 +287,13 @@ new Chart(document.getElementById('reportChart'), {
       }
     }
   }
+});
+new Chart(document.getElementById('dosesChart'), {
+  type: 'bar',
+  data: { labels: [{% for label, n in doses_by_month %}{{ label|tojson }},{% endfor %}],
+    datasets: [{ data: [{% for label, n in doses_by_month %}{{ n }},{% endfor %}],
+      backgroundColor: '#2563eb', borderRadius: 5 }] },
+  options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
 });
 </script>
 {% else %}
