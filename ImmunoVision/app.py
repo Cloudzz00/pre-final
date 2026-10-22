@@ -1937,15 +1937,25 @@ def children():
     barangay_id = request.args.get("barangay_id", type=int)
     risk_level = request.args.get("risk_level", "")
     search = request.args.get("q", "").strip()
+    selected_year = request.args.get("year", "")
     q = Child.query
     if barangay_id:
         q = q.filter(Child.barangay_id == barangay_id)
     if search:
         q = q.filter(Child.full_name.ilike(f"%{search}%"))
+    if selected_year:
+        if selected_year.isdigit() and len(selected_year) == 4:
+            q = q.filter(Child.date_registered >= date(int(selected_year), 1, 1),
+                         Child.date_registered < date(int(selected_year) + 1, 1, 1))
+        else:
+            selected_year = ""
     kids = q.order_by(Child.barangay_id, Child.id).all()
     if risk_level:
         kids = [c for c in kids if (ra := _latest_risk(c)) and ra.risk_label == risk_level]
     vt_lookup = {vt.code: vt for vt in VaccineType.query.all()}
+    registration_years = sorted({str(y[0]) for y in db.session.query(
+        func.strftime('%Y', Child.date_registered)).filter(
+        Child.date_registered.isnot(None)).distinct().all() if y[0]}, reverse=True)
 
     # Just registered: show what she can act on today instead of making her
     # open the new record and scan all 15 doses to find out.
@@ -1960,7 +1970,8 @@ def children():
         "children", page_title="Child Records", children=kids,
         barangays=Barangay.query.order_by(Barangay.name).all(), vaccine_schedule=dp.VACCINE_SCHEDULE,
         vt_lookup=vt_lookup, antigens=core_antigens(), selected_barangay=barangay_id,
-        selected_risk=risk_level, search=search,
+        selected_risk=risk_level, search=search, selected_year=selected_year,
+        registration_years=registration_years,
         dose_matrix=_dose_matrix(kids, vt_lookup),
         due_now_child=due_now_child, due_now_doses=due_now_doses,
     ))
@@ -2192,8 +2203,16 @@ def allocation():
 def reports():
     barangay_id = request.args.get("barangay_id", type=int)
     period = request.args.get("period", "")
+    year = request.args.get("year", "")
     report_type = request.args.get("type", "coverage")
-    as_of = period_end(period)
+    # A chosen Year wins over the month picker, so "as of end of 2025" doesn't
+    # require knowing to pick December specifically.
+    if year and year.isdigit() and len(year) == 4 and int(year) in data_years():
+        as_of = min(date(int(year), 12, 31), date.today())
+        period = ""
+    else:
+        year = ""
+        as_of = period_end(period)
     fig = report_figures(barangay_id, as_of)
     barangays = Barangay.query.order_by(Barangay.name).all()
     barangay_obj = next((b for b in barangays if b.id == barangay_id), None)
@@ -2213,6 +2232,7 @@ def reports():
         stats=fig, by_barangay=fig["by_barangay"], generated_at=datetime.now(),
         barangays=barangays, scope_name=barangay_obj.name if barangay_obj else "All Barangays",
         selected_barangay=barangay_id, periods=month_options(), selected_period=period,
+        years=data_years(), selected_year=year,
         as_of=as_of, **extra,
     ))
 
@@ -2221,7 +2241,11 @@ def reports():
 def export_report_csv():
     """Downloads the on-screen report as CSV (opens directly in Excel)."""
     barangay_id = request.args.get("barangay_id", type=int)
-    as_of = period_end(request.args.get("period", ""))
+    year = request.args.get("year", "")
+    if year and year.isdigit() and len(year) == 4 and int(year) in data_years():
+        as_of = min(date(int(year), 12, 31), date.today())
+    else:
+        as_of = period_end(request.args.get("period", ""))
     fig = report_figures(barangay_id, as_of)
     scope = next((b.name for b in Barangay.query.filter_by(id=barangay_id)), "All Barangays")
 
@@ -2675,13 +2699,22 @@ def requests():
 def reports():
     bid = current_user.barangay_id
     period = request.args.get("period", "")
-    as_of = period_end(period)
+    year = request.args.get("year", "")
+    # A chosen Year wins over the month picker, so "as of end of 2025" doesn't
+    # require knowing to pick December specifically.
+    if year and year.isdigit() and len(year) == 4 and int(year) in data_years():
+        as_of = min(date(int(year), 12, 31), date.today())
+        period = ""
+    else:
+        year = ""
+        as_of = period_end(period)
     fig = report_figures(bid, as_of)
     return render_template("bhw_reports.html", **_bhw_ctx(
         "reports", page_title="Reports", report_type=request.args.get("type", "coverage"),
         stats=fig, by_vaccine=report_by_vaccine(bid, as_of), generated_at=datetime.now(),
         at_risk_rows=vaccine_risk_table(bid, limit=50),
-        periods=month_options(), selected_period=period, as_of=as_of,
+        periods=month_options(), selected_period=period,
+        years=data_years(), selected_year=year, as_of=as_of,
     ))
 
 
@@ -2689,7 +2722,11 @@ def reports():
 def export_report_csv():
     """Downloads this barangay's report as CSV (opens directly in Excel)."""
     bid = current_user.barangay_id
-    as_of = period_end(request.args.get("period", ""))
+    year = request.args.get("year", "")
+    if year and year.isdigit() and len(year) == 4 and int(year) in data_years():
+        as_of = min(date(int(year), 12, 31), date.today())
+    else:
+        as_of = period_end(request.args.get("period", ""))
     fig = report_figures(bid, as_of)
     scope = current_user.barangay.name if current_user.barangay else "Unassigned"
 

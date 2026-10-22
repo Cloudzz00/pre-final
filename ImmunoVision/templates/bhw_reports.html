@@ -17,7 +17,7 @@
   {# ── Report type selector ── #}
   <div class="report-types no-print">
     {% for key, icon_name, title, desc in report_types %}
-    <a href="{{ url_for('bhw.reports', type=key, period=selected_period) }}"
+    <a href="{{ url_for('bhw.reports', type=key, period=selected_period, year=selected_year) }}"
        class="report-type-card {{ 'active' if report_type == key }}">
       <div class="ic">{{ icon(icon_name, 18) }}</div>
       <div>
@@ -39,8 +39,18 @@
         <div>
           <label for="rptPeriod">Period</label>
           <select class="form-control" id="rptPeriod" name="period">
+            <option value="" {% if not selected_period %}selected{% endif %}>{{ 'Using year ->' if selected_year else 'Latest' }}</option>
             {% for value, label in periods %}
-            <option value="{{ value }}" {% if selected_period == value or (not selected_period and loop.first) %}selected{% endif %}>{{ label }}</option>
+            <option value="{{ value }}" {% if selected_period == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="rptYear">Year</label>
+          <select class="form-control" id="rptYear" name="year">
+            <option value="" {% if not selected_year %}selected{% endif %}>Use Period above</option>
+            {% for y in years %}
+            <option value="{{ y }}" {% if selected_year == y|string %}selected{% endif %}>{{ y }} (as of Dec 31)</option>
             {% endfor %}
           </select>
         </div>
@@ -48,7 +58,7 @@
       </form>
       <div class="report-actions">
         <button type="button" class="btn btn-primary" onclick="window.print()">{{ icon('printer', 14) }} Print / Save as PDF</button>
-        <a class="btn btn-outline" href="{{ url_for('bhw.export_report_csv', type=report_type, period=selected_period) }}">{{ icon('download', 14) }} Excel</a>
+        <a class="btn btn-outline" href="{{ url_for('bhw.export_report_csv', type=report_type, period=selected_period, year=selected_year) }}">{{ icon('download', 14) }} Excel</a>
       </div>
     </div>
   </div>
