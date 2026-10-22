@@ -429,11 +429,19 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
 .card-sub { font-size: 12.5px; color: var(--text-secondary); margin: 0 0 16px; }
 
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
-.stat-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; position: relative; }
-.stat-icon { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #fff; margin-bottom: 12px; }
-.stat-value { font-size: 26px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+/* Icon-left, text-right layout. A grid (rather than flex, or rewriting the
+   16 templates that use this component) lets the icon span every text row
+   without any of those templates needing to wrap stat-value/label/caption
+   in a sub-element - grid auto-placement already flows them into column 2
+   in source order once the icon claims column 1. */
+.stat-card {
+  background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; position: relative;
+  display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto auto; align-items: center; column-gap: 14px;
+}
+.stat-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #fff; grid-column: 1; grid-row: 1 / -1; }
+.stat-value { font-size: 26px; font-weight: 800; line-height: 1.1; }
 .stat-label { font-size: 13px; font-weight: 600; color: var(--text-primary); }
-.stat-caption { font-size: 11.5px; color: var(--text-secondary); margin-top: 2px; }
+.stat-caption { font-size: 11.5px; color: var(--text-secondary); }
 .stat-trend { position: absolute; top: 18px; right: 18px; font-size: 11.5px; font-weight: 700; padding: 3px 8px; border-radius: var(--radius-pill); }
 .stat-trend.up { background: var(--green-bg); color: var(--green); }
 .stat-trend.down { background: var(--red-bg); color: var(--red); }
