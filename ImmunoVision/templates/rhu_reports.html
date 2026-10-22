@@ -236,9 +236,11 @@
       <div class="snapshot-grid">
         <div><span>Barangay</span><strong>{{ barangay_obj.name }}</strong></div>
         <div><span>Total Children</span><strong>{{ stats.total_children }}</strong></div>
-        <div><span>Coverage</span><strong>{{ stats.coverage_rate }}%</strong></div>
+        <div><span>Coverage (Actual)</span><strong>{{ stats.coverage_rate }}%</strong></div>
         <div><span>Fully Immunized</span><strong>{{ stats.fully_immunized }}</strong></div>
         <div><span>At-Risk</span><strong>{{ stats.at_risk }}</strong></div>
+        <div><span>DOH Target Population</span><strong>{{ '{:,}'.format(barangay_obj.target_population) if barangay_obj.target_population else 'Not set' }}</strong></div>
+        <div><span>Coverage (DOH Target)</span><strong>{{ barangay_target_coverage ~ '%' if barangay_target_coverage is not none else '—' }}</strong></div>
       </div>
       {% else %}
       <div class="report-doc-head">
@@ -361,8 +363,10 @@
               <th>Barangay</th>
               <th>Children</th>
               <th>Fully Immunized</th>
-              <th>Coverage</th>
+              <th>Coverage (Actual)</th>
               <th class="coverage-bar-cell">Progress</th>
+              <th>DOH Target Pop.</th>
+              <th>Coverage (Target)</th>
             </tr>
           </thead>
           <tbody>
@@ -375,6 +379,8 @@
               <td class="coverage-bar-cell">
                 <div class="mini-track"><div class="mini-fill" style="width:{{ r.coverage }}%;"></div></div>
               </td>
+              <td>{{ '{:,}'.format(r.target_population) if r.target_population else '—' }}</td>
+              <td class="coverage-value">{{ r.target_coverage ~ '%' if r.target_coverage is not none else '—' }}</td>
             </tr>
             {% endfor %}
           </tbody>

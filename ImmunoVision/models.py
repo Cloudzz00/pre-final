@@ -29,6 +29,12 @@ class Barangay(db.Model):
     __tablename__ = "barangays"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
+    # DOH/PSA projected target population for this barangay's immunizable
+    # age cohort. Entered manually by the admin -- it's external demographic
+    # data, not something derived from registered children -- and used to
+    # compute coverage against the official target denominator alongside
+    # the usual actual-registered-children denominator. Null until set.
+    target_population = db.Column(db.Integer, nullable=True)
 
     children = db.relationship("Child", backref="barangay", lazy="dynamic")
     users = db.relationship("User", backref="barangay", lazy="dynamic")

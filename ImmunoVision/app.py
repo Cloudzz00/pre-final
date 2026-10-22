@@ -298,6 +298,16 @@ def _is_fully_immunized(child):
     return True if due == 0 else ((due - missed) / due >= 0.9)
 
 
+def _target_coverage(fully_immunized, target_population):
+    """Coverage against the DOH/PSA projected target population, as opposed
+    to coverage against actual registered children. Only meaningful once an
+    admin has entered a target for that barangay; None otherwise so the
+    template can show "not set" rather than a misleading 0%."""
+    if not target_population or target_population <= 0:
+        return None
+    return round(fully_immunized / target_population * 100, 1)
+
+
 def dashboard_stats(barangay_id=None, max_age_days=None):
     children = _children_query(barangay_id).all()
     if max_age_days is not None:
@@ -336,8 +346,11 @@ def coverage_by_barangay():
         fully = sum(1 for c in children if _is_fully_immunized(c))
         at_risk = sum(1 for c in children
                       if (ra := risk.get(c.id)) and ra.risk_label == "At-Risk")
-        rows.append({"barangay": b.name, "children": total, "fully_immunized": fully, "at_risk": at_risk,
+        rows.append({"barangay": b.name, "barangay_id": b.id, "children": total,
+                      "fully_immunized": fully, "at_risk": at_risk,
                       "coverage": round((fully / total) * 100, 1) if total else 0.0,
+                      "target_population": b.target_population,
+                      "target_coverage": _target_coverage(fully, b.target_population),
                       "tiers": _risk_tier_counts(children, risk)})
     rows.sort(key=lambda r: r["coverage"], reverse=True)
     return rows
@@ -1154,7 +1167,9 @@ def report_figures(barangay_id=None, as_of=None):
     vt_by_id = _vaccine_types_by_id()
     records = _records_by_child()
     risk = _latest_risk_by_child()
-    names = {b.id: b.name for b in Barangay.query.all()}
+    all_barangays = Barangay.query.all()
+    names = {b.id: b.name for b in all_barangays}
+    targets = {b.id: b.target_population for b in all_barangays}
 
     children = [c for c in _children_query(barangay_id).all() if c.date_of_birth <= as_of]
 
@@ -1178,20 +1193,32 @@ def report_figures(barangay_id=None, as_of=None):
     for bid, kids in grouped.items():
         fully = sum(1 for c in kids if immunized(c))
         at_risk = sum(1 for c in kids if (ra := risk.get(c.id)) and ra.risk_label == "At-Risk")
-        rows.append({"barangay": names.get(bid, "—"), "children": len(kids),
+        target_pop = targets.get(bid)
+        rows.append({"barangay": names.get(bid, "—"), "barangay_id": bid, "children": len(kids),
                      "fully_immunized": fully, "at_risk": at_risk,
                      "coverage": round(fully / len(kids) * 100, 1) if kids else 0.0,
+                     "target_population": target_pop,
+                     "target_coverage": _target_coverage(fully, target_pop),
                      "tiers": _risk_tier_counts(kids, risk)})
     rows.sort(key=lambda r: r["coverage"], reverse=True)
 
     total = len(children)
     fully_total = sum(r["fully_immunized"] for r in rows)
     at_risk_total = sum(r["at_risk"] for r in rows)
+    # Only counts barangays with a target actually entered -- summing in a
+    # 0 for the rest would understate the real target population and make
+    # the aggregate rate look better than it should.
+    target_rows = [r for r in rows if r["target_population"]]
+    target_population_total = sum(r["target_population"] for r in target_rows)
     return {
         "total_children": total,
         "fully_immunized": fully_total,
         "at_risk": at_risk_total,
         "coverage_rate": round(fully_total / total * 100, 1) if total else 0.0,
+        "target_population_total": target_population_total,
+        "target_coverage_rate": _target_coverage(
+            sum(r["fully_immunized"] for r in target_rows), target_population_total),
+        "target_barangays_set": len(target_rows),
         "by_barangay": rows,
         "as_of": as_of,
     }
@@ -2235,6 +2262,8 @@ def reports():
         extra["inventory_rows"] = stock_levels()
     elif report_type == "barangay":
         extra["barangay_obj"] = barangay_obj
+        if barangay_obj:
+            extra["barangay_target_coverage"] = _target_coverage(fig["fully_immunized"], barangay_obj.target_population)
     elif report_type == "monthly":
         extra["trend"] = yearly_trend(barangay_id)
         extra["doses_by_month"] = monthly_doses_administered(barangay_id, as_of=as_of)
@@ -2867,6 +2896,29 @@ def _admin_guard():
     pass
 
 
+@admin_bp.route("/target-population", methods=["POST"])
+def set_target_population():
+    """DOH/PSA projected target population for one barangay, entered
+    manually since it's external demographic data the app has no way to
+    derive. Used alongside the actual-registered-children denominator for
+    official-standard coverage reporting (see coverage_by_barangay() and
+    report_figures())."""
+    b = db.session.get(Barangay, request.form.get("barangay_id", type=int)) or abort(404)
+    raw = (request.form.get("target_population") or "").strip()
+    if not raw:
+        b.target_population = None
+        flash(f"Target population cleared for {b.name}.", "success")
+    elif raw.isdigit() and int(raw) > 0:
+        b.target_population = int(raw)
+        log_activity(f"Set {b.name}'s target population to {int(raw):,}")
+        flash(f"Target population for {b.name} set to {int(raw):,}.", "success")
+    else:
+        flash("Target population must be a positive whole number.", "error")
+        return redirect(request.referrer or url_for("admin.dashboard"))
+    db.session.commit()
+    return redirect(request.referrer or url_for("admin.dashboard"))
+
+
 @admin_bp.route("/dashboard")
 def dashboard():
     # Municipality-wide clinical oversight is AGGREGATES ONLY - counts and
@@ -2900,6 +2952,12 @@ def dashboard():
         rows = coverage_by_barangay()
     if selected:
         rows = [r for r in rows if r["barangay"] == selected.name]
+    # Computed from the same rows (whichever path built them) rather than
+    # from muni/fig, so this works the same whether or not a period filter
+    # is active. Only counts barangays with a target entered, same
+    # reasoning as report_figures()'s target_population_total.
+    target_rows = [r for r in rows if r.get("target_population")]
+    target_population_total = sum(r["target_population"] for r in target_rows)
     municipality = {
         "total_children": muni["total_children"],
         "fully_immunized": muni["fully_immunized"],
@@ -2907,6 +2965,10 @@ def dashboard():
         "coverage_rate": muni["coverage_rate"],
         "barangays": len(rows),
         "below_target": sum(1 for r in rows if r["coverage"] < COVERAGE_TARGET),
+        "target_population_total": target_population_total,
+        "target_coverage_rate": _target_coverage(
+            sum(r["fully_immunized"] for r in target_rows), target_population_total),
+        "target_barangays_set": len(target_rows),
     }
     # Worst-performing first, so barangays needing attention surface immediately.
     barangay_rows = sorted(rows, key=lambda r: r["coverage"])
