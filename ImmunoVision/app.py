@@ -2271,7 +2271,6 @@ def campaign_worklist(campaign_id):
         "dashboard", page_title=campaign.name, campaign=campaign, rows=rows,
         barangays=Barangay.query.order_by(Barangay.name).all(),
         selected_barangay_id=barangay_id, pending_only=pending_only, search=search,
-        back_url=url_for("rhu.dashboard"),
     ))
 
 
@@ -2740,7 +2739,6 @@ def campaign_worklist(campaign_id):
     return render_template("campaign_worklist.html", **_bhw_ctx(
         "dashboard", page_title=campaign.name, campaign=campaign, rows=rows,
         barangays=None, selected_barangay_id=bid, pending_only=pending_only, search=search,
-        back_url=url_for("bhw.dashboard"),
     ))
 
 

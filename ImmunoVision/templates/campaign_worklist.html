@@ -1,15 +1,10 @@
 {% extends "layout_app.html" %}
 {% from "_icons.html" import icon %}
 {% block content %}
-<div class="page-head">
-  <div>
-    <h2>{{ campaign.name }}</h2>
-    <p class="text-muted" style="margin:2px 0 0;font-size:13px;">{{ campaign.vaccine_type.name }} &middot; {{ campaign.start_date.strftime('%b %d') }} &ndash; {{ campaign.end_date.strftime('%b %d, %Y') }}</p>
-  </div>
-  <a class="btn btn-outline btn-sm" href="{{ back_url }}">{{ icon('chevron-left', 14) }} Back to Dashboard</a>
-</div>
-
-<p class="text-muted" style="font-size:12.5px;margin:-10px 0 14px;">
+<p class="text-muted" style="font-size:13px;margin:0 0 4px;">
+  {{ campaign.vaccine_type.name }} &middot; {{ campaign.start_date.strftime('%b %d') }} &ndash; {{ campaign.end_date.strftime('%b %d, %Y') }}
+</p>
+<p class="text-muted" style="font-size:12.5px;margin:0 0 14px;">
   Children currently eligible for this campaign by age and barangay. Enter the date a dose was given and save &mdash;
   this never changes a child's risk status. To edit the campaign's own details, use Admin &rsaquo; Campaigns.
 </p>
