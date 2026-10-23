@@ -110,7 +110,7 @@ def seed(reset=False):
         print(f"  {len(real_children)} real children across: {', '.join(real_barangays)}")
 
         print("Seeding user accounts...")
-        admin2 = User(username="rcastillo", full_name="Rafael Castillo", role="admin")
+        admin2 = User(username="rcastillo", full_name="Rafael Castillo", role="superadmin")
         admin2.set_password("password123")
         admin = User(username="jdelacruz", full_name="Juan Dela Cruz", role="admin")
         admin.set_password("password123")

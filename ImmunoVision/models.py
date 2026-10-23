@@ -46,7 +46,7 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(64), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     full_name = db.Column(db.String(150), nullable=False)
-    role = db.Column(db.String(20), nullable=False)  # admin | rhu | bhw
+    role = db.Column(db.String(20), nullable=False)  # admin | superadmin | rhu | bhw
     barangay_id = db.Column(db.Integer, db.ForeignKey("barangays.id"), nullable=True)
     is_active_flag = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -89,7 +89,7 @@ class User(UserMixin, db.Model):
 
     @property
     def role_label(self):
-        return {"admin": "RHU Administrator", "rhu": "RHU Personnel",
+        return {"admin": "RHU Administrator", "superadmin": "Super Admin", "rhu": "RHU Personnel",
                 "bhw": "Barangay Health Worker"}.get(self.role, self.role)
 
 
