@@ -2907,6 +2907,7 @@ def set_target_population():
     raw = (request.form.get("target_population") or "").strip()
     if not raw:
         b.target_population = None
+        log_activity(f"Cleared {b.name}'s target population")
         flash(f"Target population cleared for {b.name}.", "success")
     elif raw.isdigit() and int(raw) > 0:
         b.target_population = int(raw)
