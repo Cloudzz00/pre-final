@@ -25,6 +25,26 @@
     });
   }
 
+  // Mobile nav: below 860px the sidebar is a slide-in drawer (see .sidebar in
+  // style.css), opened by the topbar's hamburger button and closed by its own
+  // backdrop. Independent of the desktop collapse toggle above - "collapsed"
+  // (icons-only) and "mobile-open" (full drawer over content) are different
+  // states that never apply at the same time, since the breakpoints don't
+  // overlap.
+  const menuToggle = document.getElementById("menuToggle");
+  const backdrop = document.getElementById("sidebarBackdrop");
+  if (menuToggle && sidebar && backdrop) {
+    function setMobileOpen(open) {
+      sidebar.classList.toggle("mobile-open", open);
+      backdrop.classList.toggle("show", open);
+      menuToggle.setAttribute("aria-expanded", open ? "true" : "false");
+      menuToggle.setAttribute("aria-label", open ? "Close navigation menu" : "Open navigation menu");
+      document.body.classList.toggle("no-scroll", open);
+    }
+    menuToggle.addEventListener("click", () => setMobileOpen(!sidebar.classList.contains("mobile-open")));
+    backdrop.addEventListener("click", () => setMobileOpen(false));
+  }
+
   // Collapsed-sidebar tooltips: a nav icon alone doesn't say what it does, and
   // hovering the rail used to show nothing. A floating label fixes that
   // without the whole-page reflow a hover-to-expand sidebar would cause.

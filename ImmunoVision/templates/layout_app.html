@@ -38,10 +38,15 @@
       {% endfor %}
     </nav>
   </aside>
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
   <div class="main-col">
     <header class="topbar">
-      <div>
+      <button class="menu-toggle" id="menuToggle" type="button"
+              aria-label="Open navigation menu" aria-expanded="false" aria-controls="sidebar">
+        {{ icon('menu', 22) }}
+      </button>
+      <div class="topbar-title">
         <h1>{% block page_title %}{{ page_title|default('') }}{% endblock %}</h1>
         <div class="subtitle">{% block page_subtitle %}{{ page_subtitle|default('San Jacinto, Pangasinan RHU') }}{% endblock %}</div>
       </div>

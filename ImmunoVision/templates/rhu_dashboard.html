@@ -6,7 +6,7 @@
     <h2>Good morning, {{ current_user.full_name.split(' ')[0] }}</h2>
     <p>San Jacinto Municipal Health Dashboard </p>
   </div>
-  <div style="display:flex;gap:10px;">
+  <div class="flex-gap">
     <a class="btn btn-banner btn-sm" href="{{ url_for('rhu.children', add=1) }}">{{ icon('plus', 14) }} Add Child</a>
     <a class="btn btn-banner btn-sm" href="{{ url_for('rhu.requests') }}">{{ icon('clipboard', 14) }} Vaccine Requests</a>
   </div>
@@ -24,7 +24,7 @@
 
 <div class="filter-bar">
   <span class="flabel">{{ icon('map-pin', 14) }} FILTER</span>
-  <form method="get" action="{{ url_for('rhu.dashboard') }}" style="display:flex;gap:10px;">
+  <form method="get" action="{{ url_for('rhu.dashboard') }}" class="flex-gap">
     <select class="form-control select-sm" name="barangay_id" onchange="this.form.submit()"
             aria-label="Filter dashboard by barangay">
       <option value="">All 19 barangays</option>

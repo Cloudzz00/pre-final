@@ -6,7 +6,7 @@
     <h2>Good morning, {{ current_user.full_name.split(' ')[0] }}!</h2>
     <p>Barangay {{ current_user.barangay.name }} · {{ (now.strftime('%B') ~ ' ' ~ now.day ~ ', ' ~ now.year) if now else '' }}</p>
   </div>
-  <div style="display:flex;gap:10px;">
+  <div class="flex-gap">
     <a class="btn btn-banner btn-sm" href="{{ url_for('bhw.children', add=1) }}">{{ icon('plus', 14) }} Add Child</a>
     <a class="btn btn-banner btn-sm" href="{{ url_for('bhw.requests', new=1) }}">{{ icon('plus', 14) }} New Vaccine Request</a>
   </div>

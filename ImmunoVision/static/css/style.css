@@ -181,6 +181,22 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
 .login-card h2 { margin: 0 0 4px; font-size: 24px; font-weight: 800; }
 .login-card .sub { color: var(--text-secondary); font-size: 14px; margin-bottom: 20px; }
 
+/* Below this, the hero text and the login card no longer have room to sit
+   side by side - .login-page's two flex:1 columns were squeezing into
+   half-width each instead of stacking, since flex items don't shrink below
+   their content's natural width by default. Stacks them, and trims the
+   hero down to what actually matters on a phone (brand + heading) so the
+   sign-in form isn't pushed far down the page. */
+@media (max-width: 860px) {
+  .login-page { flex-direction: column; overflow-y: auto; min-height: 100vh; height: auto; }
+  .login-hero { flex: none; max-width: none; padding: 28px 24px 20px; }
+  .login-hero .brand { margin-bottom: 20px; }
+  .login-hero h1 { font-size: 26px; margin-bottom: 10px; }
+  .login-hero p.lead { font-size: 14px; margin-bottom: 0; max-width: none; }
+  .login-hero .feature-list { display: none; }
+  .login-panel-wrap { flex: none; padding: 20px 24px 40px; }
+}
+
 .form-group { margin-bottom: 16px; }
 .form-group label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; color: var(--text-primary); }
 .form-control {
@@ -390,7 +406,23 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
 }
 .topbar h1 { font-size: 20px; font-weight: 700; margin: 0; }
 .topbar .subtitle { font-size: 12.5px; color: var(--text-secondary); margin-top: 2px; }
+.topbar-title { flex: 1; min-width: 0; }
 .topbar-right { display: flex; align-items: center; gap: 18px; }
+
+/* Mobile nav toggle + drawer backdrop. Hidden on desktop - the sidebar is
+   always visible there, this button has nothing to do. */
+.menu-toggle {
+  display: none; background: none; border: none; color: var(--text-primary);
+  padding: 8px; margin-right: 10px; border-radius: var(--radius-sm); cursor: pointer;
+  flex-shrink: 0;
+}
+.menu-toggle:hover { background: var(--slate-bg); }
+.sidebar-backdrop {
+  display: none; position: fixed; inset: 0; background: rgba(15,23,42,.5);
+  z-index: 19; opacity: 0; pointer-events: none; transition: opacity .2s ease;
+}
+.sidebar-backdrop.show { opacity: 1; pointer-events: auto; }
+body.no-scroll { overflow: hidden; }
 .bell-btn { position: relative; background: none; border: none; color: var(--text-secondary); display: inline-flex; align-items: center; }
 /* Notifications are reached only from this bell now (the sidebar entry was
    removed), so it carries a readable count instead of an unlabelled dot. */
@@ -685,9 +717,24 @@ table.data-table tbody tr:hover { background: var(--slate-bg-2); }
 .page-head h2 { margin: 0; font-size: 19px; font-weight: 700; }
 
 @media (max-width: 860px) {
-  .sidebar { position: fixed; left: -100%; }
+  .sidebar { position: fixed; left: -100%; top: 0; z-index: 20; transition: left .22s ease; width: var(--sidebar-width); }
+  .sidebar.mobile-open { left: 0; }
+  .sidebar.collapsed { width: var(--sidebar-width); }
+  .sidebar.collapsed .brand-text,
+  .sidebar.collapsed .sidebar-section-label,
+  .sidebar.collapsed .sidebar-nav .nav-item span.label { display: block; }
+  /* The desktop collapse-to-icons control has nothing to do in a drawer
+     that's only ever fully open or fully hidden. */
+  .sidebar-toggle { display: none; }
+  .menu-toggle { display: inline-flex; align-items: center; justify-content: center; }
+  .sidebar-backdrop { display: block; }
   .content { padding: 16px; }
   .topbar { padding: 0 16px; }
+  /* Banner action buttons and filter-row selects (both built on .flex-gap)
+     run out of room next to the banner text / FILTER label on a phone -
+     wrap them onto their own line instead of overflowing past the edge. */
+  .flex-gap { flex-wrap: wrap; row-gap: 8px; }
+  .banner { flex-wrap: wrap; row-gap: 12px; }
 }
 
 /* ---------------- Icon system ----------------
