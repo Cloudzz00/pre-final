@@ -642,7 +642,14 @@ def _propensity_for(barangay, rng):
     return max(0.02, min(0.9, remoteness * 0.55 + household * 0.55 + rng.uniform(-0.04, 0.04)))
 
 
-def generate_synthetic_children(barangays, n_per_barangay=(6, 14), seed=99):
+def generate_synthetic_children(barangays, n_per_barangay=(6, 14), seed=99,
+                                 dob_start=None, dob_end=None):
+    """dob_start/dob_end: optional inclusive date-of-birth bounds. Left at
+    their default, every child is under a year old, which is fine for
+    augmenting the ML training corpus but leaves a demo barangay's Year
+    filter with only one year of data. Pass a wider range (e.g. 2023-01-01
+    to today) to spread a barangay's population across several years, the
+    same way a real multi-year registry does."""
     rng = random.Random(seed)
     children = []
     for barangay in barangays:
@@ -651,7 +658,11 @@ def generate_synthetic_children(barangays, n_per_barangay=(6, 14), seed=99):
             sex = rng.choice(["M", "F"])
             first = rng.choice(FIRST_NAMES_M if sex == "M" else FIRST_NAMES_F)
             last = rng.choice(LAST_NAMES)
-            dob = date.today() - timedelta(days=rng.randint(10, 364))
+            if dob_start and dob_end:
+                span_days = max(0, (dob_end - dob_start).days)
+                dob = dob_start + timedelta(days=rng.randint(0, span_days))
+            else:
+                dob = date.today() - timedelta(days=rng.randint(10, 364))
             propensity = _propensity_for(barangay, rng)
             reg_delay = int(max(0, rng.gauss(mu=propensity * 20, sigma=5)))
             date_registered = min(date.today(), dob + timedelta(days=reg_delay))
