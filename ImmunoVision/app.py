@@ -58,6 +58,7 @@ def create_app():
     app.register_blueprint(rhu_bp)
     app.register_blueprint(bhw_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(superadmin_bp)
     app.register_blueprint(api_bp)
 
     @login_manager.user_loader
@@ -150,7 +151,9 @@ ADMIN_NAV = [
     ("campaigns", "syringe", "Campaigns", "admin.campaigns"),
     ("map", "map", "Municipality Map", "admin.municipality_map"),
     ("vaccines", "package", "Vaccine Alerts", "admin.vaccine_alerts"),
-    ("logs", "history", "Activity Logs", "admin.logs"),
+]
+SUPERADMIN_NAV = [
+    ("logs", "history", "Activity Logs", "superadmin.logs"),
 ]
 
 
@@ -1711,7 +1714,8 @@ def _due_calendar(children, vt_lookup, days_behind=90, days_ahead=60):
 # ---------------------------------------------------------------------------
 
 auth_bp = Blueprint("auth", __name__)
-ROLE_HOME = {"admin": "admin.dashboard", "rhu": "rhu.dashboard", "bhw": "bhw.dashboard"}
+ROLE_HOME = {"admin": "admin.dashboard", "superadmin": "superadmin.logs",
+             "rhu": "rhu.dashboard", "bhw": "bhw.dashboard"}
 
 
 @auth_bp.route("/")
@@ -1837,7 +1841,8 @@ def logout():
     return redirect(url_for("auth.login"))
 
 
-ROLE_SETTINGS = {"admin": "admin.settings", "rhu": "rhu.settings", "bhw": "bhw.settings"}
+ROLE_SETTINGS = {"admin": "admin.settings", "superadmin": "superadmin.settings",
+                  "rhu": "rhu.settings", "bhw": "bhw.settings"}
 
 
 @auth_bp.route("/account/profile", methods=["POST"])
@@ -2907,6 +2912,7 @@ def set_target_population():
     raw = (request.form.get("target_population") or "").strip()
     if not raw:
         b.target_population = None
+        log_activity(f"Cleared {b.name}'s target population")
         flash(f"Target population cleared for {b.name}.", "success")
     elif raw.isdigit() and int(raw) > 0:
         b.target_population = int(raw)
@@ -2993,16 +2999,18 @@ def dashboard():
         "unassigned_bhws": [u.full_name for u in bhw_users if not u.barangay_id],
     }
 
-    # Account governance: who has access, and what they've been doing with it.
+    # Account governance: who has access. What they've been doing with it is
+    # Activity Logs' job now, owned solely by the superadmin role - this
+    # dashboard only manages accounts, it doesn't audit them.
     all_users = User.query.all()
     user_stats = {"total": len(all_users), "admin": sum(1 for u in all_users if u.role == "admin"),
+                  "superadmin": sum(1 for u in all_users if u.role == "superadmin"),
                   "rhu": sum(1 for u in all_users if u.role == "rhu"), "bhw": sum(1 for u in all_users if u.role == "bhw"),
                   "active": sum(1 for u in all_users if u.is_active_flag),
                   "disabled": sum(1 for u in all_users if not u.is_active_flag),
                   "logins_today": sum(1 for u in all_users if u.last_login_at and u.last_login_at.date() == datetime.utcnow().date())}
-    role_dist = {"admin": user_stats["admin"], "rhu": user_stats["rhu"], "bhw": user_stats["bhw"]}
-    recent = ActivityLog.query.order_by(ActivityLog.created_at.desc()).limit(7).all()
-    recent_activity = [{"log": r, "category": log_category(r.action)} for r in recent]
+    role_dist = {"admin": user_stats["admin"], "superadmin": user_stats["superadmin"],
+                 "rhu": user_stats["rhu"], "bhw": user_stats["bhw"]}
 
     return render_template("admin_dashboard.html", **_admin_ctx(
         "dashboard", page_title="Dashboard",
@@ -3015,7 +3023,7 @@ def dashboard():
         as_of=as_of, period_label=period_label, period_clamped=clamped,
         barangays=Barangay.query.order_by(Barangay.name).all(),
         selected_barangay=selected, selected_barangay_id=barangay_id,
-        stats=user_stats, role_dist=role_dist, users=all_users, recent_activity=recent_activity,
+        stats=user_stats, role_dist=role_dist, users=all_users,
     ))
 
 
@@ -3291,10 +3299,33 @@ def toggle_user(user_id):
     return redirect(url_for("admin.users"))
 
 
-@admin_bp.route("/logs")
+# ---------------------------------------------------------------------------
+# Super Admin blueprint - a dedicated audit role, carved out of what used to
+# be the RHU Administrator's Activity Logs page. Account management (who has
+# access) stays with the admin role above; what every account has actually
+# done is this role's only concern, nothing else.
+# ---------------------------------------------------------------------------
+
+superadmin_bp = Blueprint("superadmin", __name__, url_prefix="/superadmin")
+
+
+def _superadmin_ctx(active, **extra):
+    return dict(role="superadmin", nav_items=build_nav(SUPERADMIN_NAV), active=active, current_user=current_user,
+                settings_url=url_for("superadmin.settings"), unread_count=0, notif_url="#", **extra)
+
+
+@superadmin_bp.before_request
+@login_required
+@role_required("superadmin")
+def _superadmin_guard():
+    pass
+
+
+@superadmin_bp.route("/logs")
 def logs():
-    """Audit trail. Filterable by category and by user account, and the two
-    combine - ?user=7&type=Record is "what this person did to child records"."""
+    """Audit trail across every role's account - this role's sole reason to
+    exist. Filterable by category and by user account, and the two combine -
+    ?user=7&type=Record is "what this person did to child records"."""
     type_filter = request.args.get("type", "All")
     user_id = request.args.get("user", type=int)
     per_page = 50
@@ -3322,14 +3353,20 @@ def logs():
     row_offset = (page - 1) * per_page
     page_entries = entries[row_offset:row_offset + per_page]
 
-    return render_template("admin_logs.html", **_admin_ctx(
-        "logs", page_title="Activity Logs", entries=page_entries, type_filter=type_filter,
+    return render_template("superadmin_logs.html", **_superadmin_ctx(
+        "logs", page_title="Activity Logs", page_subtitle="System-wide audit trail across every user account",
+        entries=page_entries, type_filter=type_filter,
         categories=["All"] + [name for name, _ in LOG_CATEGORIES],
         users=User.query.order_by(User.full_name).all(),
         selected_user=selected_user, selected_user_id=user_id,
         page=page, total_pages=total_pages, total_entries=total_entries,
         per_page=per_page, row_offset=row_offset,
     ))
+
+
+@superadmin_bp.route("/settings")
+def settings():
+    return render_template("admin_settings.html", **_superadmin_ctx("settings", page_title="Settings"))
 
 
 # ---------------------------------------------------------------------------

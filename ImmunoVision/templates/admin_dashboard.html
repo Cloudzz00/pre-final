@@ -179,9 +179,6 @@
       <a href="{{ url_for('admin.vaccine_alerts') }}" class="settings-row" style="text-decoration:none;">
         <div class="left"><div class="ic">{{ icon('package', 18) }}</div><div class="label">Vaccine Alerts</div></div><div>&rsaquo;</div>
       </a>
-      <a href="{{ url_for('admin.logs') }}" class="settings-row" style="text-decoration:none;">
-        <div class="left"><div class="ic">{{ icon('history', 18) }}</div><div class="label">View Activity Logs</div></div><div>&rsaquo;</div>
-      </a>
     </div>
 
     <div class="card card-pad" style="margin-bottom:16px;">
@@ -242,7 +239,7 @@
   </div>
 </div>
 
-<div class="grid-3">
+<div class="grid-2">
   <div class="card card-pad">
     <div class="flex-between" style="margin-bottom:12px;">
       <div class="card-title mb-0">User &amp; Access</div>
@@ -258,38 +255,20 @@
     </div>
 
     <div class="role-split-label">By role</div>
-    {% set total = role_dist.admin + role_dist.rhu + role_dist.bhw %}
+    {% set total = role_dist.admin + role_dist.superadmin + role_dist.rhu + role_dist.bhw %}
     <div class="role-bar" role="img"
-         aria-label="{{ role_dist.admin }} admin, {{ role_dist.rhu }} RHU, {{ role_dist.bhw }} BHW">
+         aria-label="{{ role_dist.admin }} admin, {{ role_dist.superadmin }} super admin, {{ role_dist.rhu }} RHU, {{ role_dist.bhw }} BHW">
       <span style="width:{{ (role_dist.admin / total * 100)|round(2) }}%;background:#7c3aed;" title="Admin: {{ role_dist.admin }}"></span>
+      <span style="width:{{ (role_dist.superadmin / total * 100)|round(2) }}%;background:#dc2626;" title="Super Admin: {{ role_dist.superadmin }}"></span>
       <span style="width:{{ (role_dist.rhu / total * 100)|round(2) }}%;background:#2563eb;" title="RHU: {{ role_dist.rhu }}"></span>
       <span style="width:{{ (role_dist.bhw / total * 100)|round(2) }}%;background:#0d9488;" title="BHW: {{ role_dist.bhw }}"></span>
     </div>
     <div class="role-key">
       <span><i style="background:#7c3aed"></i>Admin <b>{{ role_dist.admin }}</b></span>
+      <span><i style="background:#dc2626"></i>Super Admin <b>{{ role_dist.superadmin }}</b></span>
       <span><i style="background:#2563eb"></i>RHU <b>{{ role_dist.rhu }}</b></span>
       <span><i style="background:#0d9488"></i>BHW <b>{{ role_dist.bhw }}</b></span>
     </div>
-  </div>
-
-  {# Recent activity: the administrator's core job includes account/system
-     oversight, and the audit trail was only reachable from Activity Logs. #}
-  <div class="card card-pad">
-    <div class="flex-between" style="margin-bottom:8px;">
-      <div class="card-title mb-0">Recent Activity</div>
-      <a class="link" style="font-size:12px;" href="{{ url_for('admin.logs') }}">View all</a>
-    </div>
-    {% for e in recent_activity %}
-    <div class="act-row">
-      <span class="badge badge-{{ {'Login':'blue','Admin':'purple','Record':'green','Vaccine':'teal','Report':'gray'}.get(e.category,'gray') }}">{{ e.category }}</span>
-      <div class="ac-body">
-        <div class="ac-action">{{ e.log.action }}</div>
-        <div class="ac-meta">{{ e.log.user.full_name if e.log.user else 'System' }} &middot; {{ e.log.created_at.strftime('%b %d, %H:%M') }}</div>
-      </div>
-    </div>
-    {% else %}
-    <p class="text-muted" style="font-size:13px;">No recorded activity yet.</p>
-    {% endfor %}
   </div>
 
   <div class="card card-pad">
