@@ -1,6 +1,7 @@
 {% extends "layout_app.html" %}
 {% from "_icons.html" import icon %}
 {% block content %}
+<a href="{{ url_for(role ~ '.dashboard') }}" class="btn btn-outline btn-sm" style="margin-bottom:12px;">&lsaquo; Back to Dashboard</a>
 <p class="text-muted" style="font-size:13px;margin:0 0 4px;">
   {{ campaign.vaccine_type.name }} &middot; {{ campaign.start_date.strftime('%b %d') }} &ndash; {{ campaign.end_date.strftime('%b %d, %Y') }}
 </p>
@@ -37,7 +38,7 @@
       {% else %}
       <colgroup><col style="width:42%"><col style="width:16%"><col style="width:42%"></colgroup>
       {% endif %}
-      <thead><tr><th>Child</th>{% if barangays %}<th>Barangay</th>{% endif %}<th>Age</th><th>Dose Given</th></tr></thead>
+      <thead><tr><th>Child</th>{% if barangays %}<th>Barangay</th>{% endif %}<th>Age</th><th>Dose Given ({{ campaign.vaccine_type.name }})</th></tr></thead>
       <tbody>
         {% for r in rows %}
         <tr>

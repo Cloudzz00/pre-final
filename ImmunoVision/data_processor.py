@@ -8,8 +8,7 @@ live analytics used by the dashboards.
 
 This module implements the OSEMN pipeline described in the capstone
 proposal:
-  Obtain    -> load_registry_csv() / load_and_merge_real_registries() /
-               load_and_merge_synthetic_registries()
+  Obtain    -> load_registry_csv() / load_and_merge_real_registries()
   Scrub     -> _clean_date(), _clean_sex(), _clean_barangay(), dedup/impute
   Explore   -> compute_features() (feature engineering)
   Model     -> train_and_save_model()
@@ -346,14 +345,13 @@ def load_registry_csv(path, barangay_name):
     return records
 
 
-def _load_and_merge_registries(directory):
-    """Loads every *.csv in `directory`, inferring each file's barangay from
-    its filename (Data_SJ_<Barangay>...), and returns one merged list of
-    cleaned child records. Shared by the real and synthetic loaders below -
-    same file format either way, just a different directory and a different
-    source label applied by the caller."""
+def load_and_merge_real_registries(raw_dir=RAW_DATA_DIR):
+    """Loads every *.csv under data/raw/, inferring each file's barangay
+    from its filename (Data_SJ_<Barangay>...), and returns one merged list
+    of cleaned child records across all real, RHU-provided registries.
+    """
     merged = []
-    for path in sorted(glob.glob(os.path.join(directory, "*.csv"))):
+    for path in sorted(glob.glob(os.path.join(raw_dir, "*.csv"))):
         base = os.path.splitext(os.path.basename(path))[0]
         # Underscores stand in for spaces, so the whole tail is the barangay:
         # "Data_SJ_San_Guillermo" -> "San Guillermo". Matching on letters alone
@@ -371,27 +369,6 @@ def _load_and_merge_registries(directory):
         )
         merged.extend(load_registry_csv(path, barangay_name))
     return merged
-
-
-def load_and_merge_real_registries(raw_dir=RAW_DATA_DIR):
-    """Loads every *.csv under data/raw/, inferring each file's barangay
-    from its filename (Data_SJ_<Barangay>...), and returns one merged list
-    of cleaned child records across all real, RHU-provided registries.
-    """
-    return _load_and_merge_registries(raw_dir)
-
-
-SYNTHETIC_DATA_DIR = os.path.join(BASE_DIR, "data", "synthetic")
-
-
-def load_and_merge_synthetic_registries(syn_dir=SYNTHETIC_DATA_DIR):
-    """Loads every *.csv under data/synthetic/ - the same registry format as
-    data/raw/, so the two parse identically, but fabricated demo data for
-    barangays the RHU hasn't exported yet, kept as reviewable files instead
-    of only living in generate_synthetic_children()'s in-memory output.
-    Callers must insert whatever this returns with source="synthetic" -
-    never "real" - these are not RHU submissions."""
-    return _load_and_merge_registries(syn_dir)
 
 
 # ---------------------------------------------------------------------------
@@ -642,7 +619,14 @@ def _propensity_for(barangay, rng):
     return max(0.02, min(0.9, remoteness * 0.55 + household * 0.55 + rng.uniform(-0.04, 0.04)))
 
 
-def generate_synthetic_children(barangays, n_per_barangay=(6, 14), seed=99):
+def generate_synthetic_children(barangays, n_per_barangay=(6, 14), seed=99,
+                                 dob_start=None, dob_end=None):
+    """dob_start/dob_end: optional inclusive date-of-birth bounds. Left at
+    their default, every child is under a year old, which is fine for
+    augmenting the ML training corpus but leaves a demo barangay's Year
+    filter with only one year of data. Pass a wider range (e.g. 2023-01-01
+    to today) to spread a barangay's population across several years, the
+    same way a real multi-year registry does."""
     rng = random.Random(seed)
     children = []
     for barangay in barangays:
@@ -651,7 +635,11 @@ def generate_synthetic_children(barangays, n_per_barangay=(6, 14), seed=99):
             sex = rng.choice(["M", "F"])
             first = rng.choice(FIRST_NAMES_M if sex == "M" else FIRST_NAMES_F)
             last = rng.choice(LAST_NAMES)
-            dob = date.today() - timedelta(days=rng.randint(10, 364))
+            if dob_start and dob_end:
+                span_days = max(0, (dob_end - dob_start).days)
+                dob = dob_start + timedelta(days=rng.randint(0, span_days))
+            else:
+                dob = date.today() - timedelta(days=rng.randint(10, 364))
             propensity = _propensity_for(barangay, rng)
             reg_delay = int(max(0, rng.gauss(mu=propensity * 20, sigma=5)))
             date_registered = min(date.today(), dob + timedelta(days=reg_delay))

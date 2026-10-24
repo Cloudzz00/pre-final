@@ -1,7 +1,7 @@
 """One-shot database seed: reference data, demo user accounts, the real
-RHU registry data under data/raw/*.csv, fabricated demo data in the same
-format under data/synthetic/*.csv for barangays the RHU hasn't exported
-yet, starting vaccine inventory, and a handful of sample vaccine requests.
+RHU registry data under data/raw/*.csv, a simulated child population for
+any barangay with no registry file there, starting vaccine inventory, and
+a handful of sample vaccine requests.
 
 Run: python seed.py [--reset]
 """
@@ -109,11 +109,6 @@ def seed(reset=False):
         real_barangays = sorted({c["barangay"] for c in real_children})
         print(f"  {len(real_children)} real children across: {', '.join(real_barangays)}")
 
-        print("Loading synthetic demo data (data/synthetic/*.csv)...")
-        synthetic_csv_children = dp.load_and_merge_synthetic_registries()
-        synthetic_csv_barangays = sorted({c["barangay"] for c in synthetic_csv_children})
-        print(f"  {len(synthetic_csv_children)} synthetic children across: {', '.join(synthetic_csv_barangays)}")
-
         print("Seeding user accounts...")
         admin2 = User(username="rcastillo", full_name="Rafael Castillo", role="superadmin")
         admin2.set_password("password123")
@@ -156,32 +151,25 @@ def seed(reset=False):
             if i % 50 == 0:
                 print(f"  ...{i} real children seeded")
 
-        print(f"Inserting {len(synthetic_csv_children)} synthetic (CSV) children...")
-        for i, c in enumerate(synthetic_csv_children, 1):
-            _insert_child(c, barangay_objs, vt_objs, source="synthetic")
-            if i % 50 == 0:
-                print(f"  ...{i} synthetic children seeded")
-
-        # Every barangay should now have either real or synthetic-CSV data;
-        # this in-memory generator is only a safety net for one that somehow
-        # has neither, so the municipal view stays complete either way. Every
-        # child it creates is still stored with source="synthetic" so the
-        # interface can mark it as such - nothing here is ever presented as
-        # real registry data.
-        without_data = [b for b in dp.BARANGAYS if b not in real_barangays and b not in synthetic_csv_barangays]
+        # Every barangay currently has a real registry file; this in-memory
+        # generator is only a safety net for one that somehow has none, so
+        # the municipal view stays complete either way. Every child it
+        # creates is stored with source="synthetic" so the interface can
+        # mark it as such - nothing here is ever presented as real registry
+        # data.
+        without_data = [b for b in dp.BARANGAYS if b not in real_barangays]
         synthetic_children = dp.generate_synthetic_children(without_data) if without_data else []
         if synthetic_children:
-            print(f"Simulating a demo population in-place for the remaining {len(without_data)} barangays...")
+            print(f"Simulating a demo population for the remaining {len(without_data)} barangays...")
             for i, c in enumerate(synthetic_children, 1):
                 _insert_child(c, barangay_objs, vt_objs, source="synthetic")
                 if i % 50 == 0:
                     print(f"  ...{i} simulated children seeded")
 
-        total_synthetic = len(synthetic_csv_children) + len(synthetic_children)
-        total = len(real_children) + total_synthetic
+        total = len(real_children) + len(synthetic_children)
         print(f"Seeded {total} children: {len(real_children)} real from the RHU registry "
               f"({len(real_barangays)} barangays), "
-              f"{total_synthetic} simulated ({len(synthetic_csv_barangays) + len(without_data)} barangays).")
+              f"{len(synthetic_children)} simulated ({len(without_data)} barangays).")
 
         print("Seeding vaccine inventory...")
         rng2 = random.Random(5)
