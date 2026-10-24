@@ -38,7 +38,7 @@
       {% else %}
       <colgroup><col style="width:42%"><col style="width:16%"><col style="width:42%"></colgroup>
       {% endif %}
-      <thead><tr><th>Child</th>{% if barangays %}<th>Barangay</th>{% endif %}<th>Age</th><th>Dose Given</th></tr></thead>
+      <thead><tr><th>Child</th>{% if barangays %}<th>Barangay</th>{% endif %}<th>Age</th><th>Dose Given ({{ campaign.vaccine_type.name }})</th></tr></thead>
       <tbody>
         {% for r in rows %}
         <tr>
