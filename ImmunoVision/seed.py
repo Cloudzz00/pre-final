@@ -16,17 +16,6 @@ from models import (
     RiskAssessment, InventoryBatch, VaccineRequest, ActivityLog, Campaign,
 )
 
-BHW_FIRST = ["Ana", "Rosa", "Carmen", "Lita", "Ben", "Cora", "Nora", "Elsa", "Fe", "Grace",
-             "Hazel", "Ivy", "Joy", "Karen", "Luz", "Mila", "Nina", "Ofelia", "Perla"]
-BHW_LAST = ["Reyes", "Bueno", "Torres", "Gomez", "Santos", "Cruz", "Diaz", "Flores", "Garcia",
-            "Lopez", "Ramos", "Silva", "Cortez", "Aquino", "Rivera", "Salazar", "Navarro", "Castro", "Rosales"]
-
-FEATURED_BHW = {
-    "Guibel": ("Ana", "Reyes", "areyes"),
-    "Macayug": ("Miguel", "Torres", "mtorres"),
-}
-
-
 def _insert_child(c, barangay_objs, vt_objs, source):
     barangay = barangay_objs[c["barangay"]]
     child = Child(
@@ -110,40 +99,32 @@ def seed(reset=False):
         print(f"  {len(real_children)} real children across: {', '.join(real_barangays)}")
 
         print("Seeding user accounts...")
-        admin2 = User(username="rcastillo", full_name="Rafael Castillo", role="superadmin")
+        admin2 = User(username="superadmin", full_name="Super Admin", role="superadmin")
         admin2.set_password("password123")
-        admin = User(username="jdelacruz", full_name="Juan Dela Cruz", role="admin")
+        admin = User(username="admin", full_name="RHU Administrator", role="admin")
         admin.set_password("password123")
-        rhu = User(username="msantos", full_name="Maria Santos", role="rhu")
+        rhu = User(username="rhu", full_name="RHU Personnel", role="rhu")
         rhu.set_password("password123")
         db.session.add_all([admin2, admin, rhu])
         db.session.commit()
 
-        rng = random.Random(11)
-        used_names, used_usernames = set(), set()
+        # One BHW account per barangay, username and display name both the
+        # barangay's own name - there's exactly one BHW account per barangay
+        # to begin with, so there's no real person behind this account to
+        # name it after, and "the Awai account" is clearer for login/support
+        # than an invented name tied to no one.
         for name in dp.BARANGAYS:
-            if name in FEATURED_BHW:
-                first, last, username = FEATURED_BHW[name]
-            else:
-                while True:
-                    first, last = rng.choice(BHW_FIRST), rng.choice(BHW_LAST)
-                    if (first, last) not in used_names:
-                        used_names.add((first, last))
-                        break
-                username = (first[0] + last).lower()
-                if username in used_usernames:
-                    username = f"{username}{len(used_usernames)}"
-            used_usernames.add(username)
-            u = User(username=username, full_name=f"{first} {last}", role="bhw", barangay_id=barangay_objs[name].id)
+            username = name.lower().replace(" ", "").replace("-", "")
+            u = User(username=username, full_name=name, role="bhw", barangay_id=barangay_objs[name].id)
             u.set_password("password123")
             db.session.add(u)
             u.assigned_barangays.append(barangay_objs[name])
         db.session.commit()
 
-        print("  Demo BHW logins (real registry data): "
-              + ", ".join(f"{u}/password123" for _, _, u in FEATURED_BHW.values()))
-        print("  Demo RHU login: msantos / password123")
-        print("  Demo Admin logins: jdelacruz / password123, rcastillo / password123")
+        print("  BHW logins: <barangay-name>/password123, e.g. awai, sanjose, bagongpagasa")
+        print("  RHU login: rhu / password123")
+        print("  Admin login: admin / password123")
+        print("  Super Admin login: superadmin / password123")
 
         print(f"Inserting {len(real_children)} real children...")
         for i, c in enumerate(real_children, 1):
@@ -258,15 +239,6 @@ def seed(reset=False):
                 cleared += 1
         db.session.commit()
         print(f"  {cleared} child records' guardian details cleared")
-
-        # One deactivated account, so the administrator's notifications and the
-        # "Disabled" figure on the dashboard reflect a realistic system rather
-        # than a perfectly clean one. Mirrors a health worker on extended leave.
-        on_leave = User.query.filter_by(role="bhw").order_by(User.id.desc()).first()
-        if on_leave:
-            on_leave.is_active_flag = False
-            db.session.commit()
-            print(f"  Deactivated 1 account for realism: {on_leave.full_name}")
 
         # --- Activity history -------------------------------------------------
         # The seeded children are inserted directly rather than through the
