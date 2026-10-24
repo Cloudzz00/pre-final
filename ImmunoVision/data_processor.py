@@ -8,8 +8,7 @@ live analytics used by the dashboards.
 
 This module implements the OSEMN pipeline described in the capstone
 proposal:
-  Obtain    -> load_registry_csv() / load_and_merge_real_registries() /
-               load_and_merge_synthetic_registries()
+  Obtain    -> load_registry_csv() / load_and_merge_real_registries()
   Scrub     -> _clean_date(), _clean_sex(), _clean_barangay(), dedup/impute
   Explore   -> compute_features() (feature engineering)
   Model     -> train_and_save_model()
@@ -346,14 +345,13 @@ def load_registry_csv(path, barangay_name):
     return records
 
 
-def _load_and_merge_registries(directory):
-    """Loads every *.csv in `directory`, inferring each file's barangay from
-    its filename (Data_SJ_<Barangay>...), and returns one merged list of
-    cleaned child records. Shared by the real and synthetic loaders below -
-    same file format either way, just a different directory and a different
-    source label applied by the caller."""
+def load_and_merge_real_registries(raw_dir=RAW_DATA_DIR):
+    """Loads every *.csv under data/raw/, inferring each file's barangay
+    from its filename (Data_SJ_<Barangay>...), and returns one merged list
+    of cleaned child records across all real, RHU-provided registries.
+    """
     merged = []
-    for path in sorted(glob.glob(os.path.join(directory, "*.csv"))):
+    for path in sorted(glob.glob(os.path.join(raw_dir, "*.csv"))):
         base = os.path.splitext(os.path.basename(path))[0]
         # Underscores stand in for spaces, so the whole tail is the barangay:
         # "Data_SJ_San_Guillermo" -> "San Guillermo". Matching on letters alone
@@ -371,27 +369,6 @@ def _load_and_merge_registries(directory):
         )
         merged.extend(load_registry_csv(path, barangay_name))
     return merged
-
-
-def load_and_merge_real_registries(raw_dir=RAW_DATA_DIR):
-    """Loads every *.csv under data/raw/, inferring each file's barangay
-    from its filename (Data_SJ_<Barangay>...), and returns one merged list
-    of cleaned child records across all real, RHU-provided registries.
-    """
-    return _load_and_merge_registries(raw_dir)
-
-
-SYNTHETIC_DATA_DIR = os.path.join(BASE_DIR, "data", "synthetic")
-
-
-def load_and_merge_synthetic_registries(syn_dir=SYNTHETIC_DATA_DIR):
-    """Loads every *.csv under data/synthetic/ - the same registry format as
-    data/raw/, so the two parse identically, but fabricated demo data for
-    barangays the RHU hasn't exported yet, kept as reviewable files instead
-    of only living in generate_synthetic_children()'s in-memory output.
-    Callers must insert whatever this returns with source="synthetic" -
-    never "real" - these are not RHU submissions."""
-    return _load_and_merge_registries(syn_dir)
 
 
 # ---------------------------------------------------------------------------
