@@ -317,6 +317,9 @@ class VaccineRequest(db.Model):
     requested_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     antigen_id = db.Column(db.Integer, db.ForeignKey("vaccine_antigens.id"), nullable=False)
     quantity_requested = db.Column(db.Integer, nullable=False)
+    # Set only once approved - may be less than quantity_requested, when stock
+    # is short and the RHU rations it. Null while pending/rejected.
+    quantity_approved = db.Column(db.Integer, nullable=True)
     priority = db.Column(db.String(20), nullable=False, default="Normal")  # Normal | High | Urgent
     status = db.Column(db.String(20), nullable=False, default="pending")
     notes = db.Column(db.String(255))

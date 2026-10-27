@@ -2155,21 +2155,33 @@ def requests():
 def request_action(req_id, action):
     vr = db.session.get(VaccineRequest, req_id) or abort(404)
     if action == "approve":
-        vr.status, vr.reviewed_by_id, vr.reviewed_at = "approved", current_user.id, datetime.utcnow()
-        log_activity(f"Approved vaccine request {vr.request_code}")
+        # Defaults to the full amount (the plain Approve button on the
+        # Requests list never sends a quantity); the Stock Allocation page
+        # sends its suggested or RHU-adjusted quantity instead, so stock can
+        # actually be rationed rather than only approved in full or refused.
+        qty_raw = request.form.get("quantity")
+        if qty_raw and qty_raw.isdigit() and 0 < int(qty_raw) <= vr.quantity_requested:
+            qty = int(qty_raw)
+        else:
+            qty = vr.quantity_requested
+        vr.status, vr.quantity_approved = "approved", qty
+        vr.reviewed_by_id, vr.reviewed_at = current_user.id, datetime.utcnow()
+        suffix = f" ({qty} of {vr.quantity_requested} requested)" if qty < vr.quantity_requested else ""
+        log_activity(f"Approved vaccine request {vr.request_code}{suffix}")
     elif action == "reject":
         vr.status, vr.reviewed_by_id, vr.reviewed_at = "rejected", current_user.id, datetime.utcnow()
         log_activity(f"Rejected vaccine request {vr.request_code}")
     elif action == "distribute":
         vr.status, vr.distributed_at = "fulfilled", datetime.utcnow()
+        qty = vr.quantity_approved or vr.quantity_requested
         batch = (InventoryBatch.query.filter_by(antigen_id=vr.antigen_id, is_archived=False)
                  .order_by(InventoryBatch.expiry_date).first())
-        if batch and batch.quantity_on_hand >= vr.quantity_requested:
-            batch.quantity_on_hand -= vr.quantity_requested
+        if batch and batch.quantity_on_hand >= qty:
+            batch.quantity_on_hand -= qty
         log_activity(f"Distributed vaccine request {vr.request_code}")
     db.session.commit()
     flash(f"Request {vr.request_code} {action}d.", "success")
-    return redirect(url_for("rhu.requests"))
+    return redirect(request.referrer or url_for("rhu.requests"))
 
 
 @rhu_bp.route("/forecast")
@@ -2201,15 +2213,12 @@ def forecast():
 
 @rhu_bp.route("/allocation")
 def allocation():
-    """Suggested split of available stock across pending requests.
-
-    Only relevant when requests exceed stock. Three methods are computed rather
-    than one, because rationing vaccines is the RHU's decision, not the
-    system's. RHU only, since they hold the stock."""
-    method = request.args.get("method", "priority")
-    if method not in dp.ALLOCATION_METHODS:
-        method = "priority"
-
+    """One suggested split of available stock across pending requests, per
+    vaccine - urgent/high-priority requests filled first, then whatever's
+    left shared proportionally. A starting point only: the RHU can adjust
+    any row's quantity and approve it right here, so rationing stock is
+    still the RHU's decision, not the system's. RHU only, since they hold
+    the stock."""
     stock = {r["antigen"].id: r["total"] for r in stock_levels()}
     coverage = {r["barangay"]: r["coverage"] for r in coverage_by_barangay()}
 
@@ -2229,7 +2238,7 @@ def allocation():
                  "requested": r.quantity_requested, "priority": r.priority,
                  "coverage": coverage.get(r.barangay.name)}
                 for r in reqs]
-        result = dp.allocate_stock(rows, stock.get(antigen_id, 0), method, coverage)
+        result = dp.allocate_stock(rows, stock.get(antigen_id, 0), "priority", coverage)
         groups.append({"antigen": antigen, **result})
 
     # Short vaccines first: those are the decisions that need making.
@@ -2237,8 +2246,7 @@ def allocation():
 
     return render_template("rhu_allocation.html", **_rhu_ctx(
         "allocation", page_title="Stock Allocation",
-        groups=groups, method=method, methods=dp.ALLOCATION_METHODS,
-        pending_count=len(pending),
+        groups=groups, pending_count=len(pending),
     ))
 
 

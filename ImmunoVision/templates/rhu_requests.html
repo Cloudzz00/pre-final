@@ -23,7 +23,12 @@
   <td>{{ r.barangay.name }}</td>
   <td>{{ r.requested_by.full_name }}</td>
   <td>{{ r.antigen.name }}</td>
-  <td>{{ r.quantity_requested }} vials</td>
+  <td>
+    {{ r.quantity_requested }} vials
+    {% if r.quantity_approved is not none and r.quantity_approved != r.quantity_requested %}
+    <div class="text-muted" style="font-size:11.5px;">approved: {{ r.quantity_approved }}</div>
+    {% endif %}
+  </td>
   <td><span class="badge badge-{{ 'red' if r.priority=='Urgent' else 'amber' if r.priority=='High' else 'gray' }}">{{ r.priority }}</span></td>
   <td>{{ r.requested_at.strftime('%Y-%m-%d') }}</td>
   <td><span class="badge badge-{{ 'amber' if r.status=='pending' else 'blue' if r.status=='approved' else 'green' if r.status=='fulfilled' else 'red' }}">{{ r.status|capitalize }}</span></td>
