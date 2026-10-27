@@ -13,6 +13,92 @@
   <a class="pill-tab {{ 'active' if tab=='all' }}" href="{{ url_for('rhu.requests', tab='all') }}">All Requests</a>
 </div>
 
+{% if tab == 'pending' %}
+
+  {% if not groups %}
+  <div class="card card-pad">
+    <div class="card-title">No pending requests</div>
+    <div class="card-sub">Nothing is waiting on a decision right now.</div>
+  </div>
+  {% else %}
+
+  <p class="text-muted" style="font-size:12.5px;margin:0 0 16px;">
+    Grouped by vaccine, since stock is rationed per vaccine. Suggested
+    quantity fills Urgent and High priority requests first, then splits
+    what's left &mdash; adjust any amount before approving it.
+  </p>
+
+  {% for g in groups %}
+  <div class="card card-pad" style="margin-bottom:18px;">
+    <div class="flex-between" style="margin-bottom:4px;">
+      <div>
+        <div class="card-title mb-0">{{ g.antigen.name }}</div>
+        <div class="card-sub mb-0">
+          {{ g.requested }} vials requested &middot; {{ g.available }} in stock
+        </div>
+      </div>
+      {% if g.can_meet_all %}
+        <span class="badge badge-green">All requests can be met</span>
+      {% else %}
+        <span class="badge badge-red">{{ g.shortfall }} vials short</span>
+      {% endif %}
+    </div>
+
+    <div class="table-wrap auto-height" style="margin-top:14px;">
+      <table class="data-table compact">
+        <thead><tr>
+          <th>Barangay</th><th>Request</th><th>Date</th><th>Priority</th><th>Coverage</th>
+          <th>Requested</th><th>Approve Quantity</th><th></th>
+        </tr></thead>
+        <tbody>
+          {% for r in g.rows %}
+          <tr>
+            <td><b>{{ r.barangay }}</b></td>
+            <td><span class="text-muted">{{ r.code }}</span></td>
+            <td>{{ r.requested_at.strftime('%Y-%m-%d') }}</td>
+            <td>
+              <span class="badge badge-{{ 'red' if r.priority == 'Urgent' else ('amber' if r.priority == 'High' else 'gray') }}">
+                {{ r.priority }}
+              </span>
+            </td>
+            <td>
+              {% if r.coverage is not none %}
+                <span class="badge badge-{{ coverage_color(r.coverage, 1) }}">{{ r.coverage }}%</span>
+              {% else %}<span class="text-muted">&mdash;</span>{% endif %}
+            </td>
+            <td>{{ r.requested }}</td>
+            <td>
+              <form method="post" action="{{ url_for('rhu.request_action', req_id=r.id, action='approve') }}"
+                    style="display:flex;align-items:center;gap:8px;">
+                <input class="form-control" type="number" name="quantity" value="{{ r.allocated }}"
+                       min="1" max="{{ r.requested }}" style="max-width:90px;"
+                       aria-label="Quantity to approve for {{ r.barangay }}">
+                <button class="btn btn-outline btn-sm" type="submit">{{ icon('check', 14) }} Approve</button>
+              </form>
+            </td>
+            <td>
+              <form method="post" action="{{ url_for('rhu.request_action', req_id=r.id, action='reject') }}">
+                <button class="btn btn-outline btn-sm" type="submit" title="Reject">{{ icon('x', 14) }}</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td><b>Total</b></td><td></td><td></td><td></td><td></td>
+            <td><b>{{ g.requested }}</b></td>
+            <td colspan="2"><b>{{ g.allocated }}</b> suggested{% if g.shortfall %}, <span class="text-muted">{{ g.shortfall }} short</span>{% endif %}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+{% else %}
+
 <div class="table-wrap auto-height">
 <table class="data-table">
 <thead><tr><th>Request ID</th><th>Barangay</th><th>Requester</th><th>Vaccine</th><th>Qty</th><th>Priority</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
@@ -47,4 +133,6 @@
 </tbody>
 </table>
 </div>
+
+{% endif %}
 {% endblock %}

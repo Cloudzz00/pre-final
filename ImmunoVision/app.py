@@ -133,7 +133,6 @@ RHU_NAV = [
     ("inventory", "package", "Vaccine Inventory", "rhu.inventory"),
     ("requests", "clipboard", "Vaccine Requests", "rhu.requests"),
     ("forecast", "activity", "Vaccine Forecast", "rhu.forecast"),
-    ("allocation", "package", "Stock Allocation", "rhu.allocation"),
     ("reports", "file-text", "Reports", "rhu.reports"),
 ]
 BHW_NAV = [
@@ -2138,16 +2137,48 @@ def inventory():
 
 @rhu_bp.route("/requests")
 def requests():
+    """Pending requests are grouped by vaccine with a suggested split of
+    available stock - urgent/high-priority requests filled first, then
+    whatever's left shared proportionally - since stock is rationed per
+    vaccine, not per request. A starting point only: the RHU can adjust any
+    row's quantity before approving it, so rationing stock is still the
+    RHU's decision, not the system's. All Requests stays a flat history."""
     tab = request.args.get("tab", "pending")
-    q = VaccineRequest.query.order_by(VaccineRequest.requested_at.desc())
-    if tab == "pending":
-        q = q.filter_by(status="pending")
     stats = {"pending": VaccineRequest.query.filter_by(status="pending").count(),
              "approved": VaccineRequest.query.filter_by(status="approved").count(),
              "distributed": VaccineRequest.query.filter_by(status="fulfilled").count(),
              "rejected": VaccineRequest.query.filter_by(status="rejected").count()}
+
+    groups = None
+    reqs = None
+    if tab == "pending":
+        stock = {r["antigen"].id: r["total"] for r in stock_levels()}
+        coverage = {r["barangay"]: r["coverage"] for r in coverage_by_barangay()}
+        pending = (VaccineRequest.query.filter_by(status="pending")
+                   .order_by(VaccineRequest.requested_at.asc()).all())
+
+        # Grouped by antigen: stock is held per vaccine, so each is rationed
+        # separately.
+        by_antigen = defaultdict(list)
+        for r in pending:
+            by_antigen[r.antigen_id].append(r)
+
+        groups = []
+        for antigen_id, antigen_reqs in by_antigen.items():
+            antigen = antigen_reqs[0].antigen
+            rows = [{"id": r.id, "code": r.request_code, "barangay": r.barangay.name,
+                     "requested_at": r.requested_at, "requested": r.quantity_requested,
+                     "priority": r.priority, "coverage": coverage.get(r.barangay.name)}
+                    for r in antigen_reqs]
+            result = dp.allocate_stock(rows, stock.get(antigen_id, 0), "priority", coverage)
+            groups.append({"antigen": antigen, **result})
+        # Short vaccines first: those are the decisions that need making.
+        groups.sort(key=lambda g: (g["can_meet_all"], -g["shortfall"]))
+    else:
+        reqs = VaccineRequest.query.order_by(VaccineRequest.requested_at.desc()).all()
+
     return render_template("rhu_requests.html", **_rhu_ctx(
-        "requests", page_title="Vaccine Requests", reqs=q.all(), stats=stats, tab=tab,
+        "requests", page_title="Vaccine Requests", groups=groups, reqs=reqs, stats=stats, tab=tab,
     ))
 
 
@@ -2208,45 +2239,6 @@ def forecast():
         barangays_with_records=with_records,
         total_barangays=Barangay.query.count(),
         registry_children=len(dobs),
-    ))
-
-
-@rhu_bp.route("/allocation")
-def allocation():
-    """One suggested split of available stock across pending requests, per
-    vaccine - urgent/high-priority requests filled first, then whatever's
-    left shared proportionally. A starting point only: the RHU can adjust
-    any row's quantity and approve it right here, so rationing stock is
-    still the RHU's decision, not the system's. RHU only, since they hold
-    the stock."""
-    stock = {r["antigen"].id: r["total"] for r in stock_levels()}
-    coverage = {r["barangay"]: r["coverage"] for r in coverage_by_barangay()}
-
-    pending = (VaccineRequest.query.filter_by(status="pending")
-               .order_by(VaccineRequest.requested_at.asc()).all())
-
-    # Grouped by antigen: stock is held per vaccine, so each is rationed
-    # separately.
-    groups = []
-    by_antigen = defaultdict(list)
-    for r in pending:
-        by_antigen[r.antigen_id].append(r)
-
-    for antigen_id, reqs in by_antigen.items():
-        antigen = reqs[0].antigen
-        rows = [{"id": r.id, "code": r.request_code, "barangay": r.barangay.name,
-                 "requested": r.quantity_requested, "priority": r.priority,
-                 "coverage": coverage.get(r.barangay.name)}
-                for r in reqs]
-        result = dp.allocate_stock(rows, stock.get(antigen_id, 0), "priority", coverage)
-        groups.append({"antigen": antigen, **result})
-
-    # Short vaccines first: those are the decisions that need making.
-    groups.sort(key=lambda g: (g["can_meet_all"], -g["shortfall"]))
-
-    return render_template("rhu_allocation.html", **_rhu_ctx(
-        "allocation", page_title="Stock Allocation",
-        groups=groups, pending_count=len(pending),
     ))
 
 
