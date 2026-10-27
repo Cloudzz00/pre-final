@@ -2,6 +2,39 @@
 {% from "_icons.html" import icon %}
 {% block page_subtitle %}Who, in their first year, is likely to stop coming back altogether &mdash; for which specific vaccines are missing at any age, see <a class="link" href="{{ url_for('bhw.vaccine_gaps') }}">Vaccine Gaps</a>.{% endblock %}
 {% block content %}
+{# ── Schedule Visit Modal ── #}
+<div class="modal-scrim" id="scheduleVisitModal">
+  <div class="modal-box" style="max-width:400px;">
+    <div class="modal-head">
+      <h3>Schedule a Visit</h3>
+      <button class="modal-close" data-close-modal>×</button>
+    </div>
+    <form method="post" action="{{ url_for('bhw.schedule_visit') }}">
+      <div class="modal-body">
+        <input type="hidden" name="child_id" id="scheduleChildId">
+        <p style="font-size:14px;margin:0 0 16px;">
+          Setting a visit date for <b id="scheduleChildName"></b>.
+          It will appear on your dashboard calendar.
+        </p>
+        <div class="form-group">
+          <label style="font-size:13px;font-weight:700;">Visit Date</label>
+          <input type="date" name="visit_date" id="scheduleDate"
+                 class="form-control" required
+                 min="{{ today.isoformat() }}">
+        </div>
+        <p style="font-size:12px;color:var(--text-secondary);margin:10px 0 0;">
+          The visit will be automatically removed from the calendar once you
+          update this child's vaccination record.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" data-close-modal>Cancel</button>
+        <button type="submit" class="btn btn-primary">Save to Calendar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div class="stat-grid">
   <div class="stat-card"><div class="stat-icon bg-green">{{ icon('check-circle', 21) }}</div><div class="stat-value">{{ dist.low_count }}</div><div class="stat-label">On Track</div><div class="stat-caption">No follow-up needed</div></div>
   <div class="stat-card"><div class="stat-icon bg-red">{{ icon('alert-triangle', 21) }}</div><div class="stat-value">{{ rows|length }}</div><div class="stat-label">Need a Visit</div><div class="stat-caption">Follow up soon</div></div>
@@ -56,9 +89,18 @@
         <td>{{ r.missed }} of {{ r.due }} doses</td>
         <td>{{ r.last_visit.strftime('%b %d, %Y') if r.last_visit else '—' }}</td>
         <td>
-          <span class="badge badge-{{ 'red' if r.recommendation=='Home Visit' else 'amber' }}">
-            {{ r.recommendation }}
-          </span>
+          <button type="button"
+            class="btn btn-sm btn-{{ 'danger' if r.recommendation == 'Home Visit' else 'outline' }} schedule-visit-btn"
+            data-child-id="{{ r.child.id }}"
+            data-child-name="{{ r.child.display_name }}"
+            style="font-size:13px;white-space:nowrap;">
+            {{ icon('calendar', 13) }}
+            {% if r.child.next_visit_date %}
+              Scheduled: {{ r.child.next_visit_date.strftime('%b %d') }}
+            {% else %}
+              {{ r.recommendation }}
+            {% endif %}
+          </button>
         </td>
       </tr>
     {% else %}
@@ -73,4 +115,20 @@
   </table>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Use event delegation on the table so we catch all schedule buttons.
+// We populate the modal data before the global app.js handler opens it.
+document.addEventListener('click', function(e) {
+  var btn = e.target.closest('.schedule-visit-btn');
+  if (!btn) return;
+  document.getElementById('scheduleChildId').value = btn.getAttribute('data-child-id');
+  document.getElementById('scheduleChildName').textContent = btn.getAttribute('data-child-name');
+  document.getElementById('scheduleDate').value = '';
+  document.getElementById('scheduleVisitModal').classList.add('open');
+  e.stopPropagation();
+});
+</script>
 {% endblock %}

@@ -2062,6 +2062,30 @@ def edit_child(child_id):
     ))
 
 
+@rhu_bp.route("/schedule-visit", methods=["POST"])
+def schedule_visit():
+    """Save a follow-up visit date for a child, same as the BHW's own
+    scheduler - the RHU just isn't limited to one barangay, since they
+    oversee all of them."""
+    try:
+        child_id = int(request.form.get("child_id", ""))
+    except (ValueError, TypeError):
+        abort(400)
+    child = db.session.get(Child, child_id) or abort(404)
+    try:
+        visit_date = date.fromisoformat(request.form.get("visit_date", ""))
+    except (ValueError, TypeError):
+        flash("Please select a valid visit date.", "warning")
+        return redirect(request.referrer or url_for("rhu.continuation"))
+    if visit_date < date.today():
+        flash("Visit date cannot be in the past.", "warning")
+        return redirect(request.referrer or url_for("rhu.continuation"))
+    child.next_visit_date = visit_date
+    db.session.commit()
+    flash(f"Visit scheduled for {child.display_name} on {visit_date.strftime('%b %d, %Y')}.", "success")
+    return redirect(request.referrer or url_for("rhu.continuation"))
+
+
 @rhu_bp.route("/vaccine-gaps")
 def vaccine_gaps():
     vaccine_filter = request.args.get("vaccine", "")
