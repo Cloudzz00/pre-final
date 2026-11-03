@@ -214,3 +214,156 @@
     localStorage.setItem(KEY, expanded ? "1" : "0");
   });
 })();
+
+/* ---------------------------------------------------------------------------
+   Custom select: wraps every select.form-control in a styled trigger+panel
+   (see .select-panel in style.css) so the open dropdown matches the rest of
+   the app instead of the browser's unstyleable native option list. The real
+   <select> stays in the DOM, visually hidden, as the actual form field - a
+   change here sets its value and dispatches a real 'change' event, so every
+   onchange="..." and addEventListener('change', ...) a template already has
+   keeps working unmodified. If this script fails to load, the select is
+   simply left as a normal (still chevron-fixed, see style.css) native one.
+--------------------------------------------------------------------------- */
+(function () {
+  var CHEVRON_SVG = '<svg class="st-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" ' +
+    'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<polyline points="6 9 12 15 18 9"></polyline></svg>';
+  var uid = 0;
+
+  function closeAllPanels(except) {
+    document.querySelectorAll(".select-panel").forEach(function (panel) {
+      if (panel === except || panel.hidden) return;
+      panel.hidden = true;
+      var trigger = panel.parentElement.querySelector(".select-trigger");
+      if (trigger) trigger.setAttribute("aria-expanded", "false");
+    });
+  }
+
+  function enhance(select) {
+    if (select.dataset.customized) return;
+    select.dataset.customized = "1";
+    uid += 1;
+
+    var shell = document.createElement("div");
+    shell.className = "select-shell";
+    if (select.getAttribute("style")) shell.setAttribute("style", select.getAttribute("style"));
+    select.parentNode.insertBefore(shell, select);
+    shell.appendChild(select);
+
+    var trigger = document.createElement("button");
+    trigger.type = "button";
+    trigger.className = select.className + " select-trigger";
+    trigger.setAttribute("aria-haspopup", "listbox");
+    trigger.setAttribute("aria-expanded", "false");
+    if (select.disabled) trigger.disabled = true;
+    if (select.id) trigger.setAttribute("aria-labelledby", select.id);
+
+    var valueSpan = document.createElement("span");
+    valueSpan.className = "st-value";
+    trigger.appendChild(valueSpan);
+    trigger.insertAdjacentHTML("beforeend", CHEVRON_SVG);
+    shell.appendChild(trigger);
+
+    var panel = document.createElement("div");
+    panel.className = "select-panel";
+    panel.setAttribute("role", "listbox");
+    panel.hidden = true;
+    shell.appendChild(panel);
+
+    var options = [];
+    function buildOptions() {
+      panel.innerHTML = "";
+      options = Array.prototype.map.call(select.options, function (opt, i) {
+        var row = document.createElement("div");
+        row.className = "select-option";
+        row.id = "select-opt-" + uid + "-" + i;
+        row.setAttribute("role", "option");
+        row.textContent = opt.textContent;
+        if (opt.disabled) row.setAttribute("aria-disabled", "true");
+        row.dataset.value = opt.value;
+        panel.appendChild(row);
+        return row;
+      });
+      syncFromSelect();
+    }
+
+    function syncFromSelect() {
+      var selectedOpt = select.options[select.selectedIndex];
+      valueSpan.textContent = selectedOpt ? selectedOpt.textContent : "";
+      options.forEach(function (row) {
+        row.classList.toggle("is-selected", row.dataset.value === select.value);
+      });
+    }
+
+    function setActive(row) {
+      options.forEach(function (r) { r.classList.remove("is-active"); });
+      if (!row) return;
+      row.classList.add("is-active");
+      trigger.setAttribute("aria-activedescendant", row.id);
+      row.scrollIntoView({ block: "nearest" });
+    }
+
+    function openPanel() {
+      closeAllPanels(panel);
+      panel.hidden = false;
+      trigger.setAttribute("aria-expanded", "true");
+      setActive(panel.querySelector(".is-selected") || options[0]);
+    }
+    function closePanel(refocus) {
+      panel.hidden = true;
+      trigger.setAttribute("aria-expanded", "false");
+      trigger.removeAttribute("aria-activedescendant");
+      if (refocus) trigger.focus();
+    }
+    function choose(row) {
+      if (!row || row.getAttribute("aria-disabled") === "true") return;
+      select.value = row.dataset.value;
+      syncFromSelect();
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+      closePanel(true);
+    }
+
+    trigger.addEventListener("click", function () {
+      if (panel.hidden) openPanel(); else closePanel(false);
+    });
+    trigger.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        if (panel.hidden) { openPanel(); return; }
+        var i = options.indexOf(panel.querySelector(".is-active"));
+        var next = e.key === "ArrowDown" ? Math.min(i + 1, options.length - 1) : Math.max(i - 1, 0);
+        setActive(options[next]);
+      } else if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        if (panel.hidden) openPanel(); else choose(panel.querySelector(".is-active"));
+      } else if (e.key === "Escape" && !panel.hidden) {
+        e.preventDefault();
+        closePanel(true);
+      } else if (e.key === "Tab") {
+        closePanel(false);
+      }
+    });
+    panel.addEventListener("mousemove", function (e) {
+      var row = e.target.closest(".select-option");
+      if (row) setActive(row);
+    });
+    panel.addEventListener("click", function (e) {
+      var row = e.target.closest(".select-option");
+      if (row) choose(row);
+    });
+
+    // Keeps the trigger's label correct if something else (e.g. a reset
+    // button, or a filter script elsewhere on the page) changes the
+    // underlying select's value directly.
+    select.addEventListener("change", syncFromSelect);
+
+    buildOptions();
+  }
+
+  document.querySelectorAll("select.form-control").forEach(enhance);
+
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest(".select-shell")) closeAllPanels(null);
+  });
+})();
