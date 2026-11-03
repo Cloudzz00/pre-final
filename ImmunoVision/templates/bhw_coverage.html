@@ -18,7 +18,7 @@
     {{ '+' if change.delta > 0 }}{{ change.delta }}%
   </span>{% endif %}<div class="stat-icon bg-blue">{{ icon('activity', 21) }}</div><div class="stat-value">{{ stats.coverage_rate }}%</div><div class="stat-label">Avg. Coverage Rate</div></div>
   <div class="stat-card"><div class="stat-icon bg-green">{{ icon('check-circle', 21) }}</div><div class="stat-value">{{ stats.fully_immunized }}</div><div class="stat-label">Fully Immunized</div><div class="stat-caption">of enrolled children</div></div>
-  <div class="stat-card"><div class="stat-icon bg-teal">{{ icon('baby', 21) }}</div><div class="stat-value">{{ stats.total_children }}</div><div class="stat-label">Total Enrolled</div></div>
+  <div class="stat-card"><div class="stat-icon bg-teal">{{ icon('users', 21) }}</div><div class="stat-value">{{ stats.total_children }}</div><div class="stat-label">Total Enrolled</div></div>
   <div class="stat-card"><div class="stat-icon bg-orange">{{ icon('alert-triangle', 21) }}</div><div class="stat-value">{{ 1 if stats.coverage_rate < 90 else 0 }}</div><div class="stat-label">Below Target</div><div class="stat-caption">vs. 90% goal</div></div>
 </div>
 

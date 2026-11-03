@@ -7,7 +7,7 @@
 </div>
 
 <div class="stat-grid">
-  <div class="stat-card"><div class="stat-icon bg-blue">{{ icon('baby', 21) }}</div><div class="stat-value">{{ totals.eligible }}</div><div class="stat-label">Eligible Children</div><div class="stat-caption">During the active window</div></div>
+  <div class="stat-card"><div class="stat-icon bg-blue">{{ icon('users', 21) }}</div><div class="stat-value">{{ totals.eligible }}</div><div class="stat-label">Eligible Children</div><div class="stat-caption">During the active window</div></div>
   <div class="stat-card"><div class="stat-icon bg-green">{{ icon('check-circle', 21) }}</div><div class="stat-value">{{ totals.received }}</div><div class="stat-label">Received</div><div class="stat-caption">{{ totals.pct }}% of eligible</div></div>
   <div class="stat-card"><div class="stat-icon bg-teal">{{ icon('syringe', 21) }}</div><div class="stat-value">{{ campaign.vaccine_type.name }}</div><div class="stat-label">Vaccine</div>{% if campaign.is_locked %}<div class="stat-caption">Locked &mdash; doses already recorded</div>{% endif %}</div>
 </div>
