@@ -65,7 +65,7 @@
   <th class="dose-toggle-head">
     <button type="button" class="dose-toggle" id="doseToggle" aria-expanded="false"
             title="Show or hide the individual dose columns">
-      {{ icon('chevron-left', 13, 2.5) }} <span id="doseToggleLabel">Doses</span>
+      {{ icon('chevron-left', 13, 2.5) }} <span id="doseToggleLabel">Expand doses</span>
     </button>
   </th>
   {% for code, name, antigen, dose_no, rec_days in vaccine_schedule %}<th class="vaccine-group-head dose-col">{{ name }}</th>{% endfor %}
