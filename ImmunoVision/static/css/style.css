@@ -552,6 +552,19 @@ body.no-scroll { overflow: hidden; }
 .search-input-wrap input { width: 100%; padding: 9px 14px 9px 36px; border-radius: var(--radius-pill); border: 1px solid var(--border-strong); background: var(--slate-bg-2); }
 .search-input-wrap .si-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--text-muted); display: flex; align-items: center; }
 .select-sm { padding: 9px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: #fff; font-size: 13px; min-width: 130px; }
+/* Plain (non filter-select) <select> elements fall back to the browser's
+   native dropdown arrow, which renders flush against the edge no matter
+   how much right padding is set. Swap it for a custom chevron inset to
+   match every other icon's spacing in the app. */
+select.form-control {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 13px;
+}
 .chip-outline { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: var(--radius-pill); border: 1px solid var(--green-light); color: var(--green); background: var(--green-bg); font-size: 13px; font-weight: 600; }
 
 /* ---------------- Tables ---------------- */
