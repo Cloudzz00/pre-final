@@ -1,4 +1,5 @@
 {% extends "layout_app.html" %}
+{% from "_icons.html" import icon %}
 {% block content %}
 <div class="page-head" style="display:flex;flex-direction:column;align-items:flex-start;gap:10px;">
   <a href="{{ back_url }}" class="btn btn-outline btn-sm">&larr; Back</a>
@@ -7,10 +8,13 @@
 
 <div class="card card-pad bhw-child-edit">
   {% if child.latest_risk %}
-  <div class="alert-banner {{ 'warning' if child.latest_risk.risk_label == 'At-Risk' else '' }}" style="{% if child.latest_risk.risk_label != 'At-Risk' %}background:var(--green-bg);border-left-color:var(--green-light);{% endif %} margin-bottom:20px;">
-    <div class="title" style="{% if child.latest_risk.risk_label != 'At-Risk' %}color:var(--green);{% endif %}">
-      Current risk status: <span class="badge badge-{{ 'red' if child.latest_risk.risk_label == 'At-Risk' else 'green' }}">{{ child.latest_risk.risk_label }}</span>
-      <span class="text-muted" style="font-weight:400;font-size:12.5px;">({{ (child.latest_risk.risk_probability * 100)|round(1) }}% probability, as of {{ child.latest_risk.computed_at.strftime('%Y-%m-%d') }})</span>
+  <div class="alert-banner {{ 'warning' if child.latest_risk.risk_label == 'At-Risk' else 'success' }}" style="margin-bottom:20px;">
+    <div class="ab-icon">{{ icon('alert-triangle' if child.latest_risk.risk_label == 'At-Risk' else 'check-circle', 18) }}</div>
+    <div class="ab-body">
+      <div class="title">
+        Current risk status: <span class="badge badge-{{ 'red' if child.latest_risk.risk_label == 'At-Risk' else 'green' }}">{{ child.latest_risk.risk_label }}</span>
+        <span class="text-muted" style="font-weight:400;font-size:12.5px;">({{ (child.latest_risk.risk_probability * 100)|round(1) }}% probability, as of {{ child.latest_risk.computed_at.strftime('%Y-%m-%d') }})</span>
+      </div>
     </div>
   </div>
   {% endif %}

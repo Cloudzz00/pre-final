@@ -6,12 +6,15 @@
    front so the totals are not read as municipality-wide. #}
 {% if barangays_with_records < total_barangays %}
 <div class="alert-banner warning" style="margin-bottom:18px;">
-  <div class="title">{{ icon('alert-triangle', 16) }} Partial coverage</div>
-  <ul>
-    <li>Based on {{ registry_children }} children from {{ barangays_with_records }} of
-        {{ total_barangays }} barangays. Municipal demand will be higher once the
-        remaining barangays are included.</li>
-  </ul>
+  <div class="ab-icon">{{ icon('alert-triangle', 18) }}</div>
+  <div class="ab-body">
+    <div class="title">Partial coverage</div>
+    <ul>
+      <li>Based on {{ registry_children }} children from {{ barangays_with_records }} of
+          {{ total_barangays }} barangays. Municipal demand will be higher once the
+          remaining barangays are included.</li>
+    </ul>
+  </div>
 </div>
 {% endif %}
 
