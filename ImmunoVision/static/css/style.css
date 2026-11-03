@@ -1165,6 +1165,11 @@ a.stock-row {
 }
 a.stock-row:hover { background: var(--slate-bg-2); }
 a.stock-row .row-chevron { color: var(--text-muted); font-size: 16px; line-height: 1; }
+/* Unlike a campaign/antigen name (always short), a child's name can run
+   long enough to overflow a narrow card - give it the flexible column and
+   let it truncate instead of forcing the row wider than the card. */
+a.stock-row.name-flex { grid-template-columns: minmax(0, 1fr) auto auto auto; }
+a.stock-row.name-flex .sname { overflow: hidden; text-overflow: ellipsis; }
 
 /* Pending vaccine requests on the RHU dashboard. */
 .req-row {
