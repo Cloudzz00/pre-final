@@ -837,6 +837,22 @@ table.data-table.pin-first tbody td:first-child {
 }
 table.data-table.pin-first tbody tr:hover td:first-child { background: var(--slate-bg-2); }
 
+/* Child Records (RHU): ID and Name are two separate columns, and both need
+   to stay anchored together so a row keeps its identity while the vaccine
+   columns scroll - the ID chip alone isn't enough to go on. */
+table.data-table.pin-first-2 th:first-child, table.data-table.pin-first-2 td:first-child { width: 110px; min-width: 110px; max-width: 110px; }
+table.data-table.pin-first-2 th:nth-child(2), table.data-table.pin-first-2 td:nth-child(2) {
+  width: 170px; min-width: 170px; max-width: 170px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+table.data-table.pin-first-2 thead th:nth-child(-n+2) { position: sticky; z-index: 4; }
+table.data-table.pin-first-2 thead th:first-child { left: 0; }
+table.data-table.pin-first-2 thead th:nth-child(2) { left: 110px; }
+table.data-table.pin-first-2 tbody td:nth-child(-n+2) { position: sticky; background: #fff; z-index: 1; }
+table.data-table.pin-first-2 tbody td:first-child { left: 0; }
+table.data-table.pin-first-2 tbody td:nth-child(2) { left: 110px; box-shadow: inset -1px 0 0 var(--border); }
+table.data-table.pin-first-2 tbody tr:hover td:nth-child(-n+2) { background: var(--slate-bg-2); }
+
 /* ---------------- Report configuration panel ---------------- */
 .config-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
                 color: var(--text-secondary); margin-bottom: 8px; }
