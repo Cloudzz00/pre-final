@@ -1924,9 +1924,6 @@ def dashboard():
     as_of, period_label, clamped = resolve_period(month, year)
     kids = filtered_children(barangay_id, as_of=as_of)
     stats = stats_for(kids, as_of)
-    # Stock is municipality-wide, so alerts are not narrowed by barangay.
-    alerts = [f"{a.name} is completely out of stock" for a in core_antigens()
-              if sum(b.quantity_on_hand for b in InventoryBatch.query.filter_by(antigen_id=a.id, is_archived=False)) <= 0]
     dist = risk_distribution_for(kids)
     # Two actionable panels: who needs a visit, and what stock is running out.
     # Both summarise their dedicated pages rather than reproducing them. The
@@ -1956,8 +1953,8 @@ def dashboard():
     below_target = len([r for r in by_barangay if r["coverage"] < COVERAGE_TARGET])
     change = coverage_change(barangay_id)
     return render_template("rhu_dashboard.html", **_rhu_ctx(
-        "dashboard", page_title="Dashboard", stats=stats, inventory_alerts=alerts,
-        at_risk_uncontacted=dist["high_count"], risk_dist=dist, now=datetime.now(),
+        "dashboard", page_title="Dashboard", stats=stats,
+        risk_dist=dist, now=datetime.now(),
         barangays=Barangay.query.order_by(Barangay.name).all(),
         selected_barangay=selected, selected_barangay_id=barangay_id,
         months=MONTH_NAMES, years=data_years(), month=month, year=year,

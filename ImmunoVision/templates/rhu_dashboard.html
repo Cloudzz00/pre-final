@@ -12,19 +12,6 @@
   </div>
 </div>
 
-{% if inventory_alerts or at_risk_uncontacted %}
-<div class="alert-banner">
-  <div class="ab-icon">{{ icon('alert-triangle', 18) }}</div>
-  <div class="ab-body">
-    <div class="title">Critical Alerts{% if selected_barangay %} <span class="text-muted" style="font-weight:400;font-size:12px;">(stock alerts are municipality-wide)</span>{% endif %}</div>
-    <ul>
-      {% for a in inventory_alerts %}<li>{{ a }}</li>{% endfor %}
-      {% if at_risk_uncontacted %}<li>{{ at_risk_uncontacted }} high-risk children may need urgent follow-up</li>{% endif %}
-    </ul>
-  </div>
-</div>
-{% endif %}
-
 <div class="filter-bar">
   <span class="flabel">{{ icon('map-pin', 14) }} FILTER</span>
   <form method="get" action="{{ url_for('rhu.dashboard') }}" class="flex-gap">
