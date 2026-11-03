@@ -201,7 +201,7 @@
   function apply(expanded) {
     table.classList.toggle("doses-expanded", expanded);
     btn.setAttribute("aria-expanded", expanded ? "true" : "false");
-    label.textContent = expanded ? "Hide doses" : "Doses";
+    label.textContent = expanded ? "Hide doses" : "Expand doses";
     btn.title = expanded ? "Hide the individual dose columns"
                          : "Show the individual dose columns";
   }
