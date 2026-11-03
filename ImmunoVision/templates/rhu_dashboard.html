@@ -36,9 +36,7 @@
     </select>
   </form>
   <span class="text-muted" style="margin-left:auto;font-size:12.5px;">
-    {% if selected_barangay %}<b>{{ selected_barangay.name }}</b>{% else %}Municipality-wide{% endif %}
-    &middot; {{ stats.total_children }} children
-    {%- if period_label %} &middot; {{ period_label }}{% endif %}
+    {{ stats.total_children }} children
     {%- if selected_barangay or as_of %} <a class="btn btn-outline btn-sm" href="{{ url_for('rhu.dashboard') }}" style="padding:4px 10px;font-size:11.5px;margin-left:8px;">{{ icon('x', 11) }} Clear</a>{% endif %}
   </span>
 </div>
