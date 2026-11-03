@@ -567,6 +567,41 @@ select.form-control {
 }
 .chip-outline { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: var(--radius-pill); border: 1px solid var(--green-light); color: var(--green); background: var(--green-bg); font-size: 13px; font-weight: 600; }
 
+/* Custom select: app.js progressively enhances every select.form-control
+   with this trigger+panel pair so the open dropdown matches the app's own
+   design language (see .account-dropdown) instead of the browser's
+   unstyleable native option list. The real <select> stays in the DOM,
+   visually hidden, as the actual form field - this is layered on top and
+   never shown if JS doesn't run. */
+.select-shell { position: relative; }
+.select-shell select.form-control { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; }
+.select-trigger {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  text-align: left; cursor: pointer; font-family: inherit; color: var(--text-primary);
+  background-image: none;
+}
+.select-trigger:disabled { cursor: not-allowed; opacity: .6; }
+.select-trigger .st-chevron { flex-shrink: 0; color: var(--text-secondary); display: flex; transition: transform .15s ease; }
+.select-trigger[aria-expanded="true"] .st-chevron { transform: rotate(180deg); }
+.select-trigger[aria-expanded="true"] { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, .10); }
+.select-panel {
+  position: absolute; left: 0; right: 0; top: calc(100% + 6px); min-width: 180px;
+  background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow-lg); padding: 6px; z-index: 60;
+  max-height: 264px; overflow-y: auto;
+}
+.select-panel[hidden] { display: none; }
+.select-option {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 9px 10px; border-radius: var(--radius-sm); font-size: 13.5px;
+  color: var(--text-primary); cursor: pointer; white-space: nowrap;
+}
+.select-option:hover, .select-option.is-active { background: var(--slate-bg); }
+.select-option.is-selected { font-weight: 700; color: var(--primary); }
+.select-option.is-selected::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--primary); flex-shrink: 0; }
+.select-option[aria-disabled="true"] { color: var(--text-muted); cursor: not-allowed; }
+.select-option[aria-disabled="true"]:hover { background: none; }
+
 /* ---------------- Tables ---------------- */
 /* Wide tables (Child Records is 23 columns x 563 rows) scroll in BOTH axes
    inside a viewport-bounded box. Previously the wrapper had no height limit,
@@ -1483,7 +1518,7 @@ html { scroll-behavior: smooth; }
 }
 .toolbar-form { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
 .toolbar-form label { display: block; font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 5px; }
-.toolbar-form select { height: 40px; min-width: 160px; border-radius: 9px; font-size: 14px; }
+.toolbar-form select, .toolbar-form .select-trigger { height: 40px; min-width: 160px; border-radius: 9px; font-size: 14px; }
 .toolbar-form .btn { height: 40px; font-size: 14px; }
 .report-actions { display: flex; gap: 8px; }
 .report-actions .btn { font-size: 13px; height: 40px; }
@@ -1605,7 +1640,7 @@ html { scroll-behavior: smooth; }
   .report-doc-head { flex-direction: column; }
   .generated-meta { text-align: left; }
   .coverage-bar-cell { display: none; }
-  .toolbar-form, .toolbar-form select { width: 100%; }
+  .toolbar-form, .toolbar-form select, .toolbar-form .select-shell, .toolbar-form .select-trigger { width: 100%; }
   .toolbar-form .btn { width: 100%; }
   .report-actions { width: 100%; }
   .report-actions .btn { flex: 1; }
