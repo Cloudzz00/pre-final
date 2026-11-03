@@ -1013,12 +1013,6 @@ def predict_for_child(date_of_birth, date_registered, sex, doses_dict, barangay_
 
 PRIORITY_RANK = {"Urgent": 0, "High": 1, "Normal": 2}
 
-ALLOCATION_METHODS = {
-    "priority": "Priority first, then proportional",
-    "proportional": "Proportional to request",
-    "coverage": "Lowest coverage first",
-}
-
 
 def _largest_remainder(weights, available):
     """Split `available` whole vials across weights without losing a vial.
