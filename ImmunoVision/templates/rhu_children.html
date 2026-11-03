@@ -56,10 +56,10 @@
 <p class="text-muted" style="margin-top:-8px;">{{ children|length }} children found</p>
 
 <div class="table-wrap">
-<table class="data-table pin-first">
+<table class="data-table pin-first-2">
 <thead>
 <tr>
-  <th>ID</th><th>Reg. Date</th><th>Date of Birth</th><th>Sex</th><th>Barangay</th>
+  <th>ID</th><th>Name</th><th>Reg. Date</th><th>Date of Birth</th><th>Sex</th><th>Barangay</th>
   {# The 15 dose columns sit between the identity columns and Actions, so the
      buttons were pushed off screen. They now collapse behind a summary column. #}
   <th class="dose-toggle-head">
@@ -76,9 +76,9 @@
 {% for c in children %}
 <tr>
   <td>
-    <span class="id-chip"><span class="sex-dot {{ c.sex }}"></span>{{ c.barangay.name[:2]|upper }}-{{ '%03d'|format(c.id) }}</span><br>
-    <span class="text-muted" style="font-size:11.5px;">{{ c.display_name }}</span>
+    <span class="id-chip"><span class="sex-dot {{ c.sex }}"></span>{{ c.barangay.name[:2]|upper }}-{{ '%03d'|format(c.id) }}</span>
   </td>
+  <td title="{{ c.display_name }}">{{ c.display_name }}</td>
   <td>{{ c.date_registered.strftime('%m/%d/%y') }}</td>
   <td>{{ c.date_of_birth.strftime('%m/%d/%y') }}</td>
   <td>{{ c.sex }}</td>
