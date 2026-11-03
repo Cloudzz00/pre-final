@@ -235,8 +235,10 @@
     document.querySelectorAll(".select-panel").forEach(function (panel) {
       if (panel === except || panel.hidden) return;
       panel.hidden = true;
-      var trigger = panel.parentElement.querySelector(".select-trigger");
-      if (trigger) trigger.setAttribute("aria-expanded", "false");
+      var shell = panel.parentElement;
+      var trigger = shell.querySelector(".select-trigger") || shell;
+      trigger.setAttribute("aria-expanded", "false");
+      trigger.removeAttribute("aria-activedescendant");
     });
   }
 
@@ -265,6 +267,43 @@
     trigger.insertAdjacentHTML("beforeend", CHEVRON_SVG);
     shell.appendChild(trigger);
 
+    attachBehavior(select, shell, trigger, valueSpan, trigger);
+  }
+
+  // Same dropdown, for a <select> already sitting inside the app's other
+  // select-styled wrapper (.filter-select: a leading icon + the select's own
+  // text + a static chevron). Reuses that wrapper as the shell instead of
+  // building a new one, so the icon stays and only the native option list
+  // is swapped out - the select's own text layer becomes the value display.
+  function enhanceFilterSelect(select) {
+    if (select.dataset.customized) return;
+    select.dataset.customized = "1";
+    uid += 1;
+
+    var shell = select.closest(".filter-select");
+    if (!shell) return;
+    shell.classList.add("select-shell", "fs-shell");
+
+    var valueSpan = document.createElement("span");
+    valueSpan.className = "st-value fs-value";
+    valueSpan.setAttribute("aria-hidden", "true");
+    shell.insertBefore(valueSpan, select);
+
+    shell.setAttribute("tabindex", "0");
+    shell.setAttribute("role", "button");
+    shell.setAttribute("aria-haspopup", "listbox");
+    shell.setAttribute("aria-expanded", "false");
+    if (select.id) shell.setAttribute("aria-labelledby", select.id);
+
+    attachBehavior(select, shell, shell, valueSpan, shell);
+  }
+
+  // Shared panel + keyboard/pointer wiring for both enhance() and
+  // enhanceFilterSelect(). `clickTarget` opens/closes the panel;
+  // `expandedTarget` carries aria-expanded/aria-activedescendant (the
+  // trigger button for a plain select, the whole shell for a filter-select,
+  // since that variant has no separate trigger element of its own).
+  function attachBehavior(select, shell, clickTarget, valueSpan, expandedTarget) {
     var panel = document.createElement("div");
     panel.className = "select-panel";
     panel.setAttribute("role", "listbox");
@@ -304,21 +343,21 @@
       options.forEach(function (r) { r.classList.remove("is-active"); });
       if (!row) return;
       row.classList.add("is-active");
-      trigger.setAttribute("aria-activedescendant", row.id);
+      expandedTarget.setAttribute("aria-activedescendant", row.id);
       row.scrollIntoView({ block: "nearest" });
     }
 
     function openPanel() {
       closeAllPanels(panel);
       panel.hidden = false;
-      trigger.setAttribute("aria-expanded", "true");
+      expandedTarget.setAttribute("aria-expanded", "true");
       setActive(panel.querySelector(".is-selected") || options[0]);
     }
     function closePanel(refocus) {
       panel.hidden = true;
-      trigger.setAttribute("aria-expanded", "false");
-      trigger.removeAttribute("aria-activedescendant");
-      if (refocus) trigger.focus();
+      expandedTarget.setAttribute("aria-expanded", "false");
+      expandedTarget.removeAttribute("aria-activedescendant");
+      if (refocus) clickTarget.focus();
     }
     function choose(row) {
       if (!row || row.getAttribute("aria-disabled") === "true") return;
@@ -328,10 +367,10 @@
       closePanel(true);
     }
 
-    trigger.addEventListener("click", function () {
+    clickTarget.addEventListener("click", function () {
       if (panel.hidden) openPanel(); else closePanel(false);
     });
-    trigger.addEventListener("keydown", function (e) {
+    clickTarget.addEventListener("keydown", function (e) {
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
         e.preventDefault();
         if (panel.hidden) { openPanel(); return; }
@@ -353,6 +392,10 @@
       if (row) setActive(row);
     });
     panel.addEventListener("click", function (e) {
+      // The filter-select variant uses the whole shell (which contains this
+      // panel) as its click target, so without this a click on a row would
+      // bubble up and immediately reopen the panel it just closed.
+      e.stopPropagation();
       var row = e.target.closest(".select-option");
       if (row) choose(row);
     });
@@ -366,6 +409,7 @@
   }
 
   document.querySelectorAll("select.form-control").forEach(enhance);
+  document.querySelectorAll(".filter-select select").forEach(enhanceFilterSelect);
 
   document.addEventListener("click", function (e) {
     if (!e.target.closest(".select-shell")) closeAllPanels(null);

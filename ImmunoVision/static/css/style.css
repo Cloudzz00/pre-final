@@ -1501,6 +1501,19 @@ html { scroll-behavior: smooth; }
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, .10);
 }
+/* app.js enhances the select inside with the same custom dropdown panel
+   used everywhere else (see .select-panel) - the icon and chevron stay,
+   only the native option list is replaced. The select itself becomes an
+   invisible hit target behind the new text layer (.fs-value). */
+.filter-select.fs-shell { cursor: pointer; overflow: visible; }
+.filter-select.fs-shell:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.filter-select.fs-shell select { opacity: 0; pointer-events: none; position: absolute; inset: 0; }
+.filter-select.fs-shell .fs-value {
+  position: absolute; inset: 0; display: flex; align-items: center;
+  padding: 0 34px 0 35px; font-size: 12.5px; color: var(--text-primary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.filter-select.fs-shell[aria-expanded="true"] .filter-chevron { transform: translateY(-65%) rotate(225deg); }
 .add-child-btn {
   height: 38px;
   white-space: nowrap;

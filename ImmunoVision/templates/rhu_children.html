@@ -11,18 +11,18 @@
     <input type="text" name="q" value="{{ search }}" placeholder="Search by name...">
   </div>
   {% if barangays %}
-  <select name="barangay_id" class="select-sm" onchange="this.form.submit()">
+  <select name="barangay_id" class="form-control select-sm" onchange="this.form.submit()">
     <option value="">All Barangays</option>
     {% for b in barangays %}<option value="{{ b.id }}" {% if selected_barangay==b.id %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
   </select>
   {% endif %}
-  <select name="year" class="select-sm" onchange="this.form.submit()">
+  <select name="year" class="form-control select-sm" onchange="this.form.submit()">
     <option value="">All Registration Years</option>
     {% for year in registration_years %}
     <option value="{{ year }}" {% if selected_year==year %}selected{% endif %}>{{ year }} Registrations</option>
     {% endfor %}
   </select>
-  <select name="risk_level" class="select-sm" onchange="this.form.submit()">
+  <select name="risk_level" class="form-control select-sm" onchange="this.form.submit()">
     <option value="">All Risk Levels</option>
     <option value="At-Risk" {% if selected_risk=='At-Risk' %}selected{% endif %}>At-Risk</option>
     <option value="Not At-Risk" {% if selected_risk=='Not At-Risk' %}selected{% endif %}>Not At-Risk</option>
