@@ -279,7 +279,11 @@
         row.className = "select-option";
         row.id = "select-opt-" + uid + "-" + i;
         row.setAttribute("role", "option");
-        row.textContent = opt.textContent;
+        row.title = opt.textContent;
+        var label = document.createElement("span");
+        label.className = "so-label";
+        label.textContent = opt.textContent;
+        row.appendChild(label);
         if (opt.disabled) row.setAttribute("aria-disabled", "true");
         row.dataset.value = opt.value;
         panel.appendChild(row);
