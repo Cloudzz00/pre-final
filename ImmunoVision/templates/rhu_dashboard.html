@@ -139,12 +139,12 @@
             </div>
 
     <div class="card card-pad">
-              <div class="flex-between" style="margin-bottom:4px;">
-                <div>
+              <div style="margin-bottom:4px;">
+                <div class="flex-between">
                   <div class="card-title mb-0">Needs Follow-Up</div>
-                  <div class="card-sub mb-0">Highest-risk children under 12 months{% if selected_barangay %} in {{ selected_barangay.name }}{% endif %}</div>
+                  <a class="btn btn-outline btn-sm" href="{{ url_for('rhu.continuation') }}">All {{ follow_up_total }} &rsaquo;</a>
                 </div>
-                <a class="btn btn-outline btn-sm" href="{{ url_for('rhu.continuation') }}">All {{ follow_up_total }} &rsaquo;</a>
+                <div class="card-sub mb-0">Highest-risk children under 12 months{% if selected_barangay %} in {{ selected_barangay.name }}{% endif %}</div>
               </div>
               <div style="margin-top:10px;">
                 {% for r in follow_up %}
@@ -187,12 +187,12 @@
         </div>
 
     <div class="card card-pad">
-          <div class="flex-between" style="margin-bottom:4px;">
-            <div>
+          <div style="margin-bottom:4px;">
+            <div class="flex-between">
               <div class="card-title mb-0">Vaccines Running Low</div>
-              <div class="card-sub mb-0">At or below reorder level{% if selected_barangay %} &middot; municipality-wide stock{% endif %}</div>
+              <a class="btn btn-outline btn-sm" href="{{ url_for('rhu.inventory') }}">Inventory &rsaquo;</a>
             </div>
-            <a class="btn btn-outline btn-sm" href="{{ url_for('rhu.inventory') }}">Inventory &rsaquo;</a>
+            <div class="card-sub mb-0">At or below reorder level{% if selected_barangay %} &middot; municipality-wide stock{% endif %}</div>
           </div>
           <div style="margin-top:10px;">
             {% for r in low_stock %}
@@ -213,12 +213,12 @@
 
     <div class="card card-pad">
 
-          <div class="flex-between" style="margin-bottom:4px;">
-            <div>
+          <div style="margin-bottom:4px;">
+            <div class="flex-between">
               <div class="card-title mb-0">Requests Awaiting Review</div>
-              <div class="card-sub mb-0">{% if selected_barangay %}From {{ selected_barangay.name }}{% else %}Submitted by barangay health workers{% endif %}</div>
+              <a class="btn btn-outline btn-sm" href="{{ url_for('rhu.requests') }}">{{ icon('clipboard', 14) }} Review</a>
             </div>
-            <a class="btn btn-outline btn-sm" href="{{ url_for('rhu.requests') }}">{{ icon('clipboard', 14) }} Review</a>
+            <div class="card-sub mb-0">{% if selected_barangay %}From {{ selected_barangay.name }}{% else %}Submitted by barangay health workers{% endif %}</div>
           </div>
           <div style="margin-top:8px;">
             {% for q in pending_requests %}

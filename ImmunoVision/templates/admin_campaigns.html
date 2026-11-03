@@ -2,12 +2,12 @@
 {% from "_icons.html" import icon %}
 {% block content %}
 <div class="card card-pad">
-  <div class="flex-between" style="margin-bottom:4px;">
-    <div>
+  <div style="margin-bottom:4px;">
+    <div class="flex-between">
       <div class="card-title mb-0">Supplementary Campaigns</div>
-      <div class="card-sub mb-0">Catch-up drives and SIA rounds (e.g. a Measles-Rubella campaign) - tracked separately from the core schedule and never affect a child's risk status.</div>
+      <button class="btn btn-primary btn-sm" data-open-modal="newCampaignModal">{{ icon('plus', 14) }} New Campaign</button>
     </div>
-    <button class="btn btn-primary btn-sm" data-open-modal="newCampaignModal">{{ icon('plus', 14) }} New Campaign</button>
+    <div class="card-sub mb-0">Catch-up drives and SIA rounds (e.g. a Measles-Rubella campaign) - tracked separately from the core schedule and never affect a child's risk status.</div>
   </div>
 
   {% for c in campaigns %}
