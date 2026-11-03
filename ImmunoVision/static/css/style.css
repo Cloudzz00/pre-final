@@ -779,6 +779,11 @@ table.data-table tbody tr:hover { background: var(--slate-bg-2); }
    the one thing in this row that never breaks mid-phrase. */
 .flex-between { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; row-gap: 6px; }
 .flex-between .card-title { white-space: nowrap; }
+/* A card-header action is already paired with a short title on its own
+   row (see rhu/admin dashboard cards) - trimmed a bit tighter than a
+   regular small button so the pair keeps fitting one line in the
+   narrower side-column cards. */
+.flex-between .btn-sm { padding-left: 10px; padding-right: 10px; }
 /* A two-line title+subtitle block next to a short action (button, select)
    centers that action across both lines, floating it between the title and
    subtitle instead of lining up with the title itself - align to the top. */
