@@ -180,12 +180,12 @@
     </div>
 
     <div class="card card-pad" style="margin-bottom:16px;">
-      <div style="margin-bottom:4px;">
-        <div class="flex-between">
+      <div class="flex-between" style="margin-bottom:4px;">
+        <div>
           <div class="card-title mb-0">Active Campaigns</div>
-          <a class="btn btn-outline btn-sm" href="{{ url_for('admin.campaigns') }}">{{ icon('calendar', 14) }} Manage</a>
+          <div class="card-sub mb-0">Supplementary immunization drives open right now</div>
         </div>
-        <div class="card-sub mb-0">Supplementary immunization drives open right now</div>
+        <a class="btn btn-outline btn-sm" href="{{ url_for('admin.campaigns') }}">{{ icon('calendar', 14) }} Manage</a>
       </div>
       <div style="margin-top:10px;">
         {% for c in active_campaigns %}
