@@ -97,12 +97,14 @@
 <div class="dashboard-action-grid">
   <div class="card card-pad followup-card">
     <div class="card-head">
-      <div class="dashboard-card-title"><span class="dashboard-section-icon icon-red">{{ icon('alert-triangle', 18) }}</span><div class="card-title mb-0">Needs Follow-Up Checkup</div></div>
+      <div>
+        <div class="dashboard-card-title"><span class="dashboard-section-icon icon-red">{{ icon('alert-triangle', 18) }}</span><div class="card-title mb-0">Needs Follow-Up Checkup</div></div>
+        <div class="card-sub mb-0" style="margin-left:43px;">At-risk children under 12 months who need attention.</div>
+      </div>
       <a href="{{ url_for('bhw.continuation') }}" class="btn btn-outline btn-sm followup-view-btn">
         {{ icon('heart-pulse', 13) }} View All ({{ follow_up_total }})
       </a>
     </div>
-    <div class="card-sub mb-0" style="margin-left:43px;">At-risk children under 12 months who need attention.</div>
     <div class="table-wrap auto-height" style="margin-top:12px;">
       <table class="data-table plain-head compact">
         <thead><tr><th>Child</th><th>Birthdate</th><th>Missed</th><th>Risk</th></tr></thead>
@@ -125,10 +127,12 @@
 
   <div class="card card-pad due-calendar-card">
     <div class="card-head">
-      <div class="dashboard-card-title"><span class="dashboard-section-icon icon-blue">{{ icon('calendar', 18) }}</span><div class="card-title mb-0">Vaccination Due Calendar</div></div>
+      <div>
+        <div class="dashboard-card-title"><span class="dashboard-section-icon icon-blue">{{ icon('calendar', 18) }}</span><div class="card-title mb-0">Vaccination Due Calendar</div></div>
+        <div class="card-sub mb-0" style="margin-left:43px;">See which children need vaccines on a specific date.</div>
+      </div>
       <a href="{{ url_for('bhw.due_vaccines') }}" class="btn btn-outline btn-sm">View All {{ icon('arrow-right', 13) }}</a>
     </div>
-    <div class="card-sub mb-0" style="margin-left:43px;">See which children need vaccines on a specific date.</div>
     <div class="due-legend" style="margin-left:43px;margin-top:6px;">
       <span><i class="due-dot today"></i>Due Today</span>
       <span><i class="due-dot upcoming"></i>Upcoming</span>
