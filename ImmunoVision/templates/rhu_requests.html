@@ -45,7 +45,16 @@
     </div>
 
     <div class="table-wrap auto-height" style="margin-top:14px;">
-      <table class="data-table compact">
+      <table class="data-table compact" style="table-layout:fixed;">
+        {# Fixed widths so every vaccine group's table lines up the same way down
+           the page - table-layout:auto sizes each one independently off its own
+           row content (e.g. barangay name length), so columns drifted out of
+           alignment from one card to the next. #}
+        <colgroup>
+          <col style="width:14%;"><col style="width:14%;"><col style="width:12%;">
+          <col style="width:10%;"><col style="width:10%;"><col style="width:10%;">
+          <col style="width:30%;">
+        </colgroup>
         <thead><tr>
           <th>Barangay</th><th>Request</th><th>Date</th><th>Priority</th><th>Coverage</th>
           <th>Requested</th><th>Actions</th>
