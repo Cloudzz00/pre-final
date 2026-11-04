@@ -1169,11 +1169,16 @@ def report_figures(barangay_id=None, as_of=None):
     vt_by_id = _vaccine_types_by_id()
     records = _records_by_child()
     risk = _latest_risk_by_child()
-    all_barangays = Barangay.query.all()
+    # Neither the barangay list nor the (pre-as_of-filter) children list
+    # depends on `as_of`, but yearly_trend() calls this once per year of
+    # data (~17 calls for a single dashboard render) - caching both per
+    # request turns 17 redundant full-table queries into 1.
+    all_barangays = _cache("all_barangays", lambda: Barangay.query.all())
     names = {b.id: b.name for b in all_barangays}
     targets = {b.id: b.target_population for b in all_barangays}
 
-    children = [c for c in _children_query(barangay_id).all() if c.date_of_birth <= as_of]
+    all_children = _cache(f"children:{barangay_id}", lambda: _children_query(barangay_id).all())
+    children = [c for c in all_children if c.date_of_birth <= as_of]
 
     def immunized(child):
         age = (as_of - child.date_of_birth).days
