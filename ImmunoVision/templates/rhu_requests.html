@@ -48,7 +48,7 @@
       <table class="data-table compact">
         <thead><tr>
           <th>Barangay</th><th>Request</th><th>Date</th><th>Priority</th><th>Coverage</th>
-          <th>Requested</th><th>Approve Quantity</th><th></th>
+          <th>Requested</th><th>Actions</th>
         </tr></thead>
         <tbody>
           {% for r in g.rows %}
@@ -68,18 +68,18 @@
             </td>
             <td>{{ r.requested }}</td>
             <td>
-              <form method="post" action="{{ url_for('rhu.request_action', req_id=r.id, action='approve') }}"
-                    style="display:flex;align-items:center;gap:8px;">
-                <input class="form-control" type="number" name="quantity" value="{{ r.allocated }}"
-                       min="1" max="{{ r.requested }}" style="max-width:90px;"
-                       aria-label="Quantity to approve for {{ r.barangay }}">
-                <button class="btn btn-outline btn-sm" type="submit">{{ icon('check', 14) }} Approve</button>
-              </form>
-            </td>
-            <td>
-              <form method="post" action="{{ url_for('rhu.request_action', req_id=r.id, action='reject') }}">
-                <button class="btn btn-outline btn-sm" type="submit" title="Reject">{{ icon('x', 14) }}</button>
-              </form>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <form method="post" action="{{ url_for('rhu.request_action', req_id=r.id, action='approve') }}"
+                      style="display:flex;align-items:center;gap:8px;">
+                  <input class="form-control" type="number" name="quantity" value="{{ r.allocated }}"
+                         min="1" max="{{ r.requested }}" style="width:70px;"
+                         aria-label="Quantity to approve for {{ r.barangay }}">
+                  <button class="btn btn-outline btn-sm" type="submit">{{ icon('check', 14) }} Approve</button>
+                </form>
+                <form method="post" action="{{ url_for('rhu.request_action', req_id=r.id, action='reject') }}">
+                  <button class="btn btn-outline btn-sm" type="submit" title="Reject">{{ icon('x', 14) }}</button>
+                </form>
+              </div>
             </td>
           </tr>
           {% endfor %}
@@ -88,7 +88,7 @@
           <tr>
             <td><b>Total</b></td><td></td><td></td><td></td><td></td>
             <td><b>{{ g.requested }}</b></td>
-            <td colspan="2"><b>{{ g.allocated }}</b> suggested{% if g.shortfall %}, <span class="text-muted">{{ g.shortfall }} short</span>{% endif %}</td>
+            <td><b>{{ g.allocated }}</b> suggested{% if g.shortfall %}, <span class="text-muted">{{ g.shortfall }} short</span>{% endif %}</td>
           </tr>
         </tfoot>
       </table>
