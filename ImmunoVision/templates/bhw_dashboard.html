@@ -20,8 +20,7 @@
 
 {% if active_campaigns %}
 <div class="card card-pad" style="margin-top:18px;">
-  <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('calendar', 18) }}</span><div class="card-title mb-0">Active Campaigns</div></div>
-  <div class="card-sub mb-0" style="margin-left:43px;">Supplementary immunization drives open right now in Barangay {{ current_user.barangay.name }}</div>
+  <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('calendar', 18) }}</span><div><div class="card-title mb-0">Active Campaigns</div><div class="card-sub mb-0">Supplementary immunization drives open right now in Barangay {{ current_user.barangay.name }}</div></div></div>
   <div style="margin-top:12px;">
     {% for c in active_campaigns %}
     <a class="stock-row" href="{{ url_for('bhw.campaign_worklist', campaign_id=c.id) }}">
@@ -79,10 +78,10 @@
 .stat-grid .stat-card{display:flex;align-items:center;gap:16px}
 .stat-grid .stat-card .stat-icon{flex-shrink:0}
 .stat-grid .stat-card .stat-icon + div{flex:1;min-width:0}
-.dashboard-card-title{display:flex;align-items:center}.dashboard-card-title .card-title{margin:0}.dashboard-card-title .card-sub{margin-left:43px}
+.dashboard-card-title{display:flex;align-items:center}.dashboard-card-title .card-title{margin:0}
 .followup-card .card-head,.due-calendar-card .card-head{padding-bottom:2px}
 .calendar-panel{background:#f8fbff}.cal-day.selected{box-shadow:0 3px 8px rgba(37,99,235,.18)}.due-list{background:#fff}.due-item:hover{background:#f8fafc}
-@media(max-width:900px){.dashboard-action-grid{grid-template-columns:1fr}.dashboard-card-title .card-sub{margin-left:0}}
+@media(max-width:900px){.dashboard-action-grid{grid-template-columns:1fr}}
 
 <style>
 .risk-distribution-card{min-height:100%}
@@ -104,9 +103,12 @@
 <div class="dashboard-action-grid">
   <div class="card card-pad followup-card">
     <div class="card-head">
-      <div>
-        <div class="dashboard-card-title"><span class="dashboard-section-icon icon-red">{{ icon('alert-triangle', 18) }}</span><div class="card-title mb-0">Needs Follow-Up Checkup</div></div>
-        <div class="card-sub mb-0" style="margin-left:43px;">At-risk children under 12 months who need attention.</div>
+      <div class="dashboard-card-title">
+        <span class="dashboard-section-icon icon-red">{{ icon('alert-triangle', 18) }}</span>
+        <div>
+          <div class="card-title mb-0">Needs Follow-Up Checkup</div>
+          <div class="card-sub mb-0">At-risk children under 12 months who need attention.</div>
+        </div>
       </div>
       <a href="{{ url_for('bhw.continuation') }}" class="btn btn-outline btn-sm followup-view-btn">
         {{ icon('heart-pulse', 13) }} View All ({{ follow_up_total }})
@@ -134,9 +136,12 @@
 
   <div class="card card-pad due-calendar-card">
     <div class="card-head">
-      <div>
-        <div class="dashboard-card-title"><span class="dashboard-section-icon icon-blue">{{ icon('calendar', 18) }}</span><div class="card-title mb-0">Vaccination Due Calendar</div></div>
-        <div class="card-sub mb-0" style="margin-left:43px;">See which children need vaccines on a specific date.</div>
+      <div class="dashboard-card-title">
+        <span class="dashboard-section-icon icon-blue">{{ icon('calendar', 18) }}</span>
+        <div>
+          <div class="card-title mb-0">Vaccination Due Calendar</div>
+          <div class="card-sub mb-0">See which children need vaccines on a specific date.</div>
+        </div>
       </div>
       <a href="{{ url_for('bhw.due_vaccines') }}" class="btn btn-outline btn-sm">View All {{ icon('arrow-right', 13) }}</a>
     </div>
@@ -173,17 +178,15 @@
 
 <div class="split-2-1">
   <div class="card card-pad">
-    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-blue">{{ icon('syringe', 18) }}</span><div class="card-title" style="font-size:18px;">Coverage by Vaccine</div></div>
-    <div class="card-sub" style="font-size:13px;margin-left:43px;">All 15 doses, in schedule order</div>
-    <div class="chart-box"><canvas id="vaccineChart"></canvas></div>
+    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-blue">{{ icon('syringe', 18) }}</span><div><div class="card-title mb-0" style="font-size:18px;">Coverage by Vaccine</div><div class="card-sub mb-0" style="font-size:13px;">All 15 doses, in schedule order</div></div></div>
+    <div class="chart-box" style="margin-top:16px;"><canvas id="vaccineChart"></canvas></div>
     {% if insights.vaccine %}
     <div class="insight">{{ icon('activity', 14) }}<span>{{ insights.vaccine }}</span></div>
     {% endif %}
   </div>
 
   <div class="card card-pad risk-distribution-card">
-    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-green">{{ icon('shield', 18) }}</span><div class="card-title" style="font-size:18px;">How Children Are Doing</div></div>
-    <div class="card-sub" style="font-size:13px;margin-left:43px;">A quick look at which children are on track and which need a visit.</div>
+    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-green">{{ icon('shield', 18) }}</span><div><div class="card-title mb-0" style="font-size:18px;">How Children Are Doing</div><div class="card-sub mb-0" style="font-size:13px;">A quick look at which children are on track and which need a visit.</div></div></div>
     <div class="risk-summary">
       <div class="risk-total">
         <strong>{{ risk_dist.low_count + risk_dist.high_count + risk_dist.medium_count }}</strong>
@@ -212,19 +215,17 @@
   align-items:stretch;
 ">
   <div class="card card-pad" style="display:flex;flex-direction:column;min-height:380px;">
-    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('activity', 18) }}</span><div class="card-title" style="font-size:18px;">Annual Coverage Trend</div></div>
-    <div class="card-sub" style="font-size:13px;margin-left:43px;">Coverage at each year end</div>
+    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('activity', 18) }}</span><div><div class="card-title mb-0" style="font-size:18px;">Annual Coverage Trend</div><div class="card-sub mb-0" style="font-size:13px;">Coverage at each year end</div></div></div>
     {# Labelled as simulated: the database holds a current snapshot, not
        month-by-month history, so this series cannot be measured. #}
-    <div class="chart-box" style="flex:1;min-height:270px;"><canvas id="trendChart"></canvas></div>
+    <div class="chart-box" style="flex:1;min-height:270px;margin-top:16px;"><canvas id="trendChart"></canvas></div>
     {% if insights.trend %}
     <div class="insight" style="font-size:13px;">{{ icon('activity', 14) }}<span>{{ insights.trend }}</span></div>
     {% endif %}
   </div>
 
   <div class="card card-pad" style="display:flex;flex-direction:column;min-height:380px;">
-    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-teal">{{ icon('clipboard', 18) }}</span><div class="card-title" style="font-size:18px;">Vaccine Request Status</div></div>
-    <div class="card-sub" style="font-size:13px;margin-left:43px;">Barangay {{ current_user.barangay.name }}</div>
+    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-teal">{{ icon('clipboard', 18) }}</span><div><div class="card-title mb-0" style="font-size:18px;">Vaccine Request Status</div><div class="card-sub mb-0" style="font-size:13px;">Barangay {{ current_user.barangay.name }}</div></div></div>
 
     {% if pending_requests %}
     <div style="margin-top:20px;padding:15px;border:1px solid var(--border);border-radius:12px;">
