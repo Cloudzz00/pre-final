@@ -1,6 +1,7 @@
 {% extends "layout_app.html" %}
 {% from "_icons.html" import icon %}
-{% block page_subtitle %}Which vaccines are missing, weighted by consequence &mdash; for who, in their first year, is likely to stop coming back altogether, see <a class="link" href="{{ url_for('bhw.continuation') }}">Continuation Predictor</a>.{# ── Schedule Visit Modal ── #}
+{% block content %}
+{# ── Schedule Visit Modal ── #}
 <div class="modal-scrim" id="scheduleVisitModal">
   <div class="modal-box" style="max-width:400px;">
     <div class="modal-head">
@@ -33,9 +34,6 @@
   </div>
 </div>
 
-
-{% endblock %}
-{% block content %}
 {% set total_children = dist.high_count + dist.medium_count + dist.low_count %}
 {% set needs_visit = dist.high_count + dist.medium_count %}
 
