@@ -268,6 +268,15 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
 .btn-banner { background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.4); color: #fff; }
 .btn-banner:hover { background: rgba(255,255,255,0.24); }
 .btn-sm { padding: 7px 14px; font-size: 13px; border-radius: var(--radius-sm); }
+/* A number input (base .form-control padding/font-size) next to .btn-sm
+   buttons rendered taller than them (42px vs ~30-32px) - an icon-only
+   button vs. an icon+text one also differed by a couple px from their
+   content's own height. Fixing all three to one explicit height makes
+   every piece of an inline action cluster (e.g. Vaccine Requests'
+   quantity input + Approve + Reject) line up exactly. */
+.actions-cluster { display: flex; align-items: center; gap: 8px; }
+.actions-cluster input, .actions-cluster .btn-sm { height: 32px; box-sizing: border-box; }
+.actions-cluster input { padding-top: 0; padding-bottom: 0; }
 .btn-icon { width: 34px; height: 34px; padding: 0; border-radius: var(--radius-sm); }
 
 .rounded-pill-btn { border-radius: var(--radius-pill) !important; }
