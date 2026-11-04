@@ -27,6 +27,8 @@
       <option value="{{ y }}" {% if year == y|string %}selected{% endif %}>{{ y }}</option>
       {% endfor %}
     </select>
+    <input type="hidden" name="from_year" value="{{ from_year }}">
+    <input type="hidden" name="to_year" value="{{ to_year }}">
   </form>
   <span class="text-muted" style="margin-left:auto;font-size:12.5px;">
     {{ total_in_barangay }} children
@@ -42,6 +44,33 @@
   not stored historically.
 </p>
 {% endif %}
+
+<div class="card card-pad" style="margin-bottom:18px;">
+  <div class="flex-between" style="margin-bottom:4px;">
+    <div>
+      <div class="card-title mb-0">Activity</div>
+      <div class="card-sub mb-0">Doses given and children registered between these years</div>
+    </div>
+    <form method="get" action="{{ url_for('bhw.dashboard') }}" class="flex-gap" style="align-items:center;">
+      <input type="hidden" name="month" value="{{ month }}">
+      <input type="hidden" name="year" value="{{ year }}">
+      <select class="form-control select-sm" name="from_year" onchange="this.form.submit()" aria-label="From year">
+        {% for y in activity_years %}
+        <option value="{{ y }}" {% if from_year == y %}selected{% endif %}>From {{ y }}</option>
+        {% endfor %}
+      </select>
+      <select class="form-control select-sm" name="to_year" onchange="this.form.submit()" aria-label="To year">
+        {% for y in activity_years %}
+        <option value="{{ y }}" {% if to_year == y %}selected{% endif %}>To {{ y }}</option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+  <div class="mini-stats" style="margin-top:10px;">
+    <div class="mini-stat"><span class="v">{{ activity.doses_given }}</span><span class="k">Doses Given</span></div>
+    <div class="mini-stat"><span class="v">{{ activity.new_children }}</span><span class="k">New Children Registered</span></div>
+  </div>
+</div>
 
 <div class="stat-grid">
   <div class="stat-card"><div class="stat-icon bg-blue">{{ icon('users', 21) }}</div><div><div class="stat-value">{{ stats.total_children }}</div><div class="stat-label">Total Registered Children</div><div class="stat-caption">All children in your barangay</div></div></div>
