@@ -14,7 +14,7 @@
 <div class="stat-grid">
   <div class="stat-card"><div class="stat-icon bg-blue">{{ icon('users', 21) }}</div><div><div class="stat-value">{{ stats.total_children }}</div><div class="stat-label">Total Registered Children</div><div class="stat-caption">All children in your barangay</div></div></div>
   <div class="stat-card"><div class="stat-icon bg-red">{{ icon('alert-triangle', 21) }}</div><div><div class="stat-value">{{ stats.at_risk }}</div><div class="stat-label">At-Risk Children</div><div class="stat-caption">Need closer monitoring</div></div></div>
-  <div class="stat-card"><div class="stat-icon bg-green">{{ icon('check-circle', 21) }}</div><div><div class="stat-value">{{ stats.fully_immunized }}</div><div class="stat-label">Fully Immunized</div><div class="stat-caption">Completed all age-appropriate doses</div></div></div>
+  <div class="stat-card"><div class="stat-icon bg-green">{{ icon('check-circle', 21) }}</div><div><div class="stat-value">{{ stats.fully_immunized }}</div><div class="stat-label">Fully Immunized</div><div class="stat-caption">Up to date on all doses</div></div></div>
   <div class="stat-card"><div class="stat-icon bg-purple">{{ icon('activity', 21) }}</div><div><div class="stat-value">{{ stats.coverage_rate }}%</div><div class="stat-label">Coverage Rate</div><div class="stat-caption">Target: 95%</div></div></div>
 </div>
 
@@ -78,6 +78,7 @@
    to flex here so both simply center against each other's real height. */
 .stat-grid .stat-card{display:flex;align-items:center;gap:16px}
 .stat-grid .stat-card .stat-icon{flex-shrink:0}
+.stat-grid .stat-card .stat-icon + div{flex:1;min-width:0}
 .dashboard-card-title{display:flex;align-items:center}.dashboard-card-title .card-title{margin:0}.dashboard-card-title .card-sub{margin-left:43px}
 .followup-card .card-head,.due-calendar-card .card-head{padding-bottom:2px}
 .calendar-panel{background:#f8fbff}.cal-day.selected{box-shadow:0 3px 8px rgba(37,99,235,.18)}.due-list{background:#fff}.due-item:hover{background:#f8fafc}
