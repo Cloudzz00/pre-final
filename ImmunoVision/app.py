@@ -848,6 +848,29 @@ def stats_for(children, as_of=None):
             "coverage_rate": round(fully / total * 100, 1) if total else 0.0}
 
 
+def activity_in_range(barangay_id, from_year, to_year):
+    """Real events within [from_year, to_year] - unlike stats_for()'s "as of a
+    date" snapshot, these are simple date-range counts (doses administered,
+    children registered), so they stay accurate no matter how old the range
+    is: nothing here depends on a child's *current* state."""
+    range_start = date(from_year, 1, 1)
+    range_end = min(date(to_year, 12, 31), date.today())
+    doses_given = (VaccinationRecord.query.join(Child)
+                   .filter(Child.barangay_id == barangay_id,
+                           VaccinationRecord.date_administered.isnot(None),
+                           VaccinationRecord.date_administered >= range_start,
+                           VaccinationRecord.date_administered <= range_end)
+                   .count())
+    new_children = (Child.query
+                     .filter(Child.barangay_id == barangay_id,
+                             Child.date_registered.isnot(None),
+                             Child.date_registered >= range_start,
+                             Child.date_registered <= range_end)
+                     .count())
+    return {"doses_given": doses_given, "new_children": new_children,
+            "range_start": range_start, "range_end": range_end}
+
+
 def risk_distribution_for(children):
     counts = Counter()
     risk = _latest_risk_by_child()
@@ -2439,6 +2462,18 @@ def dashboard():
     year = request.args.get("year", "")
     as_of, period_label, clamped = resolve_period(month, year)
     kids = filtered_children(bid, risk_level, status, as_of)
+
+    # Activity range: real events (doses given, children registered) counted
+    # between two years, independent of the as-of snapshot filter above.
+    available_years = data_years()
+    today_year = date.today().year
+    from_year = request.args.get("from_year", type=int) or today_year
+    to_year = request.args.get("to_year", type=int) or today_year
+    from_year = min(max(from_year, available_years[-1]), available_years[0])
+    to_year = min(max(to_year, available_years[-1]), available_years[0])
+    if from_year > to_year:
+        from_year, to_year = to_year, from_year
+    activity = activity_in_range(bid, from_year, to_year)
     # The BHW does the home visits, so the "who to chase" list matters most
     # here. "View All (N)" reads straight off follow_up|length in the
     # template, so the full (unlimited) list is what gets passed - slicing
@@ -2459,6 +2494,7 @@ def dashboard():
         risk_level=risk_level, status=status,
         months=MONTH_NAMES, years=data_years(), month=month, year=year,
         as_of=as_of, period_label=period_label, period_clamped=clamped, follow_up=follow_up,
+        activity=activity, from_year=from_year, to_year=to_year, activity_years=available_years,
         follow_up_total=len(follow_up_all),
         by_vaccine=by_vaccine, trend=trend, change=change,
         vaccine_colours=vaccine_colours(by_vaccine), vaccine_labels=schedule_labels(by_vaccine),
