@@ -77,7 +77,7 @@
             </td>
             <td>{{ r.requested }}</td>
             <td>
-              <div style="display:flex;align-items:center;gap:8px;">
+              <div class="actions-cluster">
                 <form method="post" action="{{ url_for('rhu.request_action', req_id=r.id, action='approve') }}"
                       style="display:flex;align-items:center;gap:8px;">
                   <input class="form-control" type="number" name="quantity" value="{{ r.allocated }}"
