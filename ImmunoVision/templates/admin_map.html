@@ -219,6 +219,20 @@ function initLeaflet() {
   // and leaving a wide empty margin around it.
   map = L.map('leafletMap', { scrollWheelZoom: false, zoomSnap: 0, zoomDelta: 0.5 });
 
+  // Leaflet's Control._refocusOnMap moves keyboard focus to the map
+  // container after any control button click (so arrow-key panning works
+  // right after, say, a zoom click) by calling getContainer().focus() with
+  // no options. On a page where the map sits below the fold, the browser's
+  // default response to that is to scroll the newly focused element fully
+  // into view - yanking the whole page back up on the very first zoom
+  // click and hiding the button you just clicked. Wrapping .focus() to
+  // always pass preventScroll keeps the accessibility behaviour (focus
+  // still moves to the map) while dropping the disruptive scroll, without
+  // touching the vendored library file.
+  const mapContainer = map.getContainer();
+  const nativeFocus = mapContainer.focus.bind(mapContainer);
+  mapContainer.focus = (opts) => nativeFocus({ ...opts, preventScroll: true });
+
   const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 18, minZoom: 10,
     attribution: '&copy; OpenStreetMap contributors'
