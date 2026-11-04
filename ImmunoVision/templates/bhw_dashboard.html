@@ -11,11 +11,11 @@
     <a class="btn btn-banner btn-sm" href="{{ url_for('bhw.requests', new=1) }}">{{ icon('plus', 14) }} New Vaccine Request</a>
   </div>
 </div>
-<div class="stat-grid dashboard-stat-grid">
-  <div class="stat-card dashboard-stat"><div class="stat-icon bg-blue dashboard-stat-icon">{{ icon('users', 21) }}</div><div><div class="stat-value">{{ stats.total_children }}</div><div class="stat-label">Total Registered Children</div><div class="stat-caption">All children in your barangay</div></div></div>
-  <div class="stat-card dashboard-stat"><div class="stat-icon bg-red dashboard-stat-icon">{{ icon('alert-triangle', 21) }}</div><div><div class="stat-value">{{ stats.at_risk }}</div><div class="stat-label">At-Risk Children</div><div class="stat-caption">Need closer monitoring</div></div></div>
-  <div class="stat-card dashboard-stat"><div class="stat-icon bg-green dashboard-stat-icon">{{ icon('check-circle', 21) }}</div><div><div class="stat-value">{{ stats.fully_immunized }}</div><div class="stat-label">Fully Immunized</div><div class="stat-caption">Completed all age-appropriate doses</div></div></div>
-  <div class="stat-card dashboard-stat"><div class="stat-icon bg-purple dashboard-stat-icon">{{ icon('activity', 21) }}</div><div><div class="stat-value">{{ stats.coverage_rate }}%</div><div class="stat-label">Coverage Rate</div><div class="stat-caption">Target: 95%</div></div></div>
+<div class="stat-grid">
+  <div class="stat-card"><div class="stat-icon bg-blue">{{ icon('users', 21) }}</div><div><div class="stat-value">{{ stats.total_children }}</div><div class="stat-label">Total Registered Children</div><div class="stat-caption">All children in your barangay</div></div></div>
+  <div class="stat-card"><div class="stat-icon bg-red">{{ icon('alert-triangle', 21) }}</div><div><div class="stat-value">{{ stats.at_risk }}</div><div class="stat-label">At-Risk Children</div><div class="stat-caption">Need closer monitoring</div></div></div>
+  <div class="stat-card"><div class="stat-icon bg-green">{{ icon('check-circle', 21) }}</div><div><div class="stat-value">{{ stats.fully_immunized }}</div><div class="stat-label">Fully Immunized</div><div class="stat-caption">Completed all age-appropriate doses</div></div></div>
+  <div class="stat-card"><div class="stat-icon bg-purple">{{ icon('activity', 21) }}</div><div><div class="stat-value">{{ stats.coverage_rate }}%</div><div class="stat-label">Coverage Rate</div><div class="stat-caption">Target: 95%</div></div></div>
 </div>
 
 {% if active_campaigns %}
@@ -70,12 +70,11 @@
 .due-empty{padding:28px 14px;text-align:center;color:var(--text-secondary);font-size:12px}
 @media(max-width:1100px){.dashboard-action-grid{grid-template-columns:1fr}.due-layout{grid-template-columns:1fr}}
 
-.dashboard-stat-grid{gap:14px}.dashboard-stat{display:flex;align-items:center;gap:13px;min-height:88px}.dashboard-stat-icon{width:42px;height:42px;min-width:42px;border-radius:12px;display:flex;align-items:center;justify-content:center}.dashboard-stat .stat-value{font-size:24px;line-height:1.05}.dashboard-stat .stat-label{font-size:12px;margin-top:5px}.dashboard-stat .stat-caption{font-size:10px;margin-top:3px;color:var(--text-secondary)}
 .dashboard-section-icon{width:34px;height:34px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;margin-right:9px;vertical-align:middle}.icon-red{background:#fee2e2;color:#dc2626}.icon-blue{background:#dbeafe;color:#2563eb}.icon-green{background:#dcfce7;color:#16a34a}.icon-purple{background:#ede9fe;color:#7c3aed}.icon-teal{background:#ccfbf1;color:#0f766e}
 .dashboard-card-title{display:flex;align-items:center}.dashboard-card-title .card-title{margin:0}.dashboard-card-title .card-sub{margin-left:43px}
 .followup-card .card-head,.due-calendar-card .card-head{padding-bottom:2px}
 .calendar-panel{background:#f8fbff}.cal-day.selected{box-shadow:0 3px 8px rgba(37,99,235,.18)}.due-list{background:#fff}.due-item:hover{background:#f8fafc}
-@media(max-width:900px){.dashboard-stat-grid{grid-template-columns:1fr 1fr}.dashboard-action-grid{grid-template-columns:1fr}.dashboard-card-title .card-sub{margin-left:0}}
+@media(max-width:900px){.dashboard-action-grid{grid-template-columns:1fr}.dashboard-card-title .card-sub{margin-left:0}}
 
 <style>
 .risk-distribution-card{min-height:100%}
