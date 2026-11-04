@@ -566,7 +566,6 @@ body.no-scroll { overflow: hidden; }
 .search-input-wrap input { width: 100%; padding: 9px 14px 9px 36px; border-radius: var(--radius-pill); border: 1px solid var(--border-strong); background: var(--slate-bg-2); }
 .search-input-wrap .si-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--text-muted); display: flex; align-items: center; }
 .select-sm { padding: 9px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: #fff; font-size: 13px; min-width: 130px; }
-.filter-bar .btn-sm { padding-top: 9px; padding-bottom: 9px; }
 /* Plain (non filter-select) <select> elements fall back to the browser's
    native dropdown arrow, which renders flush against the edge no matter
    how much right padding is set. Swap it for a custom chevron inset to
