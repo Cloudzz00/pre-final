@@ -316,7 +316,10 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
    between the dark sidebar and the light content area, so it has contrast
    against both. The chevron flips by rotation when collapsed. */
 .sidebar-toggle {
-  position: absolute; right: -16px; top: 28px;
+  /* Vertically centered on the 38px brand-mark icon: header padding-top
+     (20px) + half the icon's height (19px) = 39px center, minus half the
+     toggle's own height (16px) = 23px. */
+  position: absolute; right: -16px; top: 23px;
   width: 32px; height: 32px; border-radius: 50%;
   background: #fff;
   border: 1px solid var(--border);
