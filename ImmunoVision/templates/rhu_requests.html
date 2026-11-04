@@ -57,7 +57,7 @@
         </colgroup>
         <thead><tr>
           <th>Barangay</th><th>Request</th><th>Date</th><th>Priority</th><th>Coverage</th>
-          <th>Requested</th><th>Actions</th>
+          <th>Requested</th><th style="text-align:right;">Actions</th>
         </tr></thead>
         <tbody>
           {% for r in g.rows %}
@@ -97,7 +97,7 @@
           <tr>
             <td><b>Total</b></td><td></td><td></td><td></td><td></td>
             <td><b>{{ g.requested }}</b></td>
-            <td><b>{{ g.allocated }}</b> suggested{% if g.shortfall %}, <span class="text-muted">{{ g.shortfall }} short</span>{% endif %}</td>
+            <td style="text-align:right;"><b>{{ g.allocated }}</b> suggested{% if g.shortfall %}, <span class="text-muted">{{ g.shortfall }} short</span>{% endif %}</td>
           </tr>
         </tfoot>
       </table>

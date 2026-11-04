@@ -277,7 +277,7 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
    content's own height. Fixing all three to one explicit height makes
    every piece of an inline action cluster (e.g. Vaccine Requests'
    quantity input + Approve + Reject) line up exactly. */
-.actions-cluster { display: flex; align-items: center; gap: 8px; }
+.actions-cluster { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
 .actions-cluster input, .actions-cluster .btn-sm { height: 32px; box-sizing: border-box; }
 .actions-cluster input { padding-top: 0; padding-bottom: 0; background: #fff; }
 .btn-icon { width: 34px; height: 34px; padding: 0; border-radius: var(--radius-sm); }
