@@ -51,13 +51,13 @@
            row content (e.g. barangay name length), so columns drifted out of
            alignment from one card to the next. #}
         <colgroup>
-          <col style="width:14%;"><col style="width:14%;"><col style="width:12%;">
-          <col style="width:10%;"><col style="width:10%;"><col style="width:10%;">
-          <col style="width:30%;">
+          <col style="width:16%;"><col style="width:16%;"><col style="width:13%;">
+          <col style="width:11%;"><col style="width:11%;"><col style="width:11%;">
+          <col style="width:22%;">
         </colgroup>
         <thead><tr>
           <th>Barangay</th><th>Request</th><th>Date</th><th>Priority</th><th>Coverage</th>
-          <th>Requested</th><th style="text-align:right;">Actions</th>
+          <th>Requested</th><th>Actions</th>
         </tr></thead>
         <tbody>
           {% for r in g.rows %}
@@ -97,7 +97,7 @@
           <tr>
             <td><b>Total</b></td><td></td><td></td><td></td><td></td>
             <td><b>{{ g.requested }}</b></td>
-            <td style="text-align:right;"><b>{{ g.allocated }}</b> suggested{% if g.shortfall %}, <span class="text-muted">{{ g.shortfall }} short</span>{% endif %}</td>
+            <td><b>{{ g.allocated }}</b> suggested{% if g.shortfall %}, <span class="text-muted">{{ g.shortfall }} short</span>{% endif %}</td>
           </tr>
         </tfoot>
       </table>
