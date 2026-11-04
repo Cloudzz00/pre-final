@@ -1,8 +1,9 @@
 """Single entry point that regenerates every table and figure this session
 produced for Chapter 4 of the capstone paper, all from the live
 data/raw/*.csv registries plus a freshly trained model -- so the whole set
-can be re-run in one command whenever the underlying data changes again,
-instead of re-running four separate scripts and a pile of one-off snippets.
+can be re-run in one command whenever the underlying data changes again.
+Replaces table_15.py, table_17_18.py, example_profiles.py and
+evaluate_model.py, which this now fully supersedes.
 
 Produces, under --out (default paper_artifacts/):
 
@@ -16,14 +17,20 @@ Produces, under --out (default paper_artifacts/):
   tables/table19_classification_report.txt
   tables/table20_supplementary_evaluation.txt
   tables/table21_example_predictions.txt
+  tables/extra_worked_example_predictions.txt   (not a numbered paper table)
   figures/figure03_records_per_barangay.png
   figures/figure04_birth_year_distribution.png
   figures/figure05_coverage_timeliness.png
   figures/figure06_fully_immunized_by_barangay.png
   figures/figure07_confusion_matrix.png
+  figures/extra_feature_importance.png          (not a numbered paper figure)
+  figures/extra_roc_precision_recall.png         (not a numbered paper figure)
 
 Table/figure numbers match this session's paper draft, not any fixed
 numbering scheme -- update the filenames if your paper's numbering moves.
+The "extra_*" files aren't part of the paper's own numbering; they're the
+groupmate's original feature-importance/supplementary-evaluation/
+example-predictions ask, kept for convenience.
 
 Run:
     python generate_paper_artifacts.py
@@ -557,6 +564,67 @@ def tables_19_20_figure_07(children, args, tables_dir, figures_dir, plt):
     fig.savefig(path, bbox_inches="tight")
     plt.close(fig)
     print(f"  wrote {path}")
+
+    # Extra: feature importance chart (not a numbered paper table/figure --
+    # this was the groupmate's original "feature importance" ask, kept
+    # alongside the numbered outputs for convenience)
+    importance = dict(zip(dp.FEATURE_COLUMNS, rf.feature_importances_.tolist()))
+    items = sorted(importance.items(), key=lambda kv: kv[1], reverse=True)
+    fig, ax = plt.subplots(figsize=(7, 5), dpi=200)
+    ax.barh([k for k, v in items][::-1], [v for k, v in items][::-1], color="#2563eb")
+    ax.set_xlabel("Importance")
+    ax.set_title("Feature Importance - Random Forest (selected)")
+    fig.tight_layout()
+    path = os.path.join(figures_dir, "extra_feature_importance.png")
+    fig.savefig(path, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  wrote {path}")
+
+    # Extra: ROC curve + precision-recall curve (the groupmate's original
+    # "supplementary evaluation" ask -- distinct from Table 20 above, which
+    # the paper itself calls "Supplementary Evaluation of the Predictive
+    # Model" for a different, 7-row breakdown)
+    from sklearn.metrics import roc_curve, auc as sk_auc, precision_recall_curve
+    fpr, tpr, _ = roc_curve(y_test, proba_test)
+    roc_auc_val = sk_auc(fpr, tpr)
+    prec_curve, rec_curve, _ = precision_recall_curve(y_test, proba_test)
+    fig, axes = plt.subplots(1, 2, figsize=(11, 4.5), dpi=200)
+    axes[0].plot(fpr, tpr, color="#2563eb", label=f"AUC = {roc_auc_val:.3f}")
+    axes[0].plot([0, 1], [0, 1], linestyle="--", color="#9ca3af")
+    axes[0].set_xlabel("False Positive Rate")
+    axes[0].set_ylabel("True Positive Rate")
+    axes[0].set_title("ROC Curve")
+    axes[0].legend(loc="lower right")
+    axes[1].plot(rec_curve, prec_curve, color="#16a34a")
+    axes[1].set_xlabel("Recall")
+    axes[1].set_ylabel("Precision")
+    axes[1].set_title("Precision-Recall Curve")
+    fig.suptitle("ROC and Precision-Recall Curves - Random Forest (selected)")
+    fig.tight_layout()
+    path = os.path.join(figures_dir, "extra_roc_precision_recall.png")
+    fig.savefig(path, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  wrote {path}")
+
+    # Extra: worked example predictions -- a handful of actual test-set
+    # children (not the constructed A-E profiles in Table 21), with the
+    # features that drove each prediction
+    n_examples = min(8, len(y_test))
+    sample_idx = np.random.RandomState(args.seed).choice(len(y_test), size=n_examples, replace=False)
+    labels = ["Not At-Risk", "At-Risk"]
+    ex_lines = ["Worked Example Predictions - Random Forest (selected)", "=" * 60, ""]
+    for i in sample_idx:
+        row = rows[idx_test[i]]
+        actual = labels[y_test[i]]
+        predicted = labels[pred_test[i]]
+        mark = "CORRECT" if actual == predicted else "WRONG"
+        ex_lines.append(f"[{mark}] Barangay: {row['barangay']}")
+        ex_lines.append(f"  Predicted: {predicted}  ({proba_test[i] * 100:.1f}% risk)   Actual: {actual}")
+        ex_lines.append(
+            f"  doses_missed={row['doses_missed']:.0f}  completion_rate={row['completion_rate']:.2f}  "
+            f"avg_delay_days={row['avg_delay_days']:.1f}  days_since_last_dose={row['days_since_last_dose']:.0f}")
+        ex_lines.append("")
+    _write(os.path.join(tables_dir, "extra_worked_example_predictions.txt"), "\n".join(ex_lines))
 
     # Table 20: supplementary evaluation
     def metrics(mask, label):
