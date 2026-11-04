@@ -83,10 +83,10 @@
                   <input class="form-control" type="number" name="quantity" value="{{ r.allocated }}"
                          min="1" max="{{ r.requested }}" style="width:70px;"
                          aria-label="Quantity to approve for {{ r.barangay }}">
-                  <button class="btn btn-outline btn-sm" type="submit">{{ icon('check', 14) }} Approve</button>
+                  <button class="btn btn-success btn-sm" type="submit">{{ icon('check', 14) }} Approve</button>
                 </form>
                 <form method="post" action="{{ url_for('rhu.request_action', req_id=r.id, action='reject') }}">
-                  <button class="btn btn-outline btn-sm" type="submit" title="Reject">{{ icon('x', 14) }}</button>
+                  <button class="btn btn-danger btn-sm" type="submit" title="Reject">{{ icon('x', 14) }}</button>
                 </form>
               </div>
             </td>
