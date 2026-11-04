@@ -27,7 +27,6 @@
     <option value="At-Risk" {% if selected_risk=='At-Risk' %}selected{% endif %}>At-Risk</option>
     <option value="Not At-Risk" {% if selected_risk=='Not At-Risk' %}selected{% endif %}>Not At-Risk</option>
   </select>
-  <button class="btn btn-outline btn-sm" type="submit">Filter</button>
   {% if search or selected_barangay or selected_risk or selected_year %}<a class="link" href="{{ url_for(request.endpoint) }}">× Clear filters</a>{% endif %}
 </form>
 
