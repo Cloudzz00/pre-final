@@ -670,6 +670,11 @@ table.data-table.plain-head thead th { background: var(--slate-bg-2); color: var
 table.data-table tbody td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; white-space: nowrap; }
 table.data-table tbody tr:last-child td { border-bottom: none; }
 table.data-table tbody tr:hover { background: var(--slate-bg-2); }
+/* tfoot never had its own padding/border rule, so a <tfoot> row (e.g. a
+   Total summary) sat flush against the cell edge and the body row above
+   it, with no inset to match tbody's - reads as "stuck to the left" and
+   "too close to everything" next to a properly padded row. */
+table.data-table tfoot td { padding: 12px 14px; border-top: 1px solid var(--border); vertical-align: middle; }
 .cell-green { color: var(--green); font-weight: 600; }
 .cell-muted { color: var(--text-muted); }
 .id-chip { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; }
@@ -1219,6 +1224,7 @@ a.stock-row.name-flex .sname { overflow: hidden; text-overflow: ellipsis; }
 table.data-table.compact { min-width: 0; font-size: 12.5px; }
 table.data-table.compact thead th { padding: 9px 10px; }
 table.data-table.compact tbody td { padding: 10px; }
+table.data-table.compact tfoot td { padding: 10px; }
 
 /* Two-column split: a wide primary panel beside a narrower secondary column.
    minmax(0, ...) on the wide track so a table inside cannot force it past its
