@@ -9,10 +9,27 @@
       // full page navigation (this is a classic multi-page app, not an SPA -
       // every nav reloads the document) doesn't flash open at full width and
       // then snap back to collapsed once app.js runs at the end of the page.
+      //
+      // .sidebar has `transition: width .18s ease` for the manual toggle
+      // button, but that same transition was firing on this very first
+      // class change too: the browser briefly commits the un-collapsed
+      // width before this script's classList.add runs, so it visibly
+      // animated 264px -> 76px on every page load instead of just snapping -
+      // "the nav expands and minimizes". Disabling the transition for this
+      // one change (then restoring it two frames later, once the collapsed
+      // state has actually painted) keeps the toggle button's own animation
+      // while removing the on-load flash.
       (function () {
         try {
           if (localStorage.getItem("iv_sidebar_collapsed") === "1") {
-            document.getElementById("sidebar").classList.add("collapsed");
+            var sidebar = document.getElementById("sidebar");
+            sidebar.style.transition = "none";
+            sidebar.classList.add("collapsed");
+            requestAnimationFrame(function () {
+              requestAnimationFrame(function () {
+                sidebar.style.transition = "";
+              });
+            });
           }
         } catch (e) {}
       })();
