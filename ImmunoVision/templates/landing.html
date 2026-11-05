@@ -212,6 +212,22 @@
 .lp-flow-text .stat-inline { font-weight: 900; color: var(--text-primary); font-size: 1.15em; }
 .lp-flow .stat-grid { margin: 0; }
 
+/* .lp-flow-inner centers the visual against the whole text column,
+   eyebrow/button included - too much of that column is just label and CTA,
+   so the cards end up looking off-balance against the heading they're
+   actually illustrating. This modifier instead centers the visual against
+   only the heading+paragraph, via a named grid area that visual and
+   heading-group are the sole occupants of; eyebrow and the CTA sit in
+   their own rows above/below and don't affect that row's height. */
+.lp-align-heading {
+  grid-template-areas: ".      eyebrow" "visual heading" ".      cta";
+  row-gap: 0;
+}
+.lp-align-heading .lp-flow-visual { grid-area: visual; }
+.lp-align-heading .lp-flow-eyebrow { grid-area: eyebrow; }
+.lp-align-heading .lp-flow-heading-group { grid-area: heading; }
+.lp-align-heading > .lp-btn { grid-area: cta; justify-self: start; }
+
 /* Coverage-vs-target bar under the "why this matters" stat cards: makes the
    gap something you see, using the app's own progress-track/fill component
    (see style.css) rather than a second restatement of the same number. */
@@ -263,6 +279,7 @@
 @media (max-width: 900px) {
   .lp-flow-inner { grid-template-columns: minmax(0,1fr); gap: 28px; }
   .lp-flow-inner .lp-flow-visual { order: -1; }
+  .lp-align-heading { grid-template-columns: minmax(0,1fr); grid-template-areas: "visual" "eyebrow" "heading" "cta"; row-gap: 28px; }
 }
 
 /* ---- device-frame panel: a peek at the live dashboard, rather than
@@ -473,7 +490,7 @@
 {% endmacro %}
 
 <section class="lp-flow" aria-label="Why this matters">
-  <div class="lp-wrap lp-flow-inner">
+  <div class="lp-wrap lp-flow-inner lp-align-heading">
     <div class="lp-flow-visual">
       <div class="stat-grid" style="grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin:0;">
         <div class="stat-card">
@@ -500,16 +517,16 @@
         </div>
       </div>
     </div>
-    <div class="lp-flow-text">
-      <div class="lp-flow-eyebrow">The problem</div>
+    <div class="lp-flow-eyebrow">The problem</div>
+    <div class="lp-flow-text lp-flow-heading-group">
       <h2>Children fall behind on their schedules &mdash; and no one knows until it's too late.</h2>
       <p>Across San Jacinto's {{ barangay_count }} barangays, health workers track hundreds of children using
          paper records &mdash; visits and doses logged by hand, with no way to see who is falling behind
          until a manual review catches it, often after the catch-up window has already closed.</p>
-      <a class="lp-btn" href="{{ url_for('auth.public_coverage') }}" style="margin-top:24px;">
-        See the full coverage dashboard <span class="lp-fwd">{{ icon('chevron-left', 15, 2.5) }}</span>
-      </a>
     </div>
+    <a class="lp-btn" href="{{ url_for('auth.public_coverage') }}" style="margin-top:24px;">
+      See the full coverage dashboard <span class="lp-fwd">{{ icon('chevron-left', 15, 2.5) }}</span>
+    </a>
   </div>
 </section>
 
