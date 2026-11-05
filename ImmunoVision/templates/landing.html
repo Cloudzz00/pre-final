@@ -250,7 +250,15 @@
 .lp-role-card p { font-size: 13px; color: var(--text-secondary); margin: 0 0 10px; line-height: 1.55; }
 .lp-role-card .lp-chips { gap: 6px; }
 .lp-role-card .lp-chip { padding: 6px 10px 6px 8px; font-size: 12px; }
-@media (max-width: 560px) { .lp-roles-grid { grid-template-columns: minmax(0,1fr); } }
+.lp-role-card-wide { grid-column: 1 / -1; display: flex; align-items: center; gap: 16px; }
+.lp-role-card-wide .ic { margin-bottom: 0; flex-shrink: 0; }
+.lp-role-card-wide b.tag { margin-bottom: 3px; }
+.lp-role-card-wide p { margin-bottom: 0; }
+.lp-role-card-wide .lp-chips { flex-shrink: 0; }
+@media (max-width: 560px) {
+  .lp-roles-grid { grid-template-columns: minmax(0,1fr); }
+  .lp-role-card-wide { flex-direction: column; align-items: flex-start; }
+}
 
 @media (max-width: 900px) {
   .lp-flow-inner { grid-template-columns: minmax(0,1fr); gap: 28px; }
@@ -655,8 +663,7 @@
         <div class="lp-role-card">
           <div class="ic" style="background:var(--violet)">{{ icon('map-pin', 18) }}</div>
           <b class="tag" style="color:var(--violet)">RHU Administrator</b>
-          <p>Manage barangay staffing, municipal coverage oversight, and user accounts &mdash;
-             municipality-wide totals only, never a child's record.</p>
+          <p>Manage staffing, coverage oversight, and accounts &mdash; never a child's record.</p>
           <div class="lp-chips">
             <span class="lp-chip">{{ icon('map', 13) }} Assignments</span>
             <span class="lp-chip">{{ icon('users', 13) }} Accounts</span>
@@ -665,16 +672,17 @@
         <div class="lp-role-card">
           <div class="ic" style="background:#dc2626">{{ icon('history', 18) }}</div>
           <b class="tag" style="color:#dc2626">Super Admin</b>
-          <p>Independent oversight of every account's activity &mdash; a full audit trail, kept separate
-             from the people who manage those accounts.</p>
+          <p>Independent oversight of every account's activity, kept separate from account management.</p>
           <div class="lp-chips">
             <span class="lp-chip">{{ icon('history', 13) }} Audit log</span>
           </div>
         </div>
-        <div class="lp-role-card">
+        <div class="lp-role-card lp-role-card-wide">
           <div class="ic" style="background:var(--text-secondary)">{{ icon('globe', 18) }}</div>
-          <b class="tag" style="color:var(--text-secondary)">Community</b>
-          <p>Check immunization coverage across San Jacinto without signing in.</p>
+          <div>
+            <b class="tag" style="color:var(--text-secondary)">Community</b>
+            <p>Check immunization coverage across San Jacinto without signing in.</p>
+          </div>
           <div class="lp-chips">
             <span class="lp-chip">{{ icon('map', 13) }} Coverage</span>
           </div>
