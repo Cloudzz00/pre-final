@@ -152,14 +152,6 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
 .login-hero .brand-sub { color: #93c5fd; font-size: 13px; }
 .login-hero h1 { font-size: clamp(28px, 3.4vw, 42px); line-height: 1.15; font-weight: 800; margin: 0 0 16px; }
 .login-hero p.lead { color: #cbd5e1; font-size: 16px; line-height: 1.6; max-width: 460px; margin-bottom: 32px; }
-.login-hero .feature-list { display: flex; flex-direction: column; gap: 14px; }
-.login-hero .feature-item { display: flex; align-items: center; gap: 12px; color: #cbd5e1; font-size: 14px; }
-.login-hero .feature-icon {
-  width: 30px; height: 30px; border-radius: 50%;
-  background: rgba(59,130,246,0.18); color: #93c5fd;
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-}
-.login-hero .feature-icon svg { width: 16px; height: 16px; display: block; }
 
 .login-panel-wrap {
   flex: 1;
@@ -193,7 +185,6 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
   .login-hero .brand { margin-bottom: 20px; }
   .login-hero h1 { font-size: 26px; margin-bottom: 10px; }
   .login-hero p.lead { font-size: 14px; margin-bottom: 0; max-width: none; }
-  .login-hero .feature-list { display: none; }
   .login-panel-wrap { flex: none; padding: 20px 24px 40px; }
 }
 
