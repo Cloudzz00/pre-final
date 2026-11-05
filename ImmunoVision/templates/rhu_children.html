@@ -22,6 +22,15 @@
   </div>
   {% endif %}
   <div class="filter-select">
+    <span class="filter-select-icon">{{ icon('users', 15) }}</span>
+    <select name="age_group" class="select-sm" onchange="this.form.submit()" aria-label="Age group">
+      <option value="all" {% if age_group=='all' %}selected{% endif %}>All Children</option>
+      <option value="active" {% if age_group=='active' %}selected{% endif %}>0–12 Months</option>
+      <option value="older" {% if age_group=='older' %}selected{% endif %}>Above 12 Months</option>
+    </select>
+    <span class="filter-chevron">{{ icon('chevron-left', 12, 2.5) }}</span>
+  </div>
+  <div class="filter-select">
     <span class="filter-select-icon">{{ icon('calendar', 15) }}</span>
     <select name="year" class="select-sm" onchange="this.form.submit()">
       <option value="">All Registration Years</option>
@@ -40,7 +49,7 @@
     </select>
     <span class="filter-chevron">{{ icon('chevron-left', 12, 2.5) }}</span>
   </div>
-  {% if search or selected_barangay or selected_risk or selected_year %}<a class="btn btn-outline btn-sm" href="{{ url_for(request.endpoint) }}" style="height:36px;">{{ icon('x', 13) }} Clear filters</a>{% endif %}
+  {% if search or selected_barangay or selected_risk or selected_year or age_group != 'all' %}<a class="btn btn-outline btn-sm" href="{{ url_for(request.endpoint) }}" style="height:36px;">{{ icon('x', 13) }} Clear filters</a>{% endif %}
 </form>
 
 {% if due_now_child %}
@@ -81,7 +90,7 @@
     </button>
   </th>
   {% for code, name, antigen, dose_no, rec_days in vaccine_schedule %}<th class="vaccine-group-head dose-col">{{ name }}</th>{% endfor %}
-  <th>Actions</th>
+  <th>Risk</th><th>Actions</th>
 </tr>
 </thead>
 <tbody>
@@ -110,6 +119,8 @@
       {{ given.strftime('%m/%d/%y') if given else '—' }}
     </td>
   {% endfor %}
+  {% set label = risk_labels[c.id] %}
+  <td>{% if label %}<span class="badge badge-{{ 'red' if label=='At-Risk' else 'green' }}">{{ label }}</span>{% else %}<span class="badge badge-gray">Pending</span>{% endif %}</td>
   <td class="flex-gap">
     <a href="{{ url_for('rhu.child_record', child_id=c.id) }}" class="btn btn-outline btn-sm">{{ icon('search', 14) }} View</a>
     <a href="{{ url_for('rhu.edit_child', child_id=c.id) }}" class="btn btn-outline btn-sm">{{ icon('pencil', 14) }} Edit</a>

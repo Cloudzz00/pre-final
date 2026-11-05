@@ -1999,6 +1999,9 @@ def children():
     risk_level = request.args.get("risk_level", "")
     search = request.args.get("q", "").strip()
     selected_year = request.args.get("year", "")
+    age_group = request.args.get("age_group", "all")
+    if age_group not in ("active", "older", "all"):
+        age_group = "all"
     q = Child.query
     if barangay_id:
         q = q.filter(Child.barangay_id == barangay_id)
@@ -2011,6 +2014,17 @@ def children():
         else:
             selected_year = ""
     kids = q.order_by(Child.barangay_id, Child.id).all()
+    # Calendar-month cutoff: the 12-month birthday is still in the active view.
+    today = date.today()
+    def twelve_month_birthday(dob):
+        try:
+            return dob.replace(year=dob.year + 1)
+        except ValueError:  # Feb 29 in a non-leap year
+            return dob.replace(year=dob.year + 1, day=28)
+    if age_group == "active":
+        kids = [c for c in kids if twelve_month_birthday(c.date_of_birth) >= today]
+    elif age_group == "older":
+        kids = [c for c in kids if twelve_month_birthday(c.date_of_birth) < today]
     if risk_level:
         kids = [c for c in kids if (ra := _latest_risk(c)) and ra.risk_label == risk_level]
     vt_lookup = {vt.code: vt for vt in VaccineType.query.all()}
@@ -2031,9 +2045,9 @@ def children():
         "children", page_title="Child Records", children=kids,
         barangays=Barangay.query.order_by(Barangay.name).all(), vaccine_schedule=dp.VACCINE_SCHEDULE,
         vt_lookup=vt_lookup, antigens=core_antigens(), selected_barangay=barangay_id,
-        selected_risk=risk_level, search=search, selected_year=selected_year,
+        selected_risk=risk_level, search=search, selected_year=selected_year, age_group=age_group,
         registration_years=registration_years,
-        dose_matrix=_dose_matrix(kids, vt_lookup),
+        dose_matrix=_dose_matrix(kids, vt_lookup), risk_labels=_risk_labels(kids),
         due_now_child=due_now_child, due_now_doses=due_now_doses,
     ))
 
@@ -2514,7 +2528,7 @@ def children():
     search = request.args.get("q", "").strip()
     selected_year = request.args.get("year", "")
     selected_sort = request.args.get("sort", "newest")
-    age_group = request.args.get("age_group", "active")
+    age_group = request.args.get("age_group", "all")
     if selected_sort not in ("newest", "oldest", "youngest", "oldest_child"):
         selected_sort = "newest"
     if age_group not in ("active", "older", "all"):
