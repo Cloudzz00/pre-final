@@ -13,18 +13,6 @@ login_manager = LoginManager()
 login_manager.login_view = "auth.login"
 
 
-# A BHW covering more than one barangay (common where the RHU is short-staffed)
-# gets one login shared across all her assigned barangays, rather than a
-# separate account per barangay. barangay_id on User stays as which one of
-# those assignments she is currently working in; user_barangays holds the
-# full set she is allowed to switch between.
-user_barangays = db.Table(
-    "user_barangays",
-    db.Column("user_id", db.Integer, db.ForeignKey("users.id"), primary_key=True),
-    db.Column("barangay_id", db.Integer, db.ForeignKey("barangays.id"), primary_key=True),
-)
-
-
 class Barangay(db.Model):
     __tablename__ = "barangays"
     id = db.Column(db.Integer, primary_key=True)
@@ -71,11 +59,6 @@ class User(UserMixin, db.Model):
     # the account for an administrator to act on, surfaced via their
     # notification bell.
     password_reset_requested_at = db.Column(db.DateTime, nullable=True)
-
-    # All barangays this BHW is assigned to (a single-barangay BHW just has one).
-    # barangay_id above is always one of these - the one she's currently working in.
-    assigned_barangays = db.relationship("Barangay", secondary=user_barangays,
-                                          order_by="Barangay.name", lazy="dynamic")
 
     def set_password(self, raw_password):
         self.password_hash = generate_password_hash(raw_password)

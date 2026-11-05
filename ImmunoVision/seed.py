@@ -118,7 +118,6 @@ def seed(reset=False):
             u = User(username=username, full_name=name, role="bhw", barangay_id=barangay_objs[name].id)
             u.set_password("password123")
             db.session.add(u)
-            u.assigned_barangays.append(barangay_objs[name])
         db.session.commit()
 
         print("  BHW logins: <barangay-name>/password123, e.g. awai, sanjose, bagongpagasa")
