@@ -16,7 +16,6 @@ proposal:
 """
 import csv
 import glob
-import hashlib
 import json
 import os
 import random

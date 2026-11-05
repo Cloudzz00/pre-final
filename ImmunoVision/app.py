@@ -19,8 +19,8 @@ from datetime import date, datetime, timedelta
 
 from flask import (Flask, Blueprint, render_template, request, redirect, url_for, flash, abort,
                    jsonify, g, has_request_context, Response)
-from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from sqlalchemy import func, or_
+from flask_login import login_user, logout_user, login_required, current_user
+from sqlalchemy import func
 
 import data_processor as dp
 from models import (
@@ -1663,6 +1663,23 @@ def _recompute_risk(child):
     return result
 
 
+def _write_dose(child, vt, rec, administered):
+    """Writes one dose onto a VaccinationRecord (creating it if it doesn't
+    exist yet), same per-dose logic _update_child applies when saving the
+    full Edit Child form. Returns the vaccine's name as a warning if an
+    optional dose was recorded past its usual catch-up age, else None."""
+    if rec is None:
+        rec = VaccinationRecord(child_id=child.id, vaccine_type_id=vt.id)
+        db.session.add(rec)
+    rec.date_administered = administered
+    rec.status = "completed" if administered else "pending"
+    if administered and vt.is_optional and vt.catch_up_deadline_days is not None:
+        age_at_dose = (administered - child.date_of_birth).days
+        if age_at_dose > vt.catch_up_deadline_days:
+            return vt.name
+    return None
+
+
 def _next_dose_for(child, vt_lookup):
     """Returns the next not-yet-administered, still-catchable dose in the
     schedule for one child (or None if every such dose has been given or has
@@ -2947,8 +2964,6 @@ def dashboard():
     # use, so every live view of municipal performance reports identical
     # figures. (report_figures() is reserved for the Reports page, which is
     # explicitly "as of" a chosen period and so can legitimately differ.)
-    # Period filter, matching the RHU and BHW dashboards.
-    periods = month_options(24)
     # Same scope + period filters as the RHU dashboard: the administrator also
     # oversees all 19 barangays and needs to narrow to one.
     barangay_id = request.args.get("barangay_id", type=int)
@@ -3403,5 +3418,5 @@ def ensure_demo_data():
 if __name__ == "__main__":
     ensure_demo_data()
     print("ImmunoVision running at http://127.0.0.1:5001")
-    print("Log in with  msantos / password123  (RHU)\n")
+    print("Log in with  rhu / password123  (RHU)\n")
     app.run(host="0.0.0.0", port=5001, debug=True)
