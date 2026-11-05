@@ -1,16 +1,7 @@
 {% extends "layout_app.html" %}
 {% from "_icons.html" import icon %}
+{% block page_subtitle %}View and manage registered children in your barangay.{% endblock %}
 {% block content %}
-<div class="children-page-head" aria-hidden="true">
-  <div class="children-page-title">
-    <div class="children-title-icon">{{ icon('users', 22) }}</div>
-    <div>
-      <h2>Child Records</h2>
-      <p>View and manage registered children in your barangay.</p>
-    </div>
-  </div>
-</div>
-
 <form class="filter-bar" method="get">
   <div class="search-input-wrap">
     <span class="si-icon">{{ icon('search', 16) }}</span>
@@ -140,33 +131,6 @@ document.addEventListener('DOMContentLoaded', function () {
   if (registerModal) registerModal.classList.add('open');
   {% endif %}
 
-  const sourceIcon = document.querySelector('.children-title-icon');
-  const topTitle = document.querySelector('.topbar h1');
-  const topSubtitle = document.querySelector('.topbar .subtitle');
-  const pageHead = document.querySelector('.children-page-head');
-
-  if (sourceIcon && topTitle) {
-    const titleParent = topTitle.parentElement;
-    titleParent.classList.add('topbar-page-title');
-
-    // Keep the icon beside the title, while keeping the subtitle underneath.
-    const copy = document.createElement('div');
-    copy.className = 'topbar-page-copy';
-    titleParent.insertBefore(copy, topTitle);
-    copy.appendChild(topTitle);
-    if (topSubtitle) copy.appendChild(topSubtitle);
-
-    sourceIcon.classList.add('topbar-page-icon');
-    titleParent.insertBefore(sourceIcon, copy);
-  }
-
-  if (topSubtitle) {
-    topSubtitle.textContent = 'View and manage registered children in your barangay.';
-  }
-
-  if (pageHead) {
-    pageHead.remove();
-  }
 });
 </script>
 {% endblock %}
