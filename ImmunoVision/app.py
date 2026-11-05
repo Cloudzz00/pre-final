@@ -3418,7 +3418,10 @@ def ensure_demo_data():
     The prototype ships with a pre-built data/immunovision.db, so normally this
     finds the data already there and does nothing. If that file is missing (or
     was deleted), it rebuilds it automatically instead of failing with an empty
-    login page - so `python app.py` is the only command needed to demo."""
+    login page. Called unconditionally at import time (not just under
+    `python app.py`) so a WSGI server like gunicorn gets the same self-healing
+    behavior - that matters on a host like Render, where a fresh persistent
+    disk starts out with no database file on it at all."""
     with app.app_context():
         db.create_all()
         if User.query.count() > 0:
@@ -3429,8 +3432,9 @@ def ensure_demo_data():
         print("Demo data ready.\n")
 
 
+ensure_demo_data()
+
 if __name__ == "__main__":
-    ensure_demo_data()
     print("ImmunoVision running at http://127.0.0.1:5001")
     print("Log in with  rhu / password123  (RHU)\n")
     app.run(host="0.0.0.0", port=5001, debug=True)
