@@ -1535,16 +1535,10 @@ html { scroll-behavior: smooth; }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .filter-select.fs-shell[aria-expanded="true"] .filter-chevron { transform: translateY(-65%) rotate(225deg); }
-.add-child-btn {
-  height: 38px;
-  white-space: nowrap;
-  margin-left: 0;
-}
 
 @media (max-width: 860px) {
   .filter-bar .search-input-wrap { min-width: 100%; }
   .filter-select { flex: 1; min-width: 0; }
-  .add-child-btn { width: 100%; justify-content: center; }
 }
 
 /* ---------------------------------------------------------------------------
