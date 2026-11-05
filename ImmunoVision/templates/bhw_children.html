@@ -50,7 +50,7 @@
 
   {% if search or selected_risk or selected_year or age_group != 'active' %}<a class="btn btn-outline btn-sm" href="{{ url_for(request.endpoint) }}" style="height:36px;">{{ icon('x', 13) }} Clear filters</a>{% endif %}
 
-  <button type="button" class="btn btn-primary rounded-pill-btn add-child-btn" data-open-modal="registerChildModal">{{ icon('plus', 15) }} Add Child</button>
+  <button class="btn btn-primary rounded-pill-btn" data-open-modal="registerChildModal">+ Add Child</button>
 </form>
 
 {% if due_now_child %}
