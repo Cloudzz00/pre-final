@@ -271,7 +271,6 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
 .actions-cluster { display: flex; align-items: center; gap: 8px; }
 .actions-cluster input, .actions-cluster .btn-sm { height: 32px; box-sizing: border-box; }
 .actions-cluster input { padding-top: 0; padding-bottom: 0; background: #fff; }
-.btn-icon { width: 34px; height: 34px; padding: 0; border-radius: var(--radius-sm); }
 
 .rounded-pill-btn { border-radius: var(--radius-pill) !important; }
 
@@ -479,9 +478,6 @@ body.no-scroll { overflow: hidden; }
 .stat-value { font-size: 28px; font-weight: 800; line-height: 1.1; }
 .stat-label { font-size: 13.5px; font-weight: 600; color: var(--text-primary); }
 .stat-caption { font-size: 12px; color: var(--text-secondary); }
-.stat-trend { position: absolute; top: 18px; right: 18px; font-size: 11.5px; font-weight: 700; padding: 3px 8px; border-radius: var(--radius-pill); }
-.stat-trend.up { background: var(--green-bg); color: var(--green); }
-.stat-trend.down { background: var(--red-bg); color: var(--red); }
 
 .bg-blue { background: var(--primary); } .bg-teal { background: var(--teal-light); } .bg-green { background: var(--green-light); }
 .bg-orange { background: var(--orange-light); } .bg-red { background: var(--red-light); } .bg-purple { background: var(--purple); }
@@ -523,7 +519,6 @@ body.no-scroll { overflow: hidden; }
 .banner > * { position: relative; z-index: 1; }
 .banner h2 { margin: 0 0 4px; font-size: 22px; font-weight: 800; }
 .banner p { margin: 0; opacity: 0.9; font-size: 13.5px; }
-.banner .banner-meta { text-align: right; font-size: 12.5px; opacity: 0.85; display: flex; align-items: center; gap: 8px; }
 
 /* Callout banner (dashboard alerts, risk-status strips, "due now" notices).
    Built like every other box in the app - white card, thin border, soft
@@ -553,8 +548,6 @@ body.no-scroll { overflow: hidden; }
 .pill-tabs { display: inline-flex; background: var(--slate-bg); border: 1px solid var(--border); border-radius: var(--radius-pill); padding: 4px; gap: 2px; margin-bottom: 18px; }
 .pill-tab { padding: 8px 16px; border-radius: var(--radius-pill); font-size: 13px; font-weight: 600; color: var(--text-secondary); border: none; background: transparent; }
 .pill-tab.active { background: var(--primary); color: #fff; }
-.pill-tab .count-badge { background: rgba(255,255,255,0.25); padding: 1px 7px; border-radius: 999px; font-size: 11px; margin-left: 6px; }
-.pill-tab:not(.active) .count-badge { background: var(--red-bg); color: var(--red); }
 
 .badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 11px; border-radius: var(--radius-pill); font-size: 12px; font-weight: 700; white-space: nowrap; }
 .badge-red { background: var(--red-bg); color: var(--red); }
@@ -594,7 +587,6 @@ select.form-control {
   background-position: right 10px center;
   background-size: 13px;
 }
-.chip-outline { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: var(--radius-pill); border: 1px solid var(--green-light); color: var(--green); background: var(--green-bg); font-size: 13px; font-weight: 600; }
 
 /* Custom select: app.js progressively enhances every select.form-control
    with this trigger+panel pair so the open dropdown matches the app's own
@@ -684,9 +676,6 @@ table.data-table tfoot td { padding: 12px 14px; border-top: 1px solid var(--bord
 .sex-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 .sex-dot.M { background: var(--primary); } .sex-dot.F { background: var(--pink); }
 .vaccine-group-head { text-align: center !important; }
-.group-bcg { background: #6d28d9 !important; } .group-hep { background: #7c3aed !important; }
-.group-dpt { background: #2563eb !important; } .group-opv { background: #0891b2 !important; }
-.group-pcv { background: #0d9488 !important; } .group-rota{ background:#4338ca !important;} .group-ipv{background:#0e7490 !important;} .group-mmr{background:#be185d !important;}
 
 .progress-track { width: 90px; height: 7px; background: var(--slate-bg); border-radius: 999px; overflow: hidden; display: inline-block; vertical-align: middle; margin-right: 8px; }
 /* display:block is required - these are <span> elements, and an inline span
@@ -712,8 +701,7 @@ table.data-table tfoot td { padding: 12px 14px; border-top: 1px solid var(--bord
    push the layout off screen. Capping the minimum at 0 lets the column shrink
    and the child scroll instead. */
 .grid-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
-.grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
-@media (max-width: 980px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+@media (max-width: 980px) { .grid-2 { grid-template-columns: 1fr; } }
 
 /* ---------------- Modal ---------------- */
 .modal-scrim { position: fixed; inset: 0; background: rgba(15,23,42,0.55); display: none; align-items: center; justify-content: center; z-index: 100; padding: 24px; }
@@ -742,17 +730,6 @@ table.data-table tfoot td { padding: 12px 14px; border-top: 1px solid var(--bord
 .map-stack { display: flex; flex-direction: column; gap: 18px; }
 .map-stack .card { width: 100%; }
 .map-canvas { position: relative; width: 100%; aspect-ratio: 16/11; background: radial-gradient(circle at 30% 20%, #eef4ff 0%, #e2e8f0 60%); border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
-.map-poly { fill: #cfe0fb; stroke: #93b8f4; stroke-width: 1.5; }
-.map-marker { cursor: pointer; }
-.map-marker circle { stroke: #fff; stroke-width: 0.5; }
-.map-marker text { font-size: 2.3px; font-weight: 700; fill: #fff; text-anchor: middle; }
-.map-marker .marker-label { fill: var(--text-primary); font-size: 2px; font-weight: 700; text-anchor: middle; paint-order: stroke; stroke: #f1f5f9; stroke-width: 0.6px; }
-.compass { position: absolute; top: 12px; right: 12px; width: 34px; height: 34px; opacity: 0.55; }
-.ranking-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }
-.ranking-row:last-child { border-bottom: none; }
-.ranking-row .rn { width: 18px; font-weight: 700; color: var(--text-secondary); }
-.ranking-row .rname { flex: 1; font-weight: 600; }
-.ranking-row .rpct { font-weight: 700; width: 38px; text-align: right; }
 
 /* ---------------- Notifications ---------------- */
 .notif-card { display: flex; gap: 14px; padding: 16px 18px; border: 1px solid var(--border); border-radius: var(--radius); background: #fff; margin-bottom: 12px; position: relative; }
@@ -776,8 +753,6 @@ table.data-table tfoot td { padding: 12px 14px; border-top: 1px solid var(--bord
 .toggle.on::after { left: 21px; }
 
 /* ---------------- Report preview ---------------- */
-.report-layout { display: grid; grid-template-columns: 300px 1fr; gap: 18px; align-items: start; }
-@media (max-width: 980px) { .report-layout { grid-template-columns: 1fr; } }
 .report-type-card { display: flex; gap: 12px; padding: 14px; border: 1.5px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; cursor: pointer; }
 .report-type-card.active { border-color: var(--primary); background: var(--primary-light); }
 .report-type-card .ic { display: flex; align-items: center; color: var(--text-secondary); }
@@ -786,13 +761,9 @@ table.data-table tfoot td { padding: 12px 14px; border-top: 1px solid var(--bord
 .report-doc { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 26px; }
 .report-doc-head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 18px; }
 .report-letterhead { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-.report-chips { display: flex; gap: 14px; margin: 18px 0; flex-wrap: wrap; }
-.report-chip { flex: 1; min-width: 140px; padding: 14px 16px; border-radius: var(--radius); background: var(--slate-bg-2); }
-.report-chip .v { font-size: 22px; font-weight: 800; }
-.report-chip .l { font-size: 12px; color: var(--text-secondary); }
 
 .text-muted { color: var(--text-secondary); }
-.mb-0{margin-bottom:0} .mt-0{margin-top:0}
+.mb-0{margin-bottom:0}
 /* Card headers (title block + action link) use this. flex-wrap lets the
    action drop to its own line on a narrow card rather than breaking the
    title text mid-word to make room for it; nowrap on the title keeps it
@@ -841,9 +812,7 @@ table.data-table tfoot td { padding: 12px 14px; border-top: 1px solid var(--bord
    .ic-svg keeps them optically aligned with adjacent text, replacing the
    emoji glyphs that previously rendered differently on each OS. */
 .ic-svg { display: block; flex-shrink: 0; }
-.btn .ic-svg, .badge .ic-svg, .stat-trend .ic-svg { display: inline-block; vertical-align: -2px; }
-.banner-meta { display: inline-flex; align-items: center; gap: 6px; }
-.stat-trend { display: inline-flex; align-items: center; gap: 4px; }
+.btn .ic-svg, .badge .ic-svg { display: inline-block; vertical-align: -2px; }
 .settings-row .ic .ic-svg { display: block; }
 
 /* ---------------- Wide-table column pinning ----------------
@@ -873,14 +842,6 @@ table.data-table.pin-first-2 tbody td:first-child { left: 0; }
 table.data-table.pin-first-2 tbody td:nth-child(2) { left: 110px; box-shadow: inset -1px 0 0 var(--border); }
 table.data-table.pin-first-2 tbody tr:hover td:nth-child(-n+2) { background: var(--slate-bg-2); }
 
-/* ---------------- Report configuration panel ---------------- */
-.config-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
-                color: var(--text-secondary); margin-bottom: 8px; }
-.report-filters { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
-.report-filters .form-group { margin-bottom: 12px; }
-.report-export { display: flex; gap: 8px; margin-top: 12px; }
-.report-export .btn { flex: 1; padding: 9px 6px; font-size: 12.5px; }
-
 /* ---------------- Print / Save-as-PDF ----------------
    Printing should produce the report document alone - no sidebar, topbar, or
    configuration controls - so "Save as PDF" from the browser dialog yields a
@@ -888,31 +849,11 @@ table.data-table.pin-first-2 tbody tr:hover td:nth-child(-n+2) { background: var
 @media print {
   .sidebar, .topbar, .no-print, .page-head, .alert, .modal-scrim { display: none !important; }
   .app-shell, .main-col, .content { display: block !important; margin: 0 !important; padding: 0 !important; }
-  .report-layout { display: block !important; }
   .report-doc { border: none !important; padding: 0 !important; box-shadow: none !important; }
   body { background: #fff !important; }
   .chart-box, .chart-box.tall { height: 420px !important; page-break-inside: avoid; }
   a[href]::after { content: ""; }
 }
-
-/* Read-only stand-in for a select, used where the value is fixed by the
-   account (a BHW is scoped to one barangay and cannot change it). */
-.locked-field {
-  display: flex; align-items: center; gap: 7px;
-  padding: 11px 14px; border-radius: var(--radius-sm);
-  border: 1px dashed var(--border-strong); background: var(--slate-bg);
-  font-size: 14px; color: var(--text-secondary);
-}
-.locked-field .lk {
-  margin-left: auto; font-size: 10.5px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted);
-}
-
-/* Weight bars in the prototype "Scoring Rules In Use" table. */
-.bar-track { width: 100%; max-width: 220px; height: 8px; border-radius: 99px;
-             background: var(--slate-bg-2); overflow: hidden; }
-.bar-fill  { height: 100%; border-radius: 99px;
-             background: linear-gradient(90deg, #60a5fa, var(--primary)); }
 
 /* Informational banner (prototype notice) - same shape as .alert-banner.warning. */
 .alert-banner.info { border-color: #d7e8ff; }
@@ -1072,29 +1013,7 @@ table.data-table.pin-first-2 tbody tr:hover td:nth-child(-n+2) { background: var
 
 
 
-/* Selected-barangay panel on the map. */
-.bgy-stats {
-  display: grid; grid-template-columns: repeat(3, minmax(0, 200px));
-  gap: 1px; background: var(--border);
-  border: 1px solid var(--border); border-radius: var(--radius-sm);
-  overflow: hidden; margin-bottom: 14px;
-}
-.bgy-stat { background: #fff; padding: 10px 12px; }
-.bgy-stat .v { display: block; font-size: 19px; font-weight: 800; line-height: 1.1; color: var(--text-primary); }
-.bgy-stat .v.bad { color: var(--red); }
-.bgy-stat .k { display: block; margin-top: 2px; font-size: 11px; font-weight: 600; color: var(--text-secondary); }
-.bgy-bar-label {
-  display: flex; justify-content: space-between;
-  font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: 5px;
-}
 .progress-track.bgy-bar { width: 100%; height: 8px; margin: 0; }
-.bgy-foot { margin-top: 10px; font-size: 12px; color: var(--text-secondary); }
-
-/* Empty state for the map's barangay detail card, before a selection. */
-.bgy-empty { text-align: center; padding: 26px 10px 20px; color: var(--text-muted); }
-.bgy-empty .ic-svg { margin: 0 auto 10px; }
-.bgy-empty .t { font-weight: 700; font-size: 14px; color: var(--text-secondary); }
-.bgy-empty .d { font-size: 12.5px; margin-top: 4px; line-height: 1.5; }
 .btn-block { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; }
 
 .btn-block { display: flex; align-items: center; justify-content: center; gap: 7px; }
@@ -1121,21 +1040,6 @@ table.data-table.pin-first-2 tbody tr:hover td:nth-child(-n+2) { background: var
 .ds-meter .progress-track { flex: 1; height: 8px; margin: 0; }
 .ds-target { font-size: 11px; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
 .ds-link { margin-left: 8px; white-space: nowrap; flex-shrink: 0; }
-
-/* A card whose scrollable body should absorb any extra height the grid gives
-   it, instead of leaving empty space below a fixed-height region. */
-.fill-card { display: flex; flex-direction: column; }
-.fill-card .fill-scroll {
-  flex: 1;
-  min-height: 240px;
-  overflow-y: auto;
-  /* .table-wrap caps height at calc(100vh - 240px) for the wide Child Records
-     table. That cap is viewport-based and unrelated here, so it is overridden;
-     the template sets an explicit height matching the chart alongside. */
-}
-
-/* Small clarifying note under a form field. */
-.field-hint { display: block; margin-top: 5px; font-size: 11.5px; color: var(--text-muted); line-height: 1.4; }
 
 /* ---------------- Child record page ---------------- */
 .dose-list { margin-top: 10px; }
@@ -1168,19 +1072,6 @@ table.data-table.pin-first-2 tbody tr:hover td:nth-child(-n+2) { background: var
 .factor-row .fname { font-weight: 700; font-size: 13px; color: var(--text-primary); }
 .factor-row .fdetail { font-size: 12.5px; color: var(--text-secondary); margin-top: 2px; }
 
-.kv-list { margin-top: 8px; }
-.kv-list > div {
-  display: flex; justify-content: space-between; gap: 16px;
-  padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px;
-}
-.kv-list > div:last-child { border-bottom: none; }
-.kv-list .k { color: var(--text-secondary); font-weight: 600; white-space: nowrap; }
-.kv-list .v { color: var(--text-primary); text-align: right; }
-
-.hist-row { padding: 9px 0; border-bottom: 1px solid var(--border); }
-.hist-row:last-child { border-bottom: none; }
-.hist-row .ha { font-size: 13px; color: var(--text-primary); }
-.hist-row .hm { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
 
 /* Vaccines-running-low rows on the dashboard. */
 .stock-row {
@@ -1240,17 +1131,6 @@ table.data-table.compact tfoot td { padding: 10px; }
 }
 @media (max-width: 1080px) { .split-2-1 { grid-template-columns: minmax(0, 1fr); } }
 
-/* Recent activity rows on the admin dashboard. */
-.act-row { display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
-.act-row:last-child { border-bottom: none; }
-.act-row .badge { flex-shrink: 0; align-self: flex-start; }
-.act-row .ac-body { min-width: 0; }
-.act-row .ac-action {
-  font-size: 12.5px; color: var(--text-primary); line-height: 1.4;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-}
-.act-row .ac-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
-
 /* Detail strip: the metric matching the active map tab is emphasised. */
 .ds-metric.is-active b { color: var(--primary); }
 .ds-metric.is-active { color: var(--text-primary); font-weight: 600; }
@@ -1280,10 +1160,6 @@ table.data-table.compact tfoot td { padding: 10px; }
 .dose-count-row { display: flex; align-items: center; gap: 2px; }
 .dose-summary .progress-track { margin-right: 8px; vertical-align: middle; }
 .dose-summary b { font-size: 15px; color: var(--text-primary); }
-.dose-status { display: inline-block; margin-top: 5px; font-size: 11px; font-weight: 750; }
-.dose-complete { color: var(--green); }
-.dose-incomplete { color: var(--amber); }
-.dose-none { color: var(--text-secondary); }
 .child-name-link { font-size: 14px; }
 
 /* Anchored cards (e.g. #coverage-by-barangay from the map) land below the
@@ -1294,13 +1170,6 @@ html { scroll-behavior: smooth; }
 [data-tabpanel] { scroll-margin-top: 90px; }
 
 /* ---- Vaccine warning levels (RHU inventory) ---- */
-.warn-bar {
-  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-  padding: 12px 16px; margin-bottom: 16px;
-  background: var(--primary-light); border: 1px solid #bfdbfe;
-  border-left: 3px solid var(--primary); border-radius: var(--radius);
-  font-size: 13px; color: var(--text-primary);
-}
 .warn-cell { display: flex; align-items: center; gap: 7px; }
 .warn-input {
   width: 76px; padding: 6px 9px; font-size: 13.5px; font-weight: 700;
@@ -1313,13 +1182,6 @@ html { scroll-behavior: smooth; }
 
 /* Barangay with no records yet - distinct from 0% coverage. */
 .progress-fill.none { background: var(--border-strong); }
-
-/* Marks a barangay whose records are simulated rather than from the RHU. */
-.sim-tag {
-  display: inline-block; margin-left: 6px; padding: 1px 7px;
-  font-size: 10px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase;
-  color: var(--violet); background: #f3e8ff; border-radius: 999px; vertical-align: middle;
-}
 
 /* Simulated barangay: the fill still carries the coverage colour, with a hatch
    over it so the polygon reads as demo data at a glance. */
@@ -1345,13 +1207,6 @@ html { scroll-behavior: smooth; }
 
 /* Features computed but not weighted by the prototype scorer - available to a
    trained model, so shown but visually secondary. */
-.feature-unweighted { background: var(--slate-bg-2); }
-.feature-unweighted b { font-weight: 600; color: var(--text-secondary); }
-
-/* The role column carries a sentence, so it must wrap rather than run past the
-   card edge - .data-table sets nowrap for the short cells elsewhere. */
-.data-table td .role-note { white-space: normal; display: block; max-width: 46ch; }
-
 /* Diseases a child is unprotected against, on the risk classification table. */
 .disease-list { display: flex; flex-wrap: wrap; gap: 4px; max-width: 280px; white-space: normal; }
 .disease-tag {
@@ -1366,9 +1221,6 @@ html { scroll-behavior: smooth; }
 /* BHW Child Records: make registration priority and vaccine history easy to scan. */
 .child-name-link { font-weight: 750; color: var(--primary); text-decoration: none; }
 .child-name-link:hover { text-decoration: underline; }
-.new-tag { display: inline-block; margin-left: 7px; padding: 2px 6px; border-radius: 999px;
-           font-size: 9.5px; font-weight: 800; letter-spacing: .03em; color: var(--primary-dark);
-           background: var(--primary-light); vertical-align: middle; }
 
 /* ---------------- Child Record: BHW action-first layout ---------------- */
 .child-record-head { align-items: flex-end; }
@@ -1426,8 +1278,6 @@ html { scroll-behavior: smooth; }
   font-weight: 700;
   color: var(--text-secondary);
 }
-.child-summary-grid { margin-bottom: 18px; }
-
 @media (max-width: 900px) {
   .child-record-head { align-items: flex-start; gap: 12px; }
   .followup-banner { align-items: flex-start; }
@@ -1800,7 +1650,6 @@ html { scroll-behavior: smooth; }
 .bhw-child-edit { width: 100%; max-width: none; margin-left: 0; margin-right: 0; }
 .bhw-child-edit .form-grid-2 { gap: 14px 22px; }
 .bhw-basic-edit-box { border: 1px solid #dbe4f0; border-radius: 12px; padding: 20px; background: #fbfdff; margin-bottom: 24px; }
-.bhw-basic-edit-heading { font-size: 16px; font-weight: 750; color: var(--text-primary); padding-bottom: 12px; margin-bottom: 16px; border-bottom: 1px solid #dbe4f0; }
 .bhw-child-edit .dose-check { width: 22px; height: 22px; min-width: 22px; accent-color: var(--primary); cursor: pointer; }
 @media (max-width: 640px) { .bhw-basic-edit-box { padding: 14px; } }
 
