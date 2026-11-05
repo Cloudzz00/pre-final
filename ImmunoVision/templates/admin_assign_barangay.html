@@ -10,11 +10,11 @@
       <div><div class="label">{{ u.full_name }}</div><div class="val">{{ u.username }} · {{ u.username }}@rhu.sanjacinto.gov.ph</div></div>
     </div>
     <div class="flex-gap">
-      {% for b in u.assigned_barangays.all() %}
-      <span class="badge {{ 'badge-blue' if b.id == u.barangay_id else 'badge-teal' }}">{{ b.name }}</span>
+      {% if u.barangay %}
+      <span class="badge badge-blue">{{ u.barangay.name }}</span>
       {% else %}
       <span class="badge badge-gray">Unassigned</span>
-      {% endfor %}
+      {% endif %}
       <button class="btn btn-outline btn-sm" data-open-modal="assignModal{{ u.id }}">{{ icon('pencil', 14) }} Change</button>
       <span class="badge badge-{{ 'green' if u.is_active_flag else 'red' }}">{{ 'Active' if u.is_active_flag else 'Disabled' }}</span>
     </div>
@@ -25,16 +25,13 @@
       <form method="post" action="{{ url_for('admin.assign_barangay') }}">
         <input type="hidden" name="user_id" value="{{ u.id }}">
         <div class="modal-body">
-          <div class="form-group"><label>Assigned Barangay(s)</label>
-            <div class="checkbox-list">
-              {% set assigned_ids = u.assigned_barangays.all()|map(attribute='id')|list %}
+          <div class="form-group"><label>Assigned Barangay</label>
+            <select name="barangay_id" class="form-control">
+              <option value="">Select a barangay</option>
               {% for b in barangays %}
-              <label class="checkbox-row">
-                <input type="checkbox" name="barangay_ids" value="{{ b.id }}" {% if b.id in assigned_ids %}checked{% endif %}>
-                {{ b.name }}
-              </label>
+              <option value="{{ b.id }}" {% if b.id == u.barangay_id %}selected{% endif %}>{{ b.name }}</option>
               {% endfor %}
-            </div>
+            </select>
           </div>
         </div>
         <div class="modal-footer">
