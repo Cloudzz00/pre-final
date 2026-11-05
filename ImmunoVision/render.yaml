@@ -3,6 +3,7 @@ services:
     name: immunovision
     runtime: python
     plan: starter
+    rootDir: ImmunoVision
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app
     healthCheckPath: /api/health
