@@ -1516,6 +1516,61 @@ def _ticked_date(form, checkbox_field, date_field, fallback):
     return datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else fallback
 
 
+def _parse_form_date(value):
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date() if value else None
+    except ValueError:
+        return None
+
+
+def _doses_before_birth(dob, dated_doses):
+    """Names of the doses in `dated_doses` ((name, date|None) pairs) dated
+    before the child's date of birth - a day-month reversal or typing error,
+    since no vaccine can be given before birth. Checked on the server for
+    every form that records a dose, so it holds even if the browser's date
+    restrictions are bypassed."""
+    if dob is None:
+        return []
+    return [name for name, given in dated_doses if given is not None and given < dob]
+
+
+def _schedule_names():
+    return {code: name for code, name, *_ in dp.VACCINE_SCHEDULE + dp.OPTIONAL_VACCINE_SCHEDULE}
+
+
+def _before_birth_message(names):
+    return ("A dose cannot be dated before the child's date of birth. Please check: "
+            + ", ".join(names) + ". Nothing was saved.")
+
+
+def _create_form_errors(form):
+    """Validation for the Register Child form, shared by RHU and BHW.
+    Returns an error message, or None if the form can be saved."""
+    dob = _parse_form_date(form.get("date_of_birth"))
+    if dob is None:
+        return "Please enter a valid date of birth."
+    names = _schedule_names()
+    dated = [(names[code], _parse_form_date(form.get(f"dose_{code}")))
+             for code, *_ in dp.VACCINE_SCHEDULE if form.get(f"dose_{code}_given")]
+    bad = _doses_before_birth(dob, dated)
+    return _before_birth_message(bad) if bad else None
+
+
+def _edit_form_errors(child, form):
+    """Validation for the Edit Child form, against the date of birth being
+    submitted (it may be corrected in the same save) and every routine,
+    optional and campaign dose date on the form."""
+    dob = _parse_form_date(form.get("date_of_birth")) if form.get("date_of_birth") else child.date_of_birth
+    if dob is None:
+        return "Please enter a valid date of birth."
+    names = _schedule_names()
+    dated = [(names[code], _parse_form_date(form.get(f"dose_{code}"))) for code in _KNOWN_DOSE_CODES]
+    dated += [(c.name, _parse_form_date(form.get(f"dose_campaign_{c.id}")))
+              for c in eligible_campaigns_for_child(child)]
+    bad = _doses_before_birth(dob, dated)
+    return _before_birth_message(bad) if bad else None
+
+
 # The core/optional dose codes the Edit Child form's generic per-code loop is
 # allowed to touch. A Campaign's VaccineType (e.g. "MR") is a real row in the
 # same table but is deliberately excluded here - it's recorded through its
@@ -1992,6 +2047,10 @@ def dashboard():
 @rhu_bp.route("/children", methods=["GET", "POST"])
 def children():
     if request.method == "POST":
+        error = _create_form_errors(request.form)
+        if error:
+            flash(error, "error")
+            return redirect(url_for("rhu.children", add=1))
         new_child = _create_child(request.form, barangay_locked=None)
         flash("Child registered successfully.", "success")
         return redirect(url_for("rhu.children", new_child=new_child.id))
@@ -2076,6 +2135,10 @@ def child_record(child_id):
 def edit_child(child_id):
     child = db.session.get(Child, child_id) or abort(404)
     if request.method == "POST":
+        error = _edit_form_errors(child, request.form)
+        if error:
+            flash(error, "error")
+            return redirect(url_for("rhu.edit_child", child_id=child.id))
         result = _update_child(child, request.form)
         flash(f"{child.display_name} updated. Risk re-assessed: {result['label']}", "success")
         for name in result["past_window_warnings"]:
@@ -2410,16 +2473,18 @@ def campaign_record_dose(campaign_id, child_id):
     date_str = request.form.get("dose_date")
     administered = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else None
     rec = child.vaccination_records.filter_by(campaign_id=campaign.id).first()
-    if rec is None:
-        if administered is not None:
+    if _doses_before_birth(child.date_of_birth, [(campaign.name, administered)]):
+        flash(_before_birth_message([campaign.name]), "error")
+    else:
+        if rec is None and administered is not None:
             rec = VaccinationRecord(child_id=child.id, vaccine_type_id=campaign.vaccine_type_id, campaign_id=campaign.id)
             db.session.add(rec)
-    if rec is not None:
-        rec.date_administered = administered
-        rec.status = "completed" if administered else "pending"
-        db.session.commit()
-        log_activity(f"Recorded {campaign.name} dose for {child_label(child)}")
-        flash(f"Saved {child.full_name}'s dose.", "success")
+        if rec is not None:
+            rec.date_administered = administered
+            rec.status = "completed" if administered else "pending"
+            db.session.commit()
+            log_activity(f"Recorded {campaign.name} dose for {child_label(child)}")
+            flash(f"Saved {child.full_name}'s dose.", "success")
     return redirect(url_for("rhu.campaign_worklist", campaign_id=campaign.id,
                              barangay_id=request.form.get("barangay_id") or None,
                              pending=request.form.get("pending") or None,
@@ -2510,16 +2575,20 @@ def children():
         try:
             dob = datetime.strptime(request.form.get("date_of_birth", ""), "%Y-%m-%d").date()
         except ValueError:
-            flash("Please enter a valid date of birth.", "danger")
+            flash("Please enter a valid date of birth.", "error")
             return redirect(url_for("bhw.children", add=1))
         age_days = (date.today() - dob).days
         if age_days < 0:
-            flash("Date of birth cannot be in the future.", "danger")
+            flash("Date of birth cannot be in the future.", "error")
             return redirect(url_for("bhw.children", add=1))
         premature = [name for code, name, _ant, _num, due_days in dp.VACCINE_SCHEDULE
                      if request.form.get(f"dose_{code}_given") and age_days < due_days]
         if premature:
-            flash("Not yet age-eligible: " + ", ".join(premature) + ". Please review the date of birth.", "danger")
+            flash("Not yet age-eligible: " + ", ".join(premature) + ". Please review the date of birth.", "error")
+            return redirect(url_for("bhw.children", add=1))
+        error = _create_form_errors(request.form)
+        if error:
+            flash(error, "error")
             return redirect(url_for("bhw.children", add=1))
         new_child = _create_child(request.form, barangay_locked=bid)
         flash("Child registered successfully.", "success")
@@ -2640,6 +2709,11 @@ def record_dose(child_id):
     vt = VaccineType.query.filter_by(code=request.form.get("vaccine_code")).first() or abort(404)
     date_str = request.form.get("date")
     administered = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else date.today()
+    if _doses_before_birth(child.date_of_birth, [(vt.name, administered)]):
+        flash(_before_birth_message([vt.name]), "error")
+        return redirect(url_for("bhw.due_vaccines",
+                                 q=request.form.get("q") or None,
+                                 status=request.form.get("status") or None))
     rec = child.vaccination_records.filter_by(vaccine_type_id=vt.id, campaign_id=None).first()
     warning = _write_dose(child, vt, rec, administered)
     db.session.commit()
@@ -2693,6 +2767,10 @@ def edit_child(child_id):
     if child.barangay_id != current_user.barangay_id:
         abort(403)
     if request.method == "POST":
+        error = _edit_form_errors(child, request.form)
+        if error:
+            flash(error, "error")
+            return redirect(url_for("bhw.edit_child", child_id=child.id))
         result = _update_child(child, request.form)
         flash(f"{child.display_name} updated. Risk re-assessed: {result['label']}", "success")
         for name in result["past_window_warnings"]:
@@ -2893,16 +2971,18 @@ def campaign_record_dose(campaign_id, child_id):
     date_str = request.form.get("dose_date")
     administered = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else None
     rec = child.vaccination_records.filter_by(campaign_id=campaign.id).first()
-    if rec is None:
-        if administered is not None:
+    if _doses_before_birth(child.date_of_birth, [(campaign.name, administered)]):
+        flash(_before_birth_message([campaign.name]), "error")
+    else:
+        if rec is None and administered is not None:
             rec = VaccinationRecord(child_id=child.id, vaccine_type_id=campaign.vaccine_type_id, campaign_id=campaign.id)
             db.session.add(rec)
-    if rec is not None:
-        rec.date_administered = administered
-        rec.status = "completed" if administered else "pending"
-        db.session.commit()
-        log_activity(f"Recorded {campaign.name} dose for {child_label(child)}")
-        flash(f"Saved {child.full_name}'s dose.", "success")
+        if rec is not None:
+            rec.date_administered = administered
+            rec.status = "completed" if administered else "pending"
+            db.session.commit()
+            log_activity(f"Recorded {campaign.name} dose for {child_label(child)}")
+            flash(f"Saved {child.full_name}'s dose.", "success")
     return redirect(url_for("bhw.campaign_worklist", campaign_id=campaign.id,
                              pending=request.form.get("pending") or None,
                              q=request.form.get("q") or None))
