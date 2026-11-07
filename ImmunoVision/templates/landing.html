@@ -345,6 +345,20 @@
 .lp-scroll-block { padding: 22px 26px; }
 .lp-scroll-block + .lp-scroll-block { border-top: 1px solid var(--border); }
 .lp-scroll-block .stat-grid { margin-bottom: 0; }
+@media (max-width: 640px) {
+  /* The preview is a picture of the dashboard; on a phone it is scaled down
+     so the figures and the four table columns fit inside the frame. */
+  .lp-scroll-block { padding: 16px; }
+  .lp-scroll-block .stat-card { padding: 12px; gap: 10px; }
+  .lp-scroll-block .stat-icon { width: 36px; height: 36px; }
+  .lp-scroll-block .stat-value { font-size: 20px; }
+  .lp-scroll-block .stat-label { font-size: 12px; }
+  .lp-scroll-block .data-table { min-width: 0; width: 100%; table-layout: fixed; }
+  .lp-scroll-block .data-table th, .lp-scroll-block .data-table td { padding: 8px 6px; font-size: 11.5px; }
+  .lp-scroll-block .data-table th:first-child, .lp-scroll-block .data-table td:first-child { width: 34%; }
+  .lp-scroll-block .data-table th { font-size: 9.5px; letter-spacing: 0; }
+  .lp-scroll-block .progress-track { display: none; }  /* keep the percentage, drop the bar */
+}
 
 /* ---- light-tinted closing section for "who it's for", so it still reads
    as a distinct beat from "why this matters" without going dark. ---- */

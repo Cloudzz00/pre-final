@@ -1670,7 +1670,7 @@ html { scroll-behavior: smooth; }
 /* BHW Child Records: full-width editing and clear single basic-info section */
 .bhw-child-edit { width: 100%; max-width: none; margin-left: 0; margin-right: 0; }
 .bhw-child-edit .form-grid-2 { gap: 14px 22px; }
-.bhw-basic-edit-box { border: 1px solid #dbe4f0; border-radius: 12px; padding: 20px; background: var(--slate-bg-2); margin-bottom: 24px; }
+.bhw-basic-edit-box { border: 1px solid var(--border); border-radius: 12px; padding: 20px; background: var(--slate-bg-2); margin-bottom: 24px; }
 .bhw-child-edit .dose-check { width: 22px; height: 22px; min-width: 22px; accent-color: var(--primary); cursor: pointer; }
 @media (max-width: 640px) { .bhw-basic-edit-box { padding: 14px; } }
 
