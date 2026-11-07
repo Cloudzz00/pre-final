@@ -468,11 +468,23 @@ body.no-scroll { overflow: hidden; }
   box-shadow: var(--shadow-sm);
 }
 .card-pad { padding: 22px; }
-.card-title { font-size: 16px; font-weight: 700; margin: 0 0 14px; }
+/* Cards stacked directly in the page always get the standard 18px gap,
+   instead of relying on each template to add a margin (the admin Campaign
+   page had two cards touching). */
+.content > .card + .card { margin-top: 18px; }
+/* Every card header - a plain title/subtitle or a header row that also
+   holds a button or dropdown - sits 16px above the card's content. Header
+   rows set their own margins inline (4px, 10px, 12px), so the gap ranged
+   from 4 to 16px between otherwise identical cards. */
+.card > .flex-between:first-child:has(.card-title),
+.card > .card-head:first-child { margin-bottom: 16px !important; padding-bottom: 0 !important; }
+.card-title { font-size: 16px; font-weight: 700; margin: 0 0 16px; }
 .card-title:has(+ .card-sub) { margin-bottom: 2px; }
 .card-sub { font-size: 12.5px; color: var(--text-secondary); margin: 0 0 16px; }
 
-.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
+/* 18px between tiles and below the row - the same rhythm as every other
+   gap between cards and sections (it was 16px / 20px). */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px; margin-bottom: 18px; }
 /* Icon-left, text-right layout. A grid (rather than flex, or rewriting the
    16 templates that use this component) lets the icon span every text row
    without any of those templates needing to wrap stat-value/label/caption
@@ -508,7 +520,7 @@ body.no-scroll { overflow: hidden; }
   padding: 26px 30px;
   color: #fff;
   display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 22px;
+  margin-bottom: 18px;
   position: relative;
   overflow: hidden;
   background: var(--role-accent-dark);
@@ -540,7 +552,7 @@ body.no-scroll { overflow: hidden; }
    reads as part of the system rather than a bolted-on warning widget. */
 .alert-banner {
   display: flex; align-items: flex-start; gap: 14px;
-  border-radius: var(--radius); padding: 16px 20px; margin-bottom: 20px;
+  border-radius: var(--radius); padding: 16px 20px; margin-bottom: 18px;
   background: #fff; border: 1px solid var(--red-bg); box-shadow: var(--shadow-sm);
 }
 .alert-banner .ab-icon {
