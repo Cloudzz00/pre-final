@@ -177,16 +177,19 @@
           <div class="summary-icon">{{ icon('activity', 17) }}</div>
           <div class="v" style="color:var(--primary)">{{ stats.coverage_rate }}%</div>
           <div class="l">Vaccination Coverage</div>
+          <div class="d">Target: 95% &middot; as of {{ as_of.strftime('%b %d, %Y') }}</div>
         </div>
         <div class="summary-card green">
           <div class="summary-icon">{{ icon('check-circle', 17) }}</div>
           <div class="v" style="color:#16a34a">{{ stats.fully_immunized }}</div>
           <div class="l">Fully Immunized</div>
+          <div class="d">of {{ stats.total_children }} children</div>
         </div>
         <div class="summary-card orange">
           <div class="summary-icon">{{ icon('alert-triangle', 17) }}</div>
           <div class="v" style="color:#d97706">{{ stats.at_risk }}</div>
           <div class="l">At-Risk</div>
+          <div class="d">Need a follow-up visit</div>
         </div>
       </div>
 
