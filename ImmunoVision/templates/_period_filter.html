@@ -30,7 +30,7 @@
 
 {# Tags a panel the period filter does not change, shown only while a period
    is selected (with no filter every panel is live anyway). #}
-{% macro live_tag(as_of, text="Today") %}{% if as_of %} <span class="live-tag" title="Not affected by the period filter">{{ text }}</span>{% endif %}{% endmacro %}
+{% macro live_tag(as_of, text="Today") %}{% if as_of %}<span class="live-tag" title="Not affected by the period filter">{{ text }}</span>{% endif %}{% endmacro %}
 
 {# Percentages over a handful of children swing on a single child. #}
 {% macro small_group_note(n) %}
