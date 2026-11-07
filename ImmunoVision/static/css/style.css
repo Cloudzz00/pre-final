@@ -1258,9 +1258,6 @@ html { scroll-behavior: smooth; }
 }
 
 /* Vaccine forecast: how-it-works panel. */
-.method-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px 28px; margin-top: 14px; }
-.method-list b { display: block; font-size: 13.5px; color: var(--text-primary); margin-bottom: 4px; }
-.method-list p { margin: 0; font-size: 13px; line-height: 1.65; color: var(--text-secondary); }
 /* BHW Child Records: make registration priority and vaccine history easy to scan. */
 .child-name-link { font-weight: 750; color: var(--primary); text-decoration: none; }
 .child-name-link:hover { text-decoration: underline; }

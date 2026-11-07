@@ -86,41 +86,10 @@
 </div>
 {% endfor %}
 
-<div class="card card-pad" style="margin-bottom:18px;">
+<div class="card card-pad">
   <div class="card-title">Births Recorded Per Year</div>
   <div class="card-sub">The basis for the cohort estimate</div>
   <div class="chart-box" style="height:260px;"><canvas id="birthsChart"></canvas></div>
-</div>
-
-<div class="card card-pad">
-  <div class="card-title">How This Is Calculated</div>
-  <div class="card-sub">Two components, only one of which is estimated</div>
-  <div class="method-list">
-    <div>
-      <b>Already due</b>
-      <p>Doses that children currently in the registry will become due for in
-         that year, calculated from each child's date of birth against the DOH
-         EPI schedule. This is measured, not predicted.</p>
-    </div>
-    <div>
-      <b>Projected new</b>
-      <p>Doses for children not yet born or registered. Based on
-         {{ cohort.low }} to {{ cohort.high }} births per year, the average of
-         {{ cohort.years|join(', ') }} with a 15% upper margin.</p>
-    </div>
-    <div>
-      <b>Why an average and not a trend</b>
-      <p>Fitting a line to this registry produces an implausible rise, because
-         the earliest years hold only a handful of records: a registry being set
-         up, not a change in births. The average of recent complete years is the
-         defensible estimate.</p>
-    </div>
-    <div>
-      <b>What this does not include</b>
-      <p>No wastage allowance, since that factor is set by the RHU's own
-         practice and vial sizes. Add it to these figures when ordering.</p>
-    </div>
-  </div>
 </div>
 {% endif %}
 {% endblock %}
