@@ -1,6 +1,6 @@
 {% extends "layout_app.html" %}
 {% from "_icons.html" import icon %}
-{% from "_period_filter.html" import period_selects, period_note, live_tag, small_group_note %}
+{% from "_period_filter.html" import period_selects, period_note, live_tag, small_group_note, data_notice %}
 {% block content %}
 <div class="banner">
   <div>
@@ -36,6 +36,7 @@
   </span>
 </div>
 
+{{ data_notice(data_as_of, 'Barangay ' ~ selected_barangay.name if selected_barangay else '') }}
 {{ period_note(as_of, born_from, period_label, period_clamped) }}
 {{ small_group_note(municipality.total_children) }}
 
