@@ -1,18 +1,22 @@
 {# Dashboard period filter: a birth-year range, with Month available when a
    single year is selected (From and To the same). See resolve_range(). #}
 {% macro period_selects(years, months, year_from, year_to, month, month_active) %}
-<select class="form-control select-sm" name="from" onchange="this.form.submit()" aria-label="Born from year">
-  <option value="">Born from: Any year</option>
-  {% for y in years|reverse %}
-  <option value="{{ y }}" {% if year_from == y|string %}selected{% endif %}>Born from {{ y }}</option>
-  {% endfor %}
-</select>
-<select class="form-control select-sm" name="to" onchange="this.form.submit()" aria-label="Born to year">
-  <option value="">Born to: Any year</option>
-  {% for y in years %}
-  <option value="{{ y }}" {% if year_to == y|string %}selected{% endif %}>Born to {{ y }}</option>
-  {% endfor %}
-</select>
+<span class="range-group" role="group" aria-label="Birth year range">
+  <span class="range-word">Born</span>
+  <select class="form-control select-sm" name="from" onchange="this.form.submit()" aria-label="Born from year">
+    <option value="">Earliest</option>
+    {% for y in years|reverse %}
+    <option value="{{ y }}" {% if year_from == y|string %}selected{% endif %}>{{ y }}</option>
+    {% endfor %}
+  </select>
+  <span class="range-word">to</span>
+  <select class="form-control select-sm" name="to" onchange="this.form.submit()" aria-label="Born to year">
+    <option value="">Latest</option>
+    {% for y in years %}
+    <option value="{{ y }}" {% if year_to == y|string %}selected{% endif %}>{{ y }}</option>
+    {% endfor %}
+  </select>
+</span>
 <select class="form-control select-sm" name="month" onchange="this.form.submit()" aria-label="Month"
         {% if not month_active %}disabled title="Choose the same start and end year to filter by month"{% endif %}>
   <option value="">Month: All</option>
