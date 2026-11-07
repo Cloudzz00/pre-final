@@ -215,60 +215,51 @@
       </p>
       {% endif %}
     </div>
-  </div>
-</div>
-
-<div class="section-head">
-  <div>
-    <h3>User &amp; Access</h3>
-  </div>
-</div>
-
-<div class="grid-2">
-  <div class="card card-pad">
-    <div class="flex-between" style="margin-bottom:12px;">
-      <div class="dashboard-card-title"><span class="dashboard-section-icon icon-blue">{{ icon('lock', 18) }}</span><div><div class="card-title mb-0">User &amp; Access</div></div></div>
-      <a class="link" style="font-size:12px;" href="{{ url_for('admin.users') }}">Manage</a>
-    </div>
-    {# Grid covers account health; the bar below covers role composition.
-       Neither repeats the other - RHU and BHW counts live only in the key. #}
-    <div class="mini-stats">
-      <div class="mini-stat"><span class="v">{{ stats.total }}</span><span class="k">Total Users</span></div>
-      <div class="mini-stat"><span class="v good">{{ stats.active }}</span><span class="k">Active</span></div>
-      <div class="mini-stat"><span class="v {{ 'bad' if stats.disabled else '' }}">{{ stats.disabled }}</span><span class="k">Disabled</span></div>
-      <div class="mini-stat"><span class="v">{{ stats.logins_today }}</span><span class="k">Logins Today</span></div>
-    </div>
-
-    <div class="role-split-label">By role</div>
-    {% set total = role_dist.admin + role_dist.superadmin + role_dist.rhu + role_dist.bhw %}
-    <div class="role-bar" role="img"
-         aria-label="{{ role_dist.admin }} admin, {{ role_dist.superadmin }} ICTMO administrator, {{ role_dist.rhu }} RHU, {{ role_dist.bhw }} BHW">
-      <span style="width:{{ (role_dist.admin / total * 100)|round(2) }}%;background:var(--violet);" title="RHU Administrator: {{ role_dist.admin }}"></span>
-      <span style="width:{{ (role_dist.superadmin / total * 100)|round(2) }}%;background:var(--navy-800);" title="ICTMO Administrator: {{ role_dist.superadmin }}"></span>
-      <span style="width:{{ (role_dist.rhu / total * 100)|round(2) }}%;background:var(--primary);" title="RHU: {{ role_dist.rhu }}"></span>
-      <span style="width:{{ (role_dist.bhw / total * 100)|round(2) }}%;background:var(--teal);" title="BHW: {{ role_dist.bhw }}"></span>
-    </div>
-    <div class="role-key">
-      <span><i style="background:var(--violet)"></i>RHU Administrator <b>{{ role_dist.admin }}</b></span>
-      <span><i style="background:var(--navy-800)"></i>ICTMO Administrator <b>{{ role_dist.superadmin }}</b></span>
-      <span><i style="background:var(--primary)"></i>RHU <b>{{ role_dist.rhu }}</b></span>
-      <span><i style="background:var(--teal)"></i>BHW <b>{{ role_dist.bhw }}</b></span>
-    </div>
-  </div>
-
-  <div class="card card-pad">
-    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-green">{{ icon('shield', 18) }}</span><div><div class="card-title mb-0">Account Status</div></div></div>
-    {% for u in users[:3] %}
-    <div class="settings-row">
-      <div class="left">
-        <div class="avatar-chip" style="background:var(--primary)">{{ u.full_name.split(' ')|map('first')|join('') }}</div>
-        <div class="label">{{ u.full_name }}<br><span class="text-muted" style="font-weight:400;">{{ u.role_label }}</span></div>
+    <div class="card card-pad" style="margin-top:18px;">
+      <div class="flex-between" style="margin-bottom:12px;">
+        <div class="dashboard-card-title"><span class="dashboard-section-icon icon-blue">{{ icon('lock', 18) }}</span><div><div class="card-title mb-0">User &amp; Access</div></div></div>
+        <a class="link" style="font-size:12px;" href="{{ url_for('admin.users') }}">Manage</a>
       </div>
-      <span class="badge badge-{{ 'green' if u.is_active_flag else 'red' }}">{{ 'Active' if u.is_active_flag else 'Disabled' }}</span>
+      {# Grid covers account health; the bar below covers role composition.
+         Neither repeats the other - RHU and BHW counts live only in the key. #}
+      <div class="mini-stats">
+        <div class="mini-stat"><span class="v">{{ stats.total }}</span><span class="k">Total Users</span></div>
+        <div class="mini-stat"><span class="v good">{{ stats.active }}</span><span class="k">Active</span></div>
+        <div class="mini-stat"><span class="v {{ 'bad' if stats.disabled else '' }}">{{ stats.disabled }}</span><span class="k">Disabled</span></div>
+        <div class="mini-stat"><span class="v">{{ stats.logins_today }}</span><span class="k">Logins Today</span></div>
+      </div>
+
+      <div class="role-split-label">By role</div>
+      {% set total = role_dist.admin + role_dist.superadmin + role_dist.rhu + role_dist.bhw %}
+      <div class="role-bar" role="img"
+           aria-label="{{ role_dist.admin }} admin, {{ role_dist.superadmin }} ICTMO administrator, {{ role_dist.rhu }} RHU, {{ role_dist.bhw }} BHW">
+        <span style="width:{{ (role_dist.admin / total * 100)|round(2) }}%;background:var(--violet);" title="RHU Administrator: {{ role_dist.admin }}"></span>
+        <span style="width:{{ (role_dist.superadmin / total * 100)|round(2) }}%;background:var(--navy-800);" title="ICTMO Administrator: {{ role_dist.superadmin }}"></span>
+        <span style="width:{{ (role_dist.rhu / total * 100)|round(2) }}%;background:var(--primary);" title="RHU: {{ role_dist.rhu }}"></span>
+        <span style="width:{{ (role_dist.bhw / total * 100)|round(2) }}%;background:var(--teal);" title="BHW: {{ role_dist.bhw }}"></span>
+      </div>
+      <div class="role-key">
+        <span><i style="background:var(--violet)"></i>RHU Administrator <b>{{ role_dist.admin }}</b></span>
+        <span><i style="background:var(--navy-800)"></i>ICTMO Administrator <b>{{ role_dist.superadmin }}</b></span>
+        <span><i style="background:var(--primary)"></i>RHU <b>{{ role_dist.rhu }}</b></span>
+        <span><i style="background:var(--teal)"></i>BHW <b>{{ role_dist.bhw }}</b></span>
+      </div>
     </div>
-    {% endfor %}
+    <div class="card card-pad" style="margin-top:18px;">
+      <div class="dashboard-card-title"><span class="dashboard-section-icon icon-green">{{ icon('shield', 18) }}</span><div><div class="card-title mb-0">Account Status</div></div></div>
+      {% for u in users[:3] %}
+      <div class="settings-row">
+        <div class="left">
+          <div class="avatar-chip" style="background:var(--primary)">{{ u.full_name.split(' ')|map('first')|join('') }}</div>
+          <div class="label">{{ u.full_name }}<br><span class="text-muted" style="font-weight:400;">{{ u.role_label }}</span></div>
+        </div>
+        <span class="badge badge-{{ 'green' if u.is_active_flag else 'red' }}">{{ 'Active' if u.is_active_flag else 'Disabled' }}</span>
+      </div>
+      {% endfor %}
+    </div>
   </div>
 </div>
+
 {% endblock %}
 
 {% block extra_js %}
