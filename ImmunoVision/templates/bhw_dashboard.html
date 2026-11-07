@@ -27,10 +27,10 @@
 {{ small_group_note(stats.total_children) }}
 
 <div class="stat-grid">
-  <div class="stat-card"><div class="stat-icon bg-blue">{{ icon('users', 21) }}</div><div><div class="stat-value">{{ stats.total_children }}</div><div class="stat-label">Total Registered Children</div><div class="stat-caption">All children in your barangay</div></div></div>
-  <div class="stat-card"><div class="stat-icon bg-orange">{{ icon('alert-triangle', 21) }}</div><div><div class="stat-value">{{ stats.at_risk }}</div><div class="stat-label">At-Risk Children</div><div class="stat-caption">Need closer monitoring</div></div></div>
-  <div class="stat-card"><div class="stat-icon bg-green">{{ icon('check-circle', 21) }}</div><div><div class="stat-value">{{ stats.fully_immunized }}</div><div class="stat-label">Fully Immunized</div><div class="stat-caption">Up to date on all doses</div></div></div>
-  <div class="stat-card"><div class="stat-icon bg-teal">{{ icon('activity', 21) }}</div><div><div class="stat-value">{{ stats.coverage_rate }}%</div><div class="stat-label">Coverage Rate</div><div class="stat-caption">Target: 95%</div></div></div>
+  <div class="stat-card"><div class="stat-icon bg-blue">{{ icon('users', 21) }}</div><div class="stat-value">{{ stats.total_children }}</div><div class="stat-label">Total Registered Children</div><div class="stat-caption">All children in your barangay</div></div>
+  <div class="stat-card"><div class="stat-icon bg-orange">{{ icon('alert-triangle', 21) }}</div><div class="stat-value">{{ stats.at_risk }}</div><div class="stat-label">At-Risk Children</div><div class="stat-caption">Need closer monitoring</div></div>
+  <div class="stat-card"><div class="stat-icon bg-green">{{ icon('check-circle', 21) }}</div><div class="stat-value">{{ stats.fully_immunized }}</div><div class="stat-label">Fully Immunized</div><div class="stat-caption">Up to date on all doses</div></div>
+  <div class="stat-card"><div class="stat-icon bg-teal">{{ icon('activity', 21) }}</div><div class="stat-value">{{ stats.coverage_rate }}%</div><div class="stat-label">Coverage Rate</div><div class="stat-caption">Target: 95%</div></div>
 </div>
 
 {% if active_campaigns %}
@@ -85,14 +85,6 @@
 .due-empty{padding:28px 14px;text-align:center;color:var(--text-secondary);font-size:12px}
 @media(max-width:1100px){.dashboard-action-grid{grid-template-columns:1fr}.due-layout{grid-template-columns:1fr}}
 
-/* .stat-card's shared grid spans the icon across value/label/caption as
-   three separate rows via auto-placement - this page instead wraps those
-   three in a single <div>, so the icon (still spanning the full stretched
-   card height) and that one-row wrapper no longer share a center. Switch
-   to flex here so both simply center against each other's real height. */
-.stat-grid .stat-card{display:flex;align-items:center;gap:16px}
-.stat-grid .stat-card .stat-icon{flex-shrink:0}
-.stat-grid .stat-card .stat-icon + div{flex:1;min-width:0}
 .followup-card .card-head,.due-calendar-card .card-head{padding-bottom:2px}
 .calendar-panel{background:var(--slate-bg-2)}.cal-day.selected{box-shadow:0 3px 8px rgba(37,99,235,.18)}.due-list{background:#fff}.due-item:hover{background:#f8fafc}
 @media(max-width:900px){.dashboard-action-grid{grid-template-columns:1fr}}

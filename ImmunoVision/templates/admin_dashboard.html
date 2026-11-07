@@ -49,26 +49,27 @@
     <div class="stat-icon bg-teal">{{ icon('activity', 21) }}</div>
     <div class="stat-value">{{ municipality.coverage_rate }}%</div>
     <div class="stat-label">Coverage Rate</div>
-    <div class="stat-caption">vs. actual registered children &middot; target: 95%</div>
+    <div class="stat-caption">Of registered children &middot; target 95%</div>
   </div>
   <div class="stat-card">
     <div class="stat-icon bg-green">{{ icon('check-circle', 21) }}</div>
     <div class="stat-value">{{ municipality.fully_immunized }}</div>
     <div class="stat-label">Fully Immunized</div>
+    <div class="stat-caption">of {{ '{:,}'.format(municipality.total_children) }} children</div>
   </div>
   <div class="stat-card">
     <div class="stat-icon bg-orange">{{ icon('alert-triangle', 21) }}</div>
     <div class="stat-value">{{ municipality.below_target }}</div>
     <div class="stat-label">Below Target</div>
-    <div class="stat-caption">barangays under the 95% target</div>
+    <div class="stat-caption">Barangays under 95%</div>
   </div>
   <div class="stat-card">
     <div class="stat-icon bg-purple">{{ icon('target', 21) }}</div>
     <div class="stat-value">{{ municipality.target_coverage_rate ~ '%' if municipality.target_coverage_rate is not none else '—' }}</div>
-    <div class="stat-label">Coverage (DOH Target)</div>
+    <div class="stat-label">DOH Target Coverage</div>
     <div class="stat-caption">
       {% if municipality.target_barangays_set %}vs. {{ '{:,}'.format(municipality.target_population_total) }} DOH/PSA projected &middot; {{ municipality.target_barangays_set }} of {{ municipality.barangays }} barangays set
-      {%- else %}Set barangay targets in the table below{% endif %}
+      {%- else %}Set targets in the table below{% endif %}
     </div>
   </div>
 </div>
