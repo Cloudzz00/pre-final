@@ -90,8 +90,7 @@
 <div class="split-2-1">
   <div class="side-col">
     <div class="card card-pad">
-          <div class="card-title" id="coverage-by-barangay">Coverage by Barangay</div>
-      <div class="card-sub">{% if selected_barangay %}{{ selected_barangay.name }} only{% else %}All 19 barangays, lowest coverage first{% endif %}</div>
+          <div class="dashboard-card-title"><span class="dashboard-section-icon icon-blue">{{ icon('map-pin', 18) }}</span><div><div class="card-title mb-0" id="coverage-by-barangay">Coverage by Barangay</div><div class="card-sub mb-0">{% if selected_barangay %}{{ selected_barangay.name }} only{% else %}All 19 barangays, lowest coverage first{% endif %}</div></div></div>
           {# Capped to the chart's height beside it so the two cards end level. #}
           <div class="table-wrap" style="max-height:{{ (by_barangay|length * 35 + 52)|int }}px;">
             <table class="data-table plain-head compact">
@@ -113,8 +112,7 @@
         </div>
 
     <div class="card card-pad">
-        <div class="card-title">Coverage by Vaccine</div>
-        <div class="card-sub">All 15 doses, in schedule order</div>
+        <div class="dashboard-card-title"><span class="dashboard-section-icon icon-blue">{{ icon('syringe', 18) }}</span><div><div class="card-title mb-0">Coverage by Vaccine</div><div class="card-sub mb-0">All 15 doses, in schedule order</div></div></div>
         <div class="chart-box"><canvas id="vaccineChart"></canvas></div>
     {% if insights.vaccine %}
     <div class="insight">{{ icon('activity', 14) }}<span>{{ insights.vaccine }}</span></div>
@@ -122,8 +120,7 @@
       </div>
 
     <div class="card card-pad">
-        <div class="card-title">Annual Coverage Trend</div>
-        <div class="card-sub">Coverage at each year end</div>
+        <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('activity', 18) }}</span><div><div class="card-title mb-0">Annual Coverage Trend</div><div class="card-sub mb-0">Coverage at each year end</div></div></div>
         <div class="chart-box"><canvas id="trendChart"></canvas></div>
     {% if insights.trend %}
     <div class="insight">{{ icon('activity', 14) }}<span>{{ insights.trend }}</span></div>
@@ -133,16 +130,14 @@
 
   <div class="side-col">
     <div class="card card-pad">
-              <div class="card-title">Risk Distribution</div>
-              <div class="card-sub">By risk level across all children</div>
+              <div class="dashboard-card-title"><span class="dashboard-section-icon icon-green">{{ icon('shield', 18) }}</span><div><div class="card-title mb-0">Risk Distribution</div><div class="card-sub mb-0">By risk level across all children</div></div></div>
               <div class="chart-box"><canvas id="riskDonutChart"></canvas></div>
             </div>
 
     <div class="card card-pad">
               <div class="flex-between" style="margin-bottom:4px;">
                 <div>
-                  <div class="card-title mb-0">Needs Follow-Up</div>
-                  <div class="card-sub mb-0">Highest-risk children under 12 months{% if selected_barangay %} in {{ selected_barangay.name }}{% endif %}</div>
+                  <div class="dashboard-card-title"><span class="dashboard-section-icon icon-red">{{ icon('alert-triangle', 18) }}</span><div><div class="card-title mb-0">Needs Follow-Up</div><div class="card-sub mb-0">Highest-risk children under 12 months{% if selected_barangay %} in {{ selected_barangay.name }}{% endif %}</div></div></div>
                 </div>
                 <a class="btn btn-outline btn-sm" href="{{ url_for('rhu.continuation') }}">All {{ follow_up_total }} &rsaquo;</a>
               </div>
@@ -164,8 +159,7 @@
     <div class="card card-pad">
           <div class="flex-between" style="margin-bottom:4px;">
             <div>
-              <div class="card-title mb-0">Active Campaigns</div>
-              <div class="card-sub mb-0">Supplementary immunization drives open right now</div>
+              <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('calendar', 18) }}</span><div><div class="card-title mb-0">Active Campaigns</div><div class="card-sub mb-0">Supplementary immunization drives open right now</div></div></div>
             </div>
           </div>
           <div style="margin-top:10px;">
@@ -189,8 +183,7 @@
     <div class="card card-pad">
           <div class="flex-between" style="margin-bottom:4px;">
             <div>
-              <div class="card-title mb-0">Vaccines Running Low</div>
-              <div class="card-sub mb-0">At or below reorder level{% if selected_barangay %} &middot; municipality-wide stock{% endif %}</div>
+              <div class="dashboard-card-title"><span class="dashboard-section-icon icon-amber">{{ icon('package', 18) }}</span><div><div class="card-title mb-0">Vaccines Running Low</div><div class="card-sub mb-0">At or below reorder level{% if selected_barangay %} &middot; municipality-wide stock{% endif %}</div></div></div>
             </div>
             <a class="btn btn-outline btn-sm" href="{{ url_for('rhu.inventory') }}">Inventory &rsaquo;</a>
           </div>
@@ -215,8 +208,7 @@
 
           <div class="flex-between" style="margin-bottom:4px;">
             <div>
-              <div class="card-title mb-0">Requests Awaiting Review</div>
-              <div class="card-sub mb-0">{% if selected_barangay %}From {{ selected_barangay.name }}{% else %}Submitted by barangay health workers{% endif %}</div>
+              <div class="dashboard-card-title"><span class="dashboard-section-icon icon-teal">{{ icon('clipboard', 18) }}</span><div><div class="card-title mb-0">Requests Awaiting Review</div><div class="card-sub mb-0">{% if selected_barangay %}From {{ selected_barangay.name }}{% else %}Submitted by barangay health workers{% endif %}</div></div></div>
             </div>
             <a class="btn btn-outline btn-sm" href="{{ url_for('rhu.requests') }}">{{ icon('clipboard', 14) }} Review</a>
           </div>

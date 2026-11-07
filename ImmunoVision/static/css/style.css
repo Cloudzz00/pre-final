@@ -1647,3 +1647,28 @@ html { scroll-behavior: smooth; }
 .bhw-basic-fields { border:0; margin:0; padding:0; min-width:0; }
 .bhw-basic-fields[hidden], .bhw-basic-summary-grid[hidden] { display:none !important; }
 @media (max-width:650px) { .bhw-basic-summary-grid { grid-template-columns:1fr; gap:14px; } }
+
+/* ---------------- Dashboard card headings ---------------- */
+/* A card title with a tinted icon square in front of it, used on every
+   role's dashboard (moved here from the BHW dashboard so all three share
+   one definition). */
+.dashboard-card-title { display: flex; align-items: center; }
+.dashboard-card-title .card-title { margin: 0; }
+.card-pad > .dashboard-card-title { margin-bottom: 16px; }
+/* In a header row with an action button (e.g. "All 146 >", "Review"), keep
+   the button beside the title and let the subtitle wrap instead - the icon
+   square otherwise pushed the button onto its own line in narrow columns. */
+.flex-between:has(> div > .dashboard-card-title) { flex-wrap: nowrap; column-gap: 12px; }
+.flex-between:has(> div > .dashboard-card-title) > div:first-child { min-width: 0; }
+.flex-between:has(> div > .dashboard-card-title) > .btn { flex-shrink: 0; }
+.flex-between:has(> div > .dashboard-card-title) .card-title { white-space: normal; }
+.dashboard-section-icon {
+  width: 34px; height: 34px; border-radius: 10px; display: inline-flex; align-items: center;
+  justify-content: center; margin-right: 9px; vertical-align: middle; flex-shrink: 0;
+}
+.icon-red { background: #fee2e2; color: #dc2626; }
+.icon-blue { background: #dbeafe; color: #2563eb; }
+.icon-green { background: #dcfce7; color: #16a34a; }
+.icon-purple { background: #ede9fe; color: #7c3aed; }
+.icon-teal { background: #ccfbf1; color: #0f766e; }
+.icon-amber { background: #fef3c7; color: #d97706; }

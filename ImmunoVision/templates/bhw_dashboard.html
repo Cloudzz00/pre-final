@@ -103,7 +103,6 @@
 .due-empty{padding:28px 14px;text-align:center;color:var(--text-secondary);font-size:12px}
 @media(max-width:1100px){.dashboard-action-grid{grid-template-columns:1fr}.due-layout{grid-template-columns:1fr}}
 
-.dashboard-section-icon{width:34px;height:34px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;margin-right:9px;vertical-align:middle}.icon-red{background:#fee2e2;color:#dc2626}.icon-blue{background:#dbeafe;color:#2563eb}.icon-green{background:#dcfce7;color:#16a34a}.icon-purple{background:#ede9fe;color:#7c3aed}.icon-teal{background:#ccfbf1;color:#0f766e}
 /* .stat-card's shared grid spans the icon across value/label/caption as
    three separate rows via auto-placement - this page instead wraps those
    three in a single <div>, so the icon (still spanning the full stretched
@@ -112,7 +111,6 @@
 .stat-grid .stat-card{display:flex;align-items:center;gap:16px}
 .stat-grid .stat-card .stat-icon{flex-shrink:0}
 .stat-grid .stat-card .stat-icon + div{flex:1;min-width:0}
-.dashboard-card-title{display:flex;align-items:center}.dashboard-card-title .card-title{margin:0}
 .followup-card .card-head,.due-calendar-card .card-head{padding-bottom:2px}
 .calendar-panel{background:#f8fbff}.cal-day.selected{box-shadow:0 3px 8px rgba(37,99,235,.18)}.due-list{background:#fff}.due-item:hover{background:#f8fafc}
 @media(max-width:900px){.dashboard-action-grid{grid-template-columns:1fr}}
@@ -211,7 +209,7 @@
 <div class="split-2-1">
   <div class="card card-pad">
     <div class="dashboard-card-title"><span class="dashboard-section-icon icon-blue">{{ icon('syringe', 18) }}</span><div><div class="card-title mb-0">Coverage by Vaccine</div><div class="card-sub mb-0">All 15 doses, in schedule order</div></div></div>
-    <div class="chart-box" style="margin-top:16px;"><canvas id="vaccineChart"></canvas></div>
+    <div class="chart-box"><canvas id="vaccineChart"></canvas></div>
     {% if insights.vaccine %}
     <div class="insight">{{ icon('activity', 14) }}<span>{{ insights.vaccine }}</span></div>
     {% endif %}
@@ -246,7 +244,7 @@
     <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('activity', 18) }}</span><div><div class="card-title mb-0">Annual Coverage Trend</div><div class="card-sub mb-0">Coverage at each year end</div></div></div>
     {# Labelled as simulated: the database holds a current snapshot, not
        month-by-month history, so this series cannot be measured. #}
-    <div class="chart-box" style="flex:1;min-height:270px;margin-top:16px;"><canvas id="trendChart"></canvas></div>
+    <div class="chart-box" style="flex:1;min-height:270px;"><canvas id="trendChart"></canvas></div>
     {% if insights.trend %}
     <div class="insight" style="font-size:13px;">{{ icon('activity', 14) }}<span>{{ insights.trend }}</span></div>
     {% endif %}
@@ -256,7 +254,7 @@
     <div class="dashboard-card-title"><span class="dashboard-section-icon icon-teal">{{ icon('clipboard', 18) }}</span><div><div class="card-title mb-0">Vaccine Request Status</div><div class="card-sub mb-0">Barangay {{ current_user.barangay.name }}</div></div></div>
 
     {% if pending_requests %}
-    <div style="margin-top:20px;padding:15px;border:1px solid var(--border);border-radius:12px;">
+    <div style="padding:15px;border:1px solid var(--border);border-radius:12px;">
       <div class="flex-between" style="gap:10px;">
         <div>
           <b style="font-size:15px;">{{ pending_requests.antigen.name }}</b><br>
