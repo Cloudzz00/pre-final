@@ -35,9 +35,9 @@
   <td>{{ u.barangay.name if u.barangay else 'All' }}</td>
   <td>
     <span class="badge badge-{{ 'green' if u.is_active_flag else 'red' }}">{{ 'Active' if u.is_active_flag else 'Disabled' }}</span>
-    {% if u.password_reset_requested_at %}<span class="badge badge-red" title="Requested {{ u.password_reset_requested_at.strftime('%Y-%m-%d %H:%M') }}">Reset Requested</span>{% endif %}
+    {% if u.password_reset_requested_at %}<span class="badge badge-red" title="Requested {{ (u.password_reset_requested_at|local).strftime('%Y-%m-%d %H:%M') }}">Reset Requested</span>{% endif %}
   </td>
-  <td>{% if u.last_login_at %}{{ u.last_login_at.strftime('%Y-%m-%d') }}<div class="text-muted" style="font-size:11.5px;">{{ u.last_login_at.strftime('%H:%M') }}</div>{% else %}—{% endif %}</td>
+  <td>{% if u.last_login_at %}{{ (u.last_login_at|local).strftime('%Y-%m-%d') }}<div class="text-muted" style="font-size:11.5px;">{{ (u.last_login_at|local).strftime('%H:%M') }}</div>{% else %}—{% endif %}</td>
   <td><div class="row-actions">
     <form method="post" action="{{ url_for('admin.reset_user_password', user_id=u.id) }}" style="display:inline">
       <button class="btn btn-warning btn-sm" data-confirm="Set a new temporary password for {{ u.full_name }}? You'll need to give it to them directly.">{{ icon('refresh', 14) }} Reset Password</button>

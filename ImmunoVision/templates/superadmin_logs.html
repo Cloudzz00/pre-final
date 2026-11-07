@@ -65,7 +65,7 @@
       {{ e.category }}
     </span>
   </td>
-  <td>{{ log.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+  <td>{{ (log.created_at|local).strftime('%Y-%m-%d %H:%M') }}</td>
 </tr>
 {% else %}
 <tr><td colspan="6">

@@ -12,10 +12,19 @@ import csv
 import json
 import io
 import os
+import time
+
+# Every "today" and "now" in the system is Philippine time, not the server's
+# (Render runs on UTC, which put dates a day behind between midnight and 8 AM
+# and printed report times 8 hours early). A POSIX zone string needs no tz
+# database on the server; the Philippines has no daylight saving time.
+os.environ["TZ"] = "PHT-8"
+if hasattr(time, "tzset"):
+    time.tzset()
 import re
 import secrets
 from collections import Counter, defaultdict
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from flask import (Flask, Blueprint, render_template, request, redirect, url_for, flash, abort,
                    jsonify, g, has_request_context, Response)
@@ -65,6 +74,8 @@ def create_app():
     def load_user(user_id):
         return db.session.get(User, int(user_id))
 
+    app.add_template_filter(to_local, "local")
+
     @app.context_processor
     def inject_globals():
         return {"today": date.today(), "coverage_color": coverage_color,
@@ -95,6 +106,17 @@ def log_category(action):
         if any(k.lower() in action.lower() for k in keywords):
             return name
     return "Other"
+
+
+PH_TZ = timezone(timedelta(hours=8), "PHT")
+
+
+def to_local(value):
+    """A stored timestamp (naive UTC, from datetime.utcnow) as Philippine
+    time, for display and for "which day was this" comparisons."""
+    if value is None:
+        return None
+    return value.replace(tzinfo=timezone.utc).astimezone(PH_TZ).replace(tzinfo=None)
 
 
 def child_label(child):
@@ -1576,7 +1598,7 @@ def admin_notifications():
                       "url": url_for("admin.users")})
 
     stale = [u for u in users if u.is_active_flag and u.last_login_at
-             and (today - u.last_login_at.date()).days > 30]
+             and (today - to_local(u.last_login_at).date()).days > 30]
     if stale:
         notes.append({"category": "Accounts", "severity": "info", "icon": "clock", "icon_bg": "bg-purple",
                       "title": f"{len(stale)} Account{'s' if len(stale) > 1 else ''} Inactive 30+ Days",
@@ -3485,7 +3507,7 @@ def dashboard():
                   "rhu": sum(1 for u in all_users if u.role == "rhu"), "bhw": sum(1 for u in all_users if u.role == "bhw"),
                   "active": sum(1 for u in all_users if u.is_active_flag),
                   "disabled": sum(1 for u in all_users if not u.is_active_flag),
-                  "logins_today": sum(1 for u in all_users if u.last_login_at and u.last_login_at.date() == datetime.utcnow().date())}
+                  "logins_today": sum(1 for u in all_users if u.last_login_at and to_local(u.last_login_at).date() == date.today())}
     role_dist = {"admin": user_stats["admin"], "superadmin": user_stats["superadmin"],
                  "rhu": user_stats["rhu"], "bhw": user_stats["bhw"]}
 

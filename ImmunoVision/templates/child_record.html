@@ -124,7 +124,7 @@
     <div class="card card-pad" style="margin-bottom:18px;">
       <div class="card-title">Reasons for Follow-Up</div>
       <div class="card-sub">
-        Assessed {{ detail.risk.computed_at.strftime('%b %d, %Y') }}
+        Assessed {{ (detail.risk.computed_at|local).strftime('%b %d, %Y') }}
       </div>
       {% if detail.factors %}
       <div class="factor-list">

@@ -27,7 +27,7 @@
     {% endif %}
   </td>
   <td><span class="badge badge-{{ 'red' if r.priority=='Urgent' else 'amber' if r.priority=='High' else 'gray' }}">{{ r.priority }}</span></td>
-  <td>{{ r.requested_at.strftime('%Y-%m-%d') }}</td>
+  <td>{{ (r.requested_at|local).strftime('%Y-%m-%d') }}</td>
   <td><span class="badge badge-{{ 'amber' if r.status=='pending' else 'blue' if r.status=='approved' else 'green' if r.status=='fulfilled' else 'red' }}">{{ r.status|capitalize }}</span></td>
 </tr>
 {% else %}

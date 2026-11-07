@@ -13,7 +13,7 @@
     <div class="ab-body">
       <div class="title">
         Current risk status: <span class="badge badge-{{ 'red' if child.latest_risk.risk_label == 'At-Risk' else 'green' }}">{{ child.latest_risk.risk_label }}</span>
-        <span class="text-muted" style="font-weight:400;font-size:12.5px;">({{ (child.latest_risk.risk_probability * 100)|round(1) }}% probability, as of {{ child.latest_risk.computed_at.strftime('%Y-%m-%d') }})</span>
+        <span class="text-muted" style="font-weight:400;font-size:12.5px;">({{ (child.latest_risk.risk_probability * 100)|round(1) }}% probability, as of {{ (child.latest_risk.computed_at|local).strftime('%Y-%m-%d') }})</span>
       </div>
     </div>
   </div>
