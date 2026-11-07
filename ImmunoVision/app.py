@@ -1939,7 +1939,7 @@ def monthly_due_list(children, month_key, include_overdue=True):
     month_key is "YYYY-MM" or "all". A month shows every dose whose due date
     falls in it; with include_overdue, doses missed before that month (within
     the last DUE_OVERDUE_DAYS) are carried in too, since those children still
-    need them. "all" covers the overdue window through the end of the sixth
+    need them. Without it, no dose already past due is listed at all. "all" covers the overdue window through the end of the sixth
     month. Returns (events, summary): summary is one row per antigen with the
     number of doses needed, in schedule order."""
     today = date.today()
@@ -1961,6 +1961,10 @@ def monthly_due_list(children, month_key, include_overdue=True):
             in_month = first <= due <= last
             carried = include_overdue and overdue_floor <= due < min(first, today)
             if not (in_month or carried):
+                continue
+            if not include_overdue and due < today:
+                # "Exclude overdue" hides every dose already past due,
+                # including ones due earlier in the selected month.
                 continue
             delta = (due - today).days
             if delta < 0:
