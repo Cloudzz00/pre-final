@@ -556,7 +556,11 @@ body.no-scroll { overflow: hidden; }
 .alert-banner.success .ab-icon { background: var(--green-bg); color: var(--green); }
 
 /* ---------------- Tabs / Pills / Badges ---------------- */
-.pill-tabs { display: inline-flex; background: var(--slate-bg); border: 1px solid var(--border); border-radius: var(--radius-pill); padding: 4px; gap: 2px; margin-bottom: 18px; }
+.pill-tabs { display: inline-flex; background: var(--slate-bg); border: 1px solid var(--border); border-radius: var(--radius-pill); padding: 4px; gap: 2px; margin-bottom: 18px;
+  /* On phones a long tab row scrolls inside itself instead of widening the page. */
+  max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.pill-tabs::-webkit-scrollbar { display: none; }
+.pill-tab { flex-shrink: 0; white-space: nowrap; }
 .pill-tab { padding: 8px 16px; border-radius: var(--radius-pill); font-size: 13px; font-weight: 600; color: var(--text-secondary); border: none; background: transparent; }
 .pill-tab.active { background: var(--primary); color: #fff; }
 
@@ -715,6 +719,11 @@ table.data-table tfoot td { padding: 12px 14px; border-top: 1px solid var(--bord
    and the child scroll instead. */
 .grid-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
 @media (max-width: 980px) { .grid-2 { grid-template-columns: 1fr; } }
+/* Settings: profile card + options. Was an inline style, which the stacking
+   rule above could not override, so on phones the second column sat
+   off-screen. */
+.settings-grid { grid-template-columns: 320px minmax(0, 1fr); }
+@media (max-width: 980px) { .settings-grid { grid-template-columns: minmax(0, 1fr); } }
 
 /* ---------------- Modal ---------------- */
 .modal-scrim { position: fixed; inset: 0; background: rgba(15,23,42,0.55); display: none; align-items: center; justify-content: center; z-index: 100; padding: 24px; }
@@ -1114,7 +1123,12 @@ a.stock-row .row-chevron { color: var(--text-muted); font-size: 16px; line-heigh
    long enough to overflow a narrow card - give it the flexible column and
    let it truncate instead of forcing the row wider than the card. */
 a.stock-row.name-flex { grid-template-columns: minmax(0, 1fr) auto auto auto; }
-a.stock-row.name-flex .sname { overflow: hidden; text-overflow: ellipsis; }
+a.stock-row.name-flex .sname {
+  /* Up to two lines, so a long name such as "Unnamed Child #63 (San Roque)"
+     keeps its barangay instead of being cut to "Unnamed Child #6...". */
+  white-space: normal; overflow: hidden; display: -webkit-box;
+  -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.3;
+}
 
 /* Pending vaccine requests on the RHU dashboard. */
 .req-row {
@@ -1678,3 +1692,21 @@ html { scroll-behavior: smooth; }
 .icon-purple { background: #ede9fe; color: #7c3aed; }
 .icon-teal { background: #ccfbf1; color: #0f766e; }
 .icon-amber { background: #fef3c7; color: #d97706; }
+
+/* ---------------- Phone layout fixes ---------------- */
+@media (max-width: 640px) {
+  /* Top bar: the account button keeps only its avatar, and the page title
+     stays on one line (ending in an ellipsis if needed) - the name and role
+     beside the avatar left the title so little room that it broke into four
+     or five lines and ran into the account button. */
+  .account-chip .who, .account-chip .caret { display: none; }
+  .account-chip { padding: 4px; }
+  .topbar-right { gap: 10px; }
+  .topbar h1 { font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .topbar .subtitle { display: none; }
+  /* Rows with a label on the left and badges/buttons on the right (Assign
+     Barangay, Settings) wrap instead of pushing past the screen edge. */
+  .settings-row { flex-wrap: wrap; gap: 10px; }
+  .settings-row .flex-gap { flex-wrap: wrap; }
+  .settings-row .val { overflow-wrap: anywhere; }
+}
