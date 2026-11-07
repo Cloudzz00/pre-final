@@ -49,7 +49,11 @@
     <div class="stat-icon bg-teal">{{ icon('activity', 21) }}</div>
     <div class="stat-value">{{ municipality.coverage_rate }}%</div>
     <div class="stat-label">Coverage Rate</div>
-    <div class="stat-caption">Of registered children &middot; target 95%</div>
+    {# The DOH-target figure needs barangay targets entered in the table
+       below; until then the caption shows the 95% goal like the BHW card. #}
+    <div class="stat-caption" title="{% if municipality.target_coverage_rate is not none %}Against {{ '{:,}'.format(municipality.target_population_total) }} DOH/PSA projected children, {{ municipality.target_barangays_set }} of {{ municipality.barangays }} barangays set{% else %}DOH target coverage appears here once barangay targets are set in the table below{% endif %}">
+      {% if municipality.target_coverage_rate is not none %}DOH target basis: {{ municipality.target_coverage_rate }}%{% else %}Target: 95%{% endif %}
+    </div>
   </div>
   <div class="stat-card">
     <div class="stat-icon bg-green">{{ icon('check-circle', 21) }}</div>
@@ -62,15 +66,6 @@
     <div class="stat-value">{{ municipality.below_target }}</div>
     <div class="stat-label">Below Target</div>
     <div class="stat-caption">Barangays under 95%</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-icon bg-purple">{{ icon('target', 21) }}</div>
-    {% if municipality.target_coverage_rate is not none %}<div class="stat-value">{{ municipality.target_coverage_rate }}%</div>{% endif %}
-    <div class="stat-label">DOH Target Coverage</div>
-    <div class="stat-caption">
-      {% if municipality.target_barangays_set %}vs. {{ '{:,}'.format(municipality.target_population_total) }} DOH/PSA projected &middot; {{ municipality.target_barangays_set }} of {{ municipality.barangays }} barangays set
-      {%- else %}Set targets in the table below{% endif %}
-    </div>
   </div>
 </div>
 
