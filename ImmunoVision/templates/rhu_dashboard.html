@@ -37,7 +37,7 @@
   </form>
   <span class="text-muted" style="margin-left:auto;font-size:12.5px;">
     {{ stats.total_children }} children
-    {%- if selected_barangay or as_of %} <a class="btn btn-outline btn-sm" href="{{ url_for('rhu.dashboard') }}" style="margin-left:8px;">{{ icon('x', 13) }} Clear</a>{% endif %}
+    {%- if selected_barangay or as_of %} <a class="btn btn-outline btn-sm" href="{{ url_for('rhu.dashboard') }}" style="margin-left:8px;">{{ icon('x', 14) }} Clear</a>{% endif %}
   </span>
 </div>
 
@@ -70,7 +70,7 @@
     <div class="stat-caption">need follow-up</div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon bg-teal">{{ icon('activity', 21) }}</div>
+    <div class="stat-icon bg-red">{{ icon('alert-octagon', 21) }}</div>
     <div class="stat-value">{{ risk_dist.high_count }}</div>
     <div class="stat-label">High Risk</div>
     <div class="stat-caption"><a href="{{ url_for('rhu.continuation') }}" class="link" style="color:var(--primary)">View Continuation Predictor ›</a></div>
@@ -150,7 +150,7 @@
                   <span class="row-chevron">&rsaquo;</span>
                 </a>
                 {% else %}
-                <div class="empty-state"><div class="ic">{{ icon('check-circle', 28) }}</div>
+                <div class="empty-state"><div class="ic">{{ icon('check-circle', 34) }}</div>
                   <div class="t">No children flagged at-risk</div></div>
                 {% endfor %}
               </div>
@@ -174,7 +174,7 @@
               <span class="row-chevron">&rsaquo;</span>
             </a>
             {% else %}
-            <div class="empty-state"><div class="ic">{{ icon('calendar', 28) }}</div>
+            <div class="empty-state"><div class="ic">{{ icon('calendar', 34) }}</div>
               <div class="t">No campaigns active right now</div></div>
             {% endfor %}
           </div>
@@ -198,7 +198,7 @@
               <span class="badge badge-{{ r.color }}">{{ r.status }}</span>
             </div>
             {% else %}
-            <div class="empty-state"><div class="ic">{{ icon('check-circle', 28) }}</div>
+            <div class="empty-state"><div class="ic">{{ icon('check-circle', 34) }}</div>
               <div class="t">All vaccines adequately stocked</div></div>
             {% endfor %}
           </div>
@@ -222,7 +222,7 @@
               <span class="badge badge-{{ 'red' if q.priority == 'Urgent' else ('amber' if q.priority == 'High' else 'gray') }}">{{ q.priority }}</span>
             </div>
             {% else %}
-            <div class="empty-state"><div class="ic">{{ icon('check-circle', 28) }}</div>
+            <div class="empty-state"><div class="ic">{{ icon('check-circle', 34) }}</div>
               <div class="t">No requests awaiting review</div></div>
             {% endfor %}
           </div>

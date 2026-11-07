@@ -69,6 +69,6 @@
 
 {% macro icon(name, size=20, stroke=2) -%}
 {% set ic = ICONS.get(name) %}
-<svg class="ic-svg" width="{{ size }}" height="{{ size }}" viewBox="{{ ic.vb if ic else '0 0 24 24' }}" fill="currentColor"
+<svg class="ic-svg" data-icon="{{ name }}" width="{{ size }}" height="{{ size }}" viewBox="{{ ic.vb if ic else '0 0 24 24' }}" fill="currentColor"
      xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">{{ (ic.body if ic else '')|safe }}</svg>
 {%- endmacro %}

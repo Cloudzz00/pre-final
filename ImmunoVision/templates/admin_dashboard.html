@@ -42,7 +42,7 @@
   </form>
   <span class="text-muted" style="margin-left:auto;font-size:12.5px;">
     {{ municipality.total_children }} children
-    {%- if selected_barangay or as_of %} <a class="btn btn-outline btn-sm" href="{{ url_for('admin.dashboard') }}" style="margin-left:8px;">{{ icon('x', 13) }} Clear</a>{% endif %}
+    {%- if selected_barangay or as_of %} <a class="btn btn-outline btn-sm" href="{{ url_for('admin.dashboard') }}" style="margin-left:8px;">{{ icon('x', 14) }} Clear</a>{% endif %}
   </span>
 </div>
 
@@ -114,7 +114,7 @@
               <input type="hidden" name="barangay_id" value="{{ r.barangay_id }}">
               <input class="form-control" type="number" min="1" step="1" name="target_population"
                      value="{{ r.target_population or '' }}" placeholder="Not set" style="width:90px;padding:5px 8px;font-size:12.5px;">
-              <button class="btn btn-outline btn-sm" type="submit" title="Save target population">{{ icon('check', 13) }}</button>
+              <button class="btn btn-outline btn-sm" type="submit" title="Save target population">{{ icon('check', 14) }}</button>
             </form>
           </td>
           <td>
@@ -195,7 +195,7 @@
           <span class="row-chevron">&rsaquo;</span>
         </a>
         {% else %}
-        <div class="empty-state"><div class="ic">{{ icon('calendar', 28) }}</div>
+        <div class="empty-state"><div class="ic">{{ icon('calendar', 34) }}</div>
           <div class="t">No campaigns active right now</div></div>
         {% endfor %}
       </div>

@@ -13,7 +13,7 @@
   {% for c in campaigns %}
   <div class="settings-row">
     <div class="left">
-      <span class="avatar-chip" style="background:var(--teal);">{{ icon('syringe', 16) }}</span>
+      <span class="avatar-chip" style="background:var(--teal);">{{ icon('calendar', 16) }}</span>
       <div>
         <div class="label"><a class="link" href="{{ url_for('admin.campaign_detail', campaign_id=c.id) }}">{{ c.name }}</a></div>
         <div class="val">{{ c.vaccine_type.name }} &middot; {{ c.min_age_days // 30 }}&ndash;{{ c.max_age_days // 30 }} months &middot; {{ c.start_date.strftime('%b %d, %Y') }} &ndash; {{ c.end_date.strftime('%b %d, %Y') }}</div>
@@ -36,7 +36,7 @@
     </div>
   </div>
   {% else %}
-  <div class="empty-state"><div class="ic">{{ icon('syringe', 34) }}</div><div class="t">No campaigns yet &mdash; add one when DOH announces a catch-up drive or SIA round.</div></div>
+  <div class="empty-state"><div class="ic">{{ icon('calendar', 34) }}</div><div class="t">No campaigns yet &mdash; add one when DOH announces a catch-up drive or SIA round.</div></div>
   {% endfor %}
 </div>
 

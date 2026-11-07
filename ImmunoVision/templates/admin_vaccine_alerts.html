@@ -5,7 +5,7 @@
 {% set flagged = stock|rejectattr('status', 'equalto', 'Enough')|list %}
 <div class="stat-grid">
   <div class="stat-card">
-    <div class="stat-icon bg-blue">{{ icon('package', 21) }}</div>
+    <div class="stat-icon bg-blue">{{ icon('syringe', 21) }}</div>
     <div class="stat-value">{{ stock|length }}</div>
     <div class="stat-label">Vaccines Tracked</div>
   </div>
@@ -16,7 +16,7 @@
     <div class="stat-caption">at or below their warning level</div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon bg-teal">{{ icon('activity', 21) }}</div>
+    <div class="stat-icon bg-teal">{{ icon('package', 21) }}</div>
     <div class="stat-value">{{ stock|sum(attribute='total') }}</div>
     <div class="stat-label">Total Vials</div>
     <div class="stat-caption">across all vaccines</div>

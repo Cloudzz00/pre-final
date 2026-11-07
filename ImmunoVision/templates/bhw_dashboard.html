@@ -30,7 +30,7 @@
   </form>
   <span class="text-muted" style="margin-left:auto;font-size:12.5px;">
     {{ total_in_barangay }} children
-    {%- if as_of %} <a class="btn btn-outline btn-sm" href="{{ url_for('bhw.dashboard') }}" style="height:36px;margin-left:8px;">{{ icon('x', 13) }} Clear</a>{% endif %}
+    {%- if as_of %} <a class="btn btn-outline btn-sm" href="{{ url_for('bhw.dashboard') }}" style="height:36px;margin-left:8px;">{{ icon('x', 14) }} Clear</a>{% endif %}
   </span>
 </div>
 
@@ -140,7 +140,7 @@
         </div>
       </div>
       <a href="{{ url_for('bhw.continuation') }}" class="btn btn-outline btn-sm followup-view-btn" style="margin-left:auto;">
-        {{ icon('heart-pulse', 13) }} View All ({{ follow_up_total }})
+        View All ({{ follow_up_total }}) &rsaquo;
       </a>
     </div>
     <div class="table-wrap auto-height" style="margin-top:12px;">
@@ -155,7 +155,7 @@
             <td><span class="badge badge-{{ 'red' if r.tier == 'High Risk' else 'amber' }}">{{ r.risk_score }}%</span></td>
           </tr>
           {% else %}
-          <tr><td colspan="4"><div class="empty-state"><div class="ic">{{ icon('check-circle', 28) }}</div>
+          <tr><td colspan="4"><div class="empty-state"><div class="ic">{{ icon('check-circle', 34) }}</div>
             <div class="t">No children flagged at-risk</div></div></td></tr>
           {% endfor %}
         </tbody>
@@ -172,7 +172,7 @@
           <div class="card-sub mb-0">See which children need vaccines on a specific date.</div>
         </div>
       </div>
-      <a href="{{ url_for('bhw.due_vaccines') }}" class="btn btn-outline btn-sm">View All {{ icon('arrow-right', 13) }}</a>
+      <a href="{{ url_for('bhw.due_vaccines') }}" class="btn btn-outline btn-sm">View All &rsaquo;</a>
     </div>
     <div class="due-legend" style="margin-left:43px;margin-top:6px;">
       <span><i class="due-dot today"></i>Due Today</span>

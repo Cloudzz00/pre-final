@@ -49,7 +49,7 @@
     </select>
     <span class="filter-chevron">{{ icon('chevron-left', 12, 2.5) }}</span>
   </div>
-  {% if search or selected_barangay or selected_risk or selected_year or age_group != 'all' %}<a class="btn btn-outline btn-sm" href="{{ url_for(request.endpoint) }}">{{ icon('x', 13) }} Clear filters</a>{% endif %}
+  {% if search or selected_barangay or selected_risk or selected_year or age_group != 'all' %}<a class="btn btn-outline btn-sm" href="{{ url_for(request.endpoint) }}">{{ icon('x', 14) }} Clear filters</a>{% endif %}
 </form>
 
 {% if due_now_child %}
