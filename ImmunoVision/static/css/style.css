@@ -1791,3 +1791,11 @@ html { scroll-behavior: smooth; }
   /* Buttons such as "View" are for the screen; on paper they are noise. */
   .report-doc .btn { display: none !important; }
 }
+
+/* Field checks on the child forms (see app.js data-validate). */
+.form-control.is-invalid, .form-control.is-invalid:focus { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-bg); }
+.field-error { margin-top: 5px; color: var(--red); font-size: 12px; line-height: 1.4; }
+.field-error[hidden] { display: none; }
+.discard-scrim { z-index: 120; }
+.discard-box { max-width: 420px; }
+#bhwVaccineGuidance:empty { display: none; }

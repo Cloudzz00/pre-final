@@ -1686,12 +1686,71 @@ def _dose_date_error(dob, dated_doses):
     return None
 
 
+NAME_PUNCTUATION = set(" .'-")
+PH_MOBILE_RE = re.compile(r"(?:09|\+639)\d{9}")
+
+
+def _name_error(value, label):
+    """Letters (accents and Ñ included), spaces, periods, apostrophes and
+    hyphens only, with at least one letter - no digits or other symbols."""
+    if not any(ch.isalpha() for ch in value) or any(not (ch.isalpha() or ch in NAME_PUNCTUATION) for ch in value):
+        return f"{label} can only contain letters, spaces, periods, apostrophes and hyphens."
+    return None
+
+
+def _contact_error(value):
+    digits = re.sub(r"[\s-]", "", value)
+    if not PH_MOBILE_RE.fullmatch(digits):
+        return "Contact number must be an 11-digit mobile number, e.g. 09171234567 (or +639171234567)."
+    return None
+
+
+def _child_field_errors(form, child=None):
+    """Field checks shared by Register Child and Edit Child, mirrored in the
+    browser by app.js (data-validate). On the edit form a field is only
+    checked when it was changed, so a record imported with an unusual name or
+    number can still be saved without retyping it."""
+    def changed(name, current):
+        return child is None or (form.get(name, "").strip() != (current or "").strip())
+
+    full_name = form.get("full_name", "").strip()
+    if child is None and not full_name:
+        return "Please enter the child's full name."
+    if full_name and changed("full_name", child.full_name if child else None):
+        err = _name_error(full_name, "Full name")
+        if err:
+            return err
+    guardian = form.get("guardian_name", "").strip()
+    if guardian and changed("guardian_name", child.guardian_name if child else None):
+        err = _name_error(guardian, "Guardian name")
+        if err:
+            return err
+    contact = form.get("guardian_contact", "").strip()
+    if contact and changed("guardian_contact", child.guardian_contact if child else None):
+        err = _contact_error(contact)
+        if err:
+            return err
+    dob = _parse_form_date(form.get("date_of_birth")) or (child.date_of_birth if child else None)
+    if dob and dob > date.today():
+        return "Date of birth cannot be in the future."
+    registered = _parse_form_date(form.get("date_registered"))
+    if registered:
+        if registered > date.today():
+            return "Date of registration cannot be in the future."
+        if dob and registered < dob:
+            return "Date of registration cannot be before the date of birth."
+    return None
+
+
 def _create_form_errors(form):
     """Validation for the Register Child form, shared by RHU and BHW.
     Returns an error message, or None if the form can be saved."""
     dob = _parse_form_date(form.get("date_of_birth"))
     if dob is None:
         return "Please enter a valid date of birth."
+    field_error = _child_field_errors(form)
+    if field_error:
+        return field_error
     names = _schedule_names()
     dated = [(names[code], _parse_form_date(form.get(f"dose_{code}")))
              for code, *_ in dp.VACCINE_SCHEDULE if form.get(f"dose_{code}_given")]
@@ -1705,6 +1764,9 @@ def _edit_form_errors(child, form):
     dob = _parse_form_date(form.get("date_of_birth")) if form.get("date_of_birth") else child.date_of_birth
     if dob is None:
         return "Please enter a valid date of birth."
+    field_error = _child_field_errors(form, child)
+    if field_error:
+        return field_error
     names = _schedule_names()
     dated = [(names[code], _parse_form_date(form.get(f"dose_{code}"))) for code in _KNOWN_DOSE_CODES]
     dated += [(c.name, _parse_form_date(form.get(f"dose_campaign_{c.id}")))
