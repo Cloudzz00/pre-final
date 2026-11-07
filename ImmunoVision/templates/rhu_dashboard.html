@@ -203,7 +203,7 @@
             <div class="req-row">
               <div>
                 <div class="rq-name">{{ q.antigen.name }} &middot; {{ q.quantity_requested }} vials</div>
-                <div class="rq-meta">{{ q.barangay.name }} &middot; {{ q.request_code }} &middot; {{ q.requested_at.strftime('%b %d') }}</div>
+                <div class="rq-meta">{{ q.barangay.name }} &middot; {{ q.request_code }} &middot; {{ (q.requested_at|local).strftime('%b %d') }}</div>
               </div>
               <span class="badge badge-{{ 'red' if q.priority == 'Urgent' else ('amber' if q.priority == 'High' else 'gray') }}">{{ q.priority }}</span>
             </div>

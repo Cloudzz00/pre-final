@@ -236,7 +236,7 @@
         <div>
           <b style="font-size:15px;">{{ pending_requests.antigen.name }}</b><br>
           <span class="text-muted" style="font-size:12px;line-height:1.6;">
-            {{ pending_requests.request_code }} · {{ pending_requests.quantity_requested }} vials · {{ pending_requests.requested_at.strftime('%Y-%m-%d') }}
+            {{ pending_requests.request_code }} · {{ pending_requests.quantity_requested }} vials · {{ (pending_requests.requested_at|local).strftime('%Y-%m-%d') }}
           </span>
         </div>
         <span class="badge badge-amber">Pending</span>
