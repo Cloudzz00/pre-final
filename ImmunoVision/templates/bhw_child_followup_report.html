@@ -44,7 +44,7 @@
         <h1 class="report-title">{{ child.display_name }}</h1>
         <p class="report-sub">Child follow-up report for Barangay {{ current_user.barangay.name }}.</p>
       </div>
-      <div class="generated">{{ icon('clock', 12) }}<br>Generated {{ generated_at.strftime('%b %d, %Y %I:%M %p') }}<br>Prepared by {{ current_user.full_name }}</div>
+      <div class="generated"><span class="gen-line">{{ icon('clock', 12) }} Generated {{ generated_at.strftime('%b %d, %Y %I:%M %p') }}</span><br>Prepared by {{ current_user.full_name }}</div>
     </div>
 
     <div class="child-identity">

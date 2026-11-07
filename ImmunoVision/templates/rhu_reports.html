@@ -88,7 +88,7 @@
           <h1 class="report-doc-title">At-Risk Children Report</h1>
           <p class="report-doc-sub">{{ scope_name }} &middot; {{ as_of.strftime('%B %Y') }}</p>
         </div>
-        <div class="generated-meta">{{ icon('clock', 12) }}<br>Generated {{ generated_at.strftime('%b %d, %Y %I:%M %p') }}</div>
+        <div class="generated-meta"><span class="gen-line">{{ icon('clock', 12) }} Generated {{ generated_at.strftime('%b %d, %Y %I:%M %p') }}</span></div>
       </div>
 
       {% if at_risk_rows %}
@@ -152,7 +152,7 @@
           <h1 class="report-doc-title">Vaccine Inventory Report</h1>
           <p class="report-doc-sub">San Jacinto Rural Health Unit &middot; {{ as_of.strftime('%B %Y') }}</p>
         </div>
-        <div class="generated-meta">{{ icon('clock', 12) }}<br>Generated {{ generated_at.strftime('%b %d, %Y %I:%M %p') }}</div>
+        <div class="generated-meta"><span class="gen-line">{{ icon('clock', 12) }} Generated {{ generated_at.strftime('%b %d, %Y %I:%M %p') }}</span></div>
       </div>
 
       <div class="data-note" style="margin:0 0 14px;">Central cold-chain stock is RHU-wide and not split by barangay, so the Barangay filter above does not apply to this report.</div>
@@ -205,7 +205,7 @@
           <h1 class="report-doc-title">Barangay {{ barangay_obj.name }} Overview</h1>
           <p class="report-doc-sub">Overall immunization status &middot; {{ as_of.strftime('%B %Y') }}</p>
         </div>
-        <div class="generated-meta">{{ icon('clock', 12) }}<br>Generated {{ generated_at.strftime('%b %d, %Y %I:%M %p') }}</div>
+        <div class="generated-meta"><span class="gen-line">{{ icon('clock', 12) }} Generated {{ generated_at.strftime('%b %d, %Y %I:%M %p') }}</span></div>
       </div>
 
       <div class="report-insight {{ 'warn' if stats.coverage_rate < 95 }}">
@@ -261,7 +261,7 @@
           <h1 class="report-doc-title">Performance Summary</h1>
           <p class="report-doc-sub">{{ scope_name }} &middot; {{ as_of.strftime('%B %Y') }}</p>
         </div>
-        <div class="generated-meta">{{ icon('clock', 12) }}<br>Generated {{ generated_at.strftime('%b %d, %Y %I:%M %p') }}</div>
+        <div class="generated-meta"><span class="gen-line">{{ icon('clock', 12) }} Generated {{ generated_at.strftime('%b %d, %Y %I:%M %p') }}</span></div>
       </div>
 
       <div class="report-summary">
@@ -314,7 +314,7 @@
           <h1 class="report-doc-title">Coverage Report</h1>
           <p class="report-doc-sub">San Jacinto Rural Health Unit, Pangasinan &middot; {{ scope_name }} &middot; {{ as_of.strftime('%B %Y') }}</p>
         </div>
-        <div class="generated-meta">{{ icon('clock', 12) }}<br>Generated {{ generated_at.strftime('%b %d, %Y %I:%M %p') }}</div>
+        <div class="generated-meta"><span class="gen-line">{{ icon('clock', 12) }} Generated {{ generated_at.strftime('%b %d, %Y %I:%M %p') }}</span></div>
       </div>
 
       <div class="report-summary">

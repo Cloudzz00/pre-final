@@ -79,7 +79,7 @@
           <h1 class="report-doc-title">At-Risk Children Report</h1>
           <p class="report-doc-sub">Barangay {{ current_user.barangay.name }} · {{ as_of.strftime('%B %Y') }}</p>
         </div>
-        <div class="generated-meta">{{ icon('clock', 12) }}<br>Generated {{ generated_at.strftime('%b %d, %Y %I:%M %p') }}</div>
+        <div class="generated-meta"><span class="gen-line">{{ icon('clock', 12) }} Generated {{ generated_at.strftime('%b %d, %Y %I:%M %p') }}</span></div>
       </div>
 
       <div class="report-section-head">
@@ -144,7 +144,7 @@
           <h1 class="report-doc-title">Barangay {{ current_user.barangay.name }} Overview</h1>
           <p class="report-doc-sub">Overall immunization status · {{ as_of.strftime('%B %Y') }}</p>
         </div>
-        <div class="generated-meta">{{ icon('clock', 12) }}<br>Generated {{ generated_at.strftime('%b %d, %Y %I:%M %p') }}</div>
+        <div class="generated-meta"><span class="gen-line">{{ icon('clock', 12) }} Generated {{ generated_at.strftime('%b %d, %Y %I:%M %p') }}</span></div>
       </div>
 
       <div class="report-section-head">
@@ -169,7 +169,7 @@
           <h1 class="report-doc-title">Vaccination Coverage Report</h1>
           <p class="report-doc-sub">Barangay {{ current_user.barangay.name }} · {{ as_of.strftime('%B %Y') }}</p>
         </div>
-        <div class="generated-meta">{{ icon('clock', 12) }}<br>Generated {{ generated_at.strftime('%b %d, %Y %I:%M %p') }}</div>
+        <div class="generated-meta"><span class="gen-line">{{ icon('clock', 12) }} Generated {{ generated_at.strftime('%b %d, %Y %I:%M %p') }}</span></div>
       </div>
 
       <div class="report-summary">
