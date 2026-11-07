@@ -3504,12 +3504,33 @@ def ensure_demo_data():
     disk starts out with no database file on it at all."""
     with app.app_context():
         db.create_all()
-        if User.query.count() > 0:
-            return
-        print("No demo data found - building it now (about a minute, one time only)...")
-        import seed
-        seed.seed()
-        print("Demo data ready.\n")
+        if User.query.count() == 0:
+            print("No demo data found - building it now (about a minute, one time only)...")
+            import seed
+            seed.seed()
+            print("Demo data ready.\n")
+        name_unnamed_children()
+
+
+def name_unnamed_children():
+    """One-time update for databases created before unnamed registry
+    children were given generated names: replaces any remaining
+    "Unnamed Child #n (Barangay)" placeholder with the same generated name a
+    fresh import gives that child. Only placeholders are touched - a name
+    from the registry or one typed in by staff is never changed - so this
+    is a no-op once done."""
+    children = Child.query.all()
+    pending = [c for c in children if dp.is_placeholder_name(c.full_name)]
+    if not pending:
+        return
+    names = dp.generated_child_names(
+        [(c.full_name, c.sex) for c in pending],
+        [c.full_name for c in children if not dp.is_placeholder_name(c.full_name)],
+    )
+    for c in pending:
+        c.full_name = names[c.full_name]
+    db.session.commit()
+    print(f"Gave generated names to {len(pending)} children with no name in the registry.")
 
 
 ensure_demo_data()

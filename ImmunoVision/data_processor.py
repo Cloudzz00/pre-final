@@ -367,7 +367,50 @@ def load_and_merge_real_registries(raw_dir=RAW_DATA_DIR):
             next((b for b in BARANGAYS if _norm(b).startswith(_norm(barangay_key))), barangay_key),
         )
         merged.extend(load_registry_csv(path, barangay_name))
+    # Children with no name in the registry get a generated name in place of
+    # the "Unnamed Child #n (Barangay)" placeholder - the same name the live
+    # database gives them (see generated_child_names()).
+    names = generated_child_names(
+        [(c["full_name"], c["sex"]) for c in merged if is_placeholder_name(c["full_name"])],
+        [c["full_name"] for c in merged if not is_placeholder_name(c["full_name"])],
+    )
+    for c in merged:
+        if c["full_name"] in names:
+            c["full_name"] = names[c["full_name"]]
     return merged
+
+
+PLACEHOLDER_NAME_PREFIX = "Unnamed Child #"
+
+
+def is_placeholder_name(name):
+    return (name or "").startswith(PLACEHOLDER_NAME_PREFIX)
+
+
+def generated_child_names(placeholders, taken_names):
+    """Generated names for children whose registry name was blank.
+
+    placeholders is a list of (placeholder name, sex) pairs, e.g.
+    ("Unnamed Child #63 (San Roque)", "M"); taken_names are the names already
+    in use. Returns {placeholder: generated name}. The result is
+    deterministic - the same placeholder always gets the same name, whether
+    the registry is imported fresh or an existing database is updated - and
+    no name repeats one already in use."""
+    import hashlib
+    used = {(n or "").strip().lower() for n in taken_names}
+    out = {}
+    for key, sex in sorted(placeholders):
+        firsts = FIRST_NAMES_F if sex == "F" else FIRST_NAMES_M
+        attempt = 0
+        while True:
+            h = hashlib.sha256(f"{key}|{attempt}".encode()).digest()
+            name = f"{firsts[h[0] % len(firsts)]} {LAST_NAMES[h[1] % len(LAST_NAMES)]}"
+            if name.lower() not in used:
+                break
+            attempt += 1
+        used.add(name.lower())
+        out[key] = name
+    return out
 
 
 # ---------------------------------------------------------------------------
