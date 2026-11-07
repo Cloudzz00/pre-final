@@ -787,6 +787,27 @@ def yearly_trend(barangay_id=None):
     return out
 
 
+DATA_STALE_DAYS = 30
+
+
+def data_currency(barangay_id=None):
+    """Date of the newest routine dose on record (campaign doses excluded,
+    since they do not count toward coverage), for the dashboards' "records
+    up to" notice. Every figure is measured as of today, so a dose that fell
+    due after this date counts as not given until it is entered. Returns
+    None when records are current (within DATA_STALE_DAYS) or there are
+    none."""
+    q = (db.session.query(func.max(VaccinationRecord.date_administered))
+         .filter(VaccinationRecord.campaign_id.is_(None),
+                 VaccinationRecord.date_administered.isnot(None)))
+    if barangay_id:
+        q = q.join(Child, Child.id == VaccinationRecord.child_id).filter(Child.barangay_id == barangay_id)
+    latest = q.scalar()
+    if latest is None or (date.today() - latest).days <= DATA_STALE_DAYS:
+        return None
+    return {"date": latest, "days": (date.today() - latest).days}
+
+
 def monthly_cohort_trend(barangay_id, year, risk=None):
     """Coverage at the end of each month of `year` for the children born in
     that year - the dashboards' trend chart when a single birth year is
@@ -2282,6 +2303,7 @@ def dashboard():
         by_barangay=by_barangay, by_vaccine=by_vaccine,
         vaccine_colours=vaccine_colours(by_vaccine), vaccine_labels=schedule_labels(by_vaccine),
         insights=chart_insights(by_vaccine, by_barangay, trend, trend_info["trend_year"]), **trend_info,
+        data_as_of=data_currency(barangay_id),
         below_target=below_target, change=change, active_campaigns=active_campaigns_summary(),
     ))
 
@@ -2817,6 +2839,7 @@ def dashboard():
         by_vaccine=by_vaccine, change=change,
         vaccine_colours=vaccine_colours(by_vaccine), vaccine_labels=schedule_labels(by_vaccine),
         insights=chart_insights(by_vaccine, [], trend, trend_info["trend_year"]), **trend_info,
+        data_as_of=data_currency(bid),
         total_in_barangay=len(filtered_children(bid, as_of=as_of, born_from=born_from)),
         due_calendar=due_calendar,
         pending_requests=(VaccineRequest.query.filter_by(barangay_id=bid, status="pending")
@@ -3381,6 +3404,7 @@ def dashboard():
         by_vaccine=by_vaccine, staffing=staffing,
         vaccine_colours=vaccine_colours(by_vaccine), vaccine_labels=schedule_labels(by_vaccine),
         insights=chart_insights(by_vaccine, barangay_rows, trend, trend_info["trend_year"]), **trend_info,
+        data_as_of=data_currency(barangay_id),
         active_campaigns=active_campaigns_summary(),
         **period,
         barangays=Barangay.query.order_by(Barangay.name).all(),

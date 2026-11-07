@@ -1,3 +1,4 @@
+{% from "_icons.html" import icon %}
 {# Dashboard period filter: a birth-year range, with Month available when a
    single year is selected (From and To the same). See resolve_range(). #}
 {% macro period_selects(years, months, year_from, year_to, month, month_active) %}
@@ -50,5 +51,18 @@
 {% if 0 < n < 20 %}
 <p class="small-group-note">{{ n }} child{{ '' if n == 1 else 'ren' }} in this selection &mdash; percentages
   can change sharply with a single child.</p>
+{% endif %}
+{% endmacro %}
+
+{# Records stop before today: say so, since doses due after the newest
+   record count as not given. See data_currency(). #}
+{% macro data_notice(d, scope="") %}
+{% if d %}
+<div class="data-notice">
+  <span class="data-notice-icon">{{ icon('clock', 15) }}</span>
+  <span><b>Routine immunization records run to {{ _d(d.date) }}</b>{% if scope %} for {{ scope }}{% endif %}
+  ({{ d.days }} days ago). Doses due after this date count as not given until they are entered,
+  so coverage and risk for recent months may look lower than they really are.</span>
+</div>
 {% endif %}
 {% endmacro %}
