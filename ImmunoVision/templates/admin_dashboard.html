@@ -1,6 +1,6 @@
 {% extends "layout_app.html" %}
 {% from "_icons.html" import icon %}
-{% from "_period_filter.html" import period_selects, live_tag, small_group_note %}
+{% from "_period_filter.html" import period_selects, small_group_note %}
 {% block content %}
 <div class="banner">
   <div>
@@ -138,7 +138,7 @@
   </div>
 
   <div class="card card-pad" style="margin-top:18px;">
-    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('activity', 18) }}</span><div>{% if trend_monthly %}<div class="card-title mb-0">Monthly Coverage &mdash; children born in {{ trend_year }}</div><div class="card-sub mb-0">Coverage at each month end, as that year's births are added</div>{% else %}<div class="card-title mb-0">Annual Coverage <span class="nowrap">Trend{{ live_tag(as_of, "All years") }}</span></div><div class="card-sub mb-0">Coverage at each year end</div>{% endif %}</div></div>
+    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('activity', 18) }}</span><div>{% if trend_monthly %}<div class="card-title mb-0">Monthly Coverage &mdash; children born in {{ trend_year }}</div><div class="card-sub mb-0">Coverage at each month end, as that year's births are added</div>{% else %}<div class="card-title mb-0">Annual Coverage Trend</div><div class="card-sub mb-0">Coverage at each year end</div>{% endif %}</div></div>
     {# Computed from actual dose dates - coverage as at 31 December of each year
        the data covers - so this is measured, not simulated. #}
     <div class="chart-box"><canvas id="trendChart"></canvas></div>
@@ -174,7 +174,7 @@
     <div class="card card-pad" style="margin-bottom:18px;">
       <div class="flex-between" style="margin-bottom:4px;">
         <div>
-          <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('calendar', 18) }}</span><div><div class="card-title mb-0">Active <span class="nowrap">Campaigns{{ live_tag(as_of) }}</span></div><div class="card-sub mb-0">Supplementary immunization drives open right now</div></div></div>
+          <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('calendar', 18) }}</span><div><div class="card-title mb-0">Active Campaigns</div><div class="card-sub mb-0">Supplementary immunization drives open right now</div></div></div>
         </div>
         <a class="btn btn-outline btn-sm" href="{{ url_for('admin.campaigns') }}">{{ icon('calendar', 14) }} Manage</a>
       </div>
