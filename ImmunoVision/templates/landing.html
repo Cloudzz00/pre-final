@@ -281,14 +281,6 @@
 .lp-access .yes { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text-primary); white-space: nowrap; }
 .lp-access .yes .ic-svg { color: var(--green); flex-shrink: 0; }
 .lp-access .no { color: var(--text-muted); }
-.lp-access-foot {
-  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
-  margin-top: 18px; font-size: 13px; color: var(--text-secondary);
-}
-.lp-access-foot .note { display: inline-flex; align-items: center; gap: 8px; }
-.lp-access-foot .note .ic-svg { color: var(--primary); flex-shrink: 0; }
-.lp-access-foot .actions { display: flex; gap: 10px; flex-wrap: wrap; }
-.lp-btn.outline { background: var(--card-bg); color: var(--text-primary); border: 1px solid var(--border-strong); }
 @media (max-width: 1080px) {
   .lp-access { background: transparent; border: none; box-shadow: none; overflow: visible; }
   .lp-access thead { display: none; }
@@ -308,7 +300,6 @@
 }
 @media (max-width: 640px) {
   .lp-access tbody { grid-template-columns: minmax(0,1fr); }
-  .lp-access-foot { flex-direction: column; align-items: flex-start; }
 }
 
 @media (max-width: 900px) {
@@ -743,13 +734,6 @@
           {% endfor %}
         </tbody>
       </table>
-    </div>
-    <div class="lp-access-foot">
-      <span class="note">{{ icon('lock', 15) }} Access is enforced on the server, not only hidden on screen, and every action is logged.</span>
-      <div class="actions">
-        <a class="lp-btn outline" href="{{ url_for('auth.public_coverage') }}">View public coverage</a>
-        <a class="lp-btn" href="{{ url_for('auth.login') }}">Sign in <span class="lp-fwd">{{ icon('chevron-left', 15, 2.5) }}</span></a>
-      </div>
     </div>
   </div>
 </section>
