@@ -1,6 +1,7 @@
 {% extends "layout_app.html" %}
 {% from "_icons.html" import icon %}
 {% from "_brand.html" import brand_mark %}
+{% block page_subtitle %}View vaccination coverage, stock levels, and at-risk cases across the municipality.{% endblock %}
 {% block content %}
 {% set report_types = [
   ('coverage', 'trending-up', 'Coverage Report', 'Immunization coverage rates by barangay and vaccine'),
@@ -12,15 +13,6 @@
 {% set current = report_types|selectattr('0', 'equalto', report_type)|first %}
 
 <div class="rhu-report-page">
-
-  {# ── Page header ── #}
-  <div class="report-hero">
-    <div>
-      <h2>Reports</h2>
-      <p>View vaccination coverage, stock levels, and at-risk cases across the municipality.</p>
-    </div>
-    <div class="report-period-pill">{{ icon('map-pin', 13) }} {{ scope_name }}</div>
-  </div>
 
   {# ── Report type selector ── #}
   <div class="report-types no-print">

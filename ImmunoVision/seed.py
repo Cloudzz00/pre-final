@@ -99,7 +99,7 @@ def seed(reset=False):
         print(f"  {len(real_children)} real children across: {', '.join(real_barangays)}")
 
         print("Seeding user accounts...")
-        admin2 = User(username="superadmin", full_name="Super Admin", role="superadmin")
+        admin2 = User(username="superadmin", full_name="ICTMO Administrator", role="superadmin")
         admin2.set_password("password123")
         admin = User(username="admin", full_name="RHU Administrator", role="admin")
         admin.set_password("password123")
@@ -123,7 +123,7 @@ def seed(reset=False):
         print("  BHW logins: <barangay-name>/password123, e.g. awai, sanjose, bagongpagasa")
         print("  RHU login: rhu / password123")
         print("  Admin login: admin / password123")
-        print("  Super Admin login: superadmin / password123")
+        print("  ICTMO Administrator login: superadmin / password123")
 
         print(f"Inserting {len(real_children)} real children...")
         for i, c in enumerate(real_children, 1):

@@ -189,6 +189,8 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
 }
 
 .form-group { margin-bottom: 16px; }
+/* Text inputs and the custom dropdown were 44px and 42px in the same form. */
+.form-group input.form-control, .form-group .select-trigger { height: 42px; }
 .form-group label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; color: var(--text-primary); }
 .form-control {
   width: 100%;
@@ -238,11 +240,18 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
 
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  padding: 11px 20px;
+  padding: 10px 20px;
   border-radius: var(--radius-pill);
   font-weight: 700;
   font-size: 14px;
-  border: none;
+  /* Fixed line-height and a 1px border on every variant (transparent on
+     filled buttons): before, outline buttons were 2px taller than filled
+     ones and a <button> rendered taller than an <a> with the same classes,
+     so the same button looked different from page to page. All buttons are
+     now 40px tall, small buttons 32px. */
+  line-height: 18px;
+  font-family: inherit;
+  border: 1px solid transparent;
   cursor: pointer;
   transition: filter .12s, transform .05s;
   white-space: nowrap;
@@ -261,7 +270,7 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
 .btn-success:hover { background: var(--green-bg); }
 .btn-banner { background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.4); color: #fff; }
 .btn-banner:hover { background: rgba(255,255,255,0.24); }
-.btn-sm { padding: 7px 14px; font-size: 13px; border-radius: var(--radius-sm); }
+.btn-sm { padding: 6px 14px; font-size: 13px; border-radius: var(--radius-sm); }
 /* A number input (base .form-control padding/font-size) next to .btn-sm
    buttons rendered taller than them (42px vs ~30-32px) - an icon-only
    button vs. an icon+text one also differed by a couple px from their
@@ -476,6 +485,8 @@ body.no-scroll { overflow: hidden; }
 .stat-icon { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; color: #fff; grid-column: 1; grid-row: 1 / -1; }
 .stat-icon .ic-svg { width: 24px; height: 24px; }
 .stat-value { font-size: 28px; font-weight: 800; line-height: 1.1; }
+/* Ranges (e.g. 5340–6120 on the Vaccine Forecast) wrap at 28px. */
+.stat-value-range { font-size: 22px; }
 .stat-label { font-size: 13.5px; font-weight: 600; color: var(--text-primary); }
 .stat-caption { font-size: 12px; color: var(--text-secondary); }
 
@@ -560,6 +571,8 @@ body.no-scroll { overflow: hidden; }
 
 /* ---------------- Filters ---------------- */
 .filter-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 18px; }
+/* Buttons sitting among the 36px filter controls match their height. */
+.filter-bar .btn-sm { height: 36px; }
 .filter-bar .flabel { font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; display: flex; align-items: center; gap: 6px; }
 .search-input-wrap { position: relative; flex: 1; min-width: 220px; }
 .search-input-wrap input { width: 100%; padding: 9px 14px 9px 36px; border-radius: var(--radius-pill); border: 1px solid var(--border-strong); background: var(--slate-bg-2); }
@@ -1373,9 +1386,6 @@ html { scroll-behavior: smooth; }
 --------------------------------------------------------------------------- */
 .bhw-report-page, .rhu-report-page { display: flex; flex-direction: column; gap: 18px; }
 
-.report-hero { display: flex; justify-content: space-between; align-items: flex-end; gap: 18px; flex-wrap: wrap; }
-.report-hero h2 { margin: 0 0 3px; font-size: 22px; }
-.report-hero p { margin: 0; color: var(--text-secondary); font-size: 14px; }
 .report-period-pill {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 8px 14px; border: 1px solid var(--border); background: #fff;
@@ -1414,10 +1424,10 @@ html { scroll-behavior: smooth; }
 }
 .toolbar-form { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
 .toolbar-form label { display: block; font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 5px; }
-.toolbar-form select, .toolbar-form .select-trigger { height: 40px; min-width: 160px; border-radius: 9px; font-size: 14px; }
+.toolbar-form select, .toolbar-form .select-trigger { height: 40px; min-width: 160px; border-radius: var(--radius-sm); font-size: 14px; }
 .toolbar-form .btn { height: 40px; font-size: 14px; }
 .report-actions { display: flex; gap: 8px; }
-.report-actions .btn { font-size: 13px; height: 40px; }
+.report-actions .btn { height: 40px; }
 
 .report-doc {
   background: #fff; border: 1px solid var(--border); border-radius: 16px;
