@@ -498,7 +498,7 @@ body.no-scroll { overflow: hidden; }
      centring its own (differently long) text. */
   align-content: start;
 }
-.stat-card .stat-icon { align-self: start; }
+.stat-card .stat-icon { align-self: center; }
 .stat-card .stat-label { margin-top: 2px; }
 .stat-card .stat-caption { margin-top: 2px; }
 /* 52px/24px glyph: sized against the 3-line value+label+caption stack beside

@@ -65,7 +65,7 @@
   </div>
   <div class="stat-card">
     <div class="stat-icon bg-purple">{{ icon('target', 21) }}</div>
-    <div class="stat-value">{{ municipality.target_coverage_rate ~ '%' if municipality.target_coverage_rate is not none else '—' }}</div>
+    {% if municipality.target_coverage_rate is not none %}<div class="stat-value">{{ municipality.target_coverage_rate }}%</div>{% endif %}
     <div class="stat-label">DOH Target Coverage</div>
     <div class="stat-caption">
       {% if municipality.target_barangays_set %}vs. {{ '{:,}'.format(municipality.target_population_total) }} DOH/PSA projected &middot; {{ municipality.target_barangays_set }} of {{ municipality.barangays }} barangays set
