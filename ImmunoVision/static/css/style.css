@@ -271,6 +271,8 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
 .btn-danger:hover { background: var(--red-bg); }
 .btn-success { background: #fff; border: 1px solid var(--green-light); color: var(--green); }
 .btn-success:hover { background: var(--green-bg); }
+.btn-warning { background: #fff; border: 1px solid #fcd34d; color: #b45309; }
+.btn-warning:hover { background: var(--amber-bg); }
 .btn-banner { background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.4); color: #fff; }
 .btn-banner:hover { background: rgba(255,255,255,0.24); }
 .btn-sm { padding: 6px 14px; font-size: 13px; border-radius: var(--radius-sm); }
@@ -1806,3 +1808,9 @@ html { scroll-behavior: smooth; }
 .discard-scrim { z-index: 120; }
 .discard-box { max-width: 420px; }
 #bhwVaccineGuidance:empty { display: none; }
+
+/* User Management: actions sit side by side; tighter cell padding lets the
+   whole table, buttons included, fit without sideways scrolling on most
+   laptop screens. */
+.row-actions { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
+#userTable th, #userTable td { padding-left: 10px; padding-right: 10px; }

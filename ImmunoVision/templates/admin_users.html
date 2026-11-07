@@ -29,7 +29,7 @@
 <tbody>
 {% for u in users %}
 <tr data-role="{{ u.role }}" data-name="{{ u.full_name|lower }} {{ u.username|lower }}">
-  <td class="id-chip"><span class="avatar-chip" style="background:{{ u.role_color }};width:30px;height:30px;font-size:11px;">{{ u.full_name.split(' ')|map('first')|join('') }}</span>{{ u.full_name }}</td>
+  <td><span class="id-chip"><span class="avatar-chip" style="background:{{ u.role_color }};width:30px;height:30px;font-size:11px;">{{ u.full_name.split(' ')|map('first')|join('') }}</span>{{ u.full_name }}</span></td>
   <td>{{ u.username }}</td>
   <td><span class="badge badge-{{ u.role_badge }}">{{ u.role_label }}</span></td>
   <td>{{ u.barangay.name if u.barangay else 'All' }}</td>
@@ -37,17 +37,17 @@
     <span class="badge badge-{{ 'green' if u.is_active_flag else 'red' }}">{{ 'Active' if u.is_active_flag else 'Disabled' }}</span>
     {% if u.password_reset_requested_at %}<span class="badge badge-red" title="Requested {{ u.password_reset_requested_at.strftime('%Y-%m-%d %H:%M') }}">Reset Requested</span>{% endif %}
   </td>
-  <td>{{ u.last_login_at.strftime('%Y-%m-%d %H:%M') if u.last_login_at else '—' }}</td>
-  <td>
+  <td>{% if u.last_login_at %}{{ u.last_login_at.strftime('%Y-%m-%d') }}<div class="text-muted" style="font-size:11.5px;">{{ u.last_login_at.strftime('%H:%M') }}</div>{% else %}—{% endif %}</td>
+  <td><div class="row-actions">
     <form method="post" action="{{ url_for('admin.reset_user_password', user_id=u.id) }}" style="display:inline">
-      <button class="btn btn-outline btn-sm" data-confirm="Set a new temporary password for {{ u.full_name }}? You'll need to give it to them directly.">{{ icon('refresh', 14) }} Reset Password</button>
+      <button class="btn btn-warning btn-sm" data-confirm="Set a new temporary password for {{ u.full_name }}? You'll need to give it to them directly.">{{ icon('refresh', 14) }} Reset Password</button>
     </form>
     {% if u.id != current_user.id %}
     <form method="post" action="{{ url_for('admin.toggle_user', user_id=u.id) }}" style="display:inline">
-      <button class="btn btn-outline btn-sm" data-confirm="{{ 'Disable' if u.is_active_flag else 'Enable' }} this account?">{% if u.is_active_flag %}{{ icon('x', 14) }} Disable{% else %}{{ icon('check', 14) }} Enable{% endif %}</button>
+      <button class="btn {{ 'btn-danger' if u.is_active_flag else 'btn-success' }} btn-sm" data-confirm="{{ 'Disable' if u.is_active_flag else 'Enable' }} this account?">{% if u.is_active_flag %}{{ icon('x', 14) }} Disable{% else %}{{ icon('check', 14) }} Enable{% endif %}</button>
     </form>
     {% else %}<span class="text-muted">—</span>{% endif %}
-  </td>
+  </div></td>
 </tr>
 {% endfor %}
 </tbody>
