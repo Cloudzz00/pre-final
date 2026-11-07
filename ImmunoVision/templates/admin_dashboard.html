@@ -252,16 +252,16 @@
     {% set total = role_dist.admin + role_dist.superadmin + role_dist.rhu + role_dist.bhw %}
     <div class="role-bar" role="img"
          aria-label="{{ role_dist.admin }} admin, {{ role_dist.superadmin }} ICTMO administrator, {{ role_dist.rhu }} RHU, {{ role_dist.bhw }} BHW">
-      <span style="width:{{ (role_dist.admin / total * 100)|round(2) }}%;background:#7c3aed;" title="Admin: {{ role_dist.admin }}"></span>
+      <span style="width:{{ (role_dist.admin / total * 100)|round(2) }}%;background:var(--violet);" title="RHU Administrator: {{ role_dist.admin }}"></span>
       <span style="width:{{ (role_dist.superadmin / total * 100)|round(2) }}%;background:var(--navy-800);" title="ICTMO Administrator: {{ role_dist.superadmin }}"></span>
-      <span style="width:{{ (role_dist.rhu / total * 100)|round(2) }}%;background:#2563eb;" title="RHU: {{ role_dist.rhu }}"></span>
-      <span style="width:{{ (role_dist.bhw / total * 100)|round(2) }}%;background:#0d9488;" title="BHW: {{ role_dist.bhw }}"></span>
+      <span style="width:{{ (role_dist.rhu / total * 100)|round(2) }}%;background:var(--primary);" title="RHU: {{ role_dist.rhu }}"></span>
+      <span style="width:{{ (role_dist.bhw / total * 100)|round(2) }}%;background:var(--teal);" title="BHW: {{ role_dist.bhw }}"></span>
     </div>
     <div class="role-key">
-      <span><i style="background:#7c3aed"></i>Admin <b>{{ role_dist.admin }}</b></span>
+      <span><i style="background:var(--violet)"></i>RHU Administrator <b>{{ role_dist.admin }}</b></span>
       <span><i style="background:var(--navy-800)"></i>ICTMO Administrator <b>{{ role_dist.superadmin }}</b></span>
-      <span><i style="background:#2563eb"></i>RHU <b>{{ role_dist.rhu }}</b></span>
-      <span><i style="background:#0d9488"></i>BHW <b>{{ role_dist.bhw }}</b></span>
+      <span><i style="background:var(--primary)"></i>RHU <b>{{ role_dist.rhu }}</b></span>
+      <span><i style="background:var(--teal)"></i>BHW <b>{{ role_dist.bhw }}</b></span>
     </div>
   </div>
 

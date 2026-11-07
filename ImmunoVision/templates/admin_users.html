@@ -29,9 +29,9 @@
 <tbody>
 {% for u in users %}
 <tr data-role="{{ u.role }}" data-name="{{ u.full_name|lower }} {{ u.username|lower }}">
-  <td class="id-chip"><span class="avatar-chip" style="background:{{ 'var(--teal)' if u.role=='bhw' else '#dc2626' if u.role=='superadmin' else 'var(--primary)' }};width:30px;height:30px;font-size:11px;">{{ u.full_name.split(' ')|map('first')|join('') }}</span>{{ u.full_name }}</td>
+  <td class="id-chip"><span class="avatar-chip" style="background:{{ u.role_color }};width:30px;height:30px;font-size:11px;">{{ u.full_name.split(' ')|map('first')|join('') }}</span>{{ u.full_name }}</td>
   <td>{{ u.username }}</td>
-  <td><span class="badge badge-{{ 'purple' if u.role=='admin' else 'red' if u.role=='superadmin' else 'blue' if u.role=='rhu' else 'teal' }}">{{ u.role_label }}</span></td>
+  <td><span class="badge badge-{{ u.role_badge }}">{{ u.role_label }}</span></td>
   <td>{{ u.barangay.name if u.barangay else 'All' }}</td>
   <td>
     <span class="badge badge-{{ 'green' if u.is_active_flag else 'red' }}">{{ 'Active' if u.is_active_flag else 'Disabled' }}</span>

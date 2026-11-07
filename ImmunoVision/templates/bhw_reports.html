@@ -103,7 +103,7 @@
               </td>
               <td>{{ r.child.date_of_birth.strftime('%b %d, %Y') }}</td>
               <td>
-                <span class="risk-pill">{{ r.tier }}</span>
+                <span class="risk-pill{{ ' tier-high' if r.tier in ('High Risk', 'Visit Urgently') else (' tier-low' if r.tier in ('Low Risk', 'On Track') else '') }}">{{ r.tier }}</span>
               </td>
               <td class="missed-count">{{ r.missed }}</td>
               <td>

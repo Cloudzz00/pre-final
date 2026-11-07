@@ -75,6 +75,20 @@ class User(UserMixin, db.Model):
         return {"admin": "RHU Administrator", "superadmin": "ICTMO Administrator", "rhu": "RHU Personnel",
                 "bhw": "Barangay Health Worker"}.get(self.role, self.role)
 
+    @property
+    def role_badge(self):
+        """Badge color for this role - one mapping shared by User Management,
+        Settings and the admin dashboard's role chart, so a role reads as the
+        same color everywhere."""
+        return {"admin": "purple", "superadmin": "navy", "rhu": "blue", "bhw": "teal"}.get(self.role, "gray")
+
+    @property
+    def role_color(self):
+        """Solid color for this role (avatars, chart segments), matching
+        role_badge."""
+        return {"admin": "var(--violet)", "superadmin": "var(--navy-800)", "rhu": "var(--primary)",
+                "bhw": "var(--teal)"}.get(self.role, "var(--text-secondary)")
+
 
 class VaccineAntigen(db.Model):
     """The 7 vaccine antigens tracked at the Inventory / Requests level."""

@@ -45,9 +45,9 @@
 
 <div class="stat-grid">
   <div class="stat-card"><div class="stat-icon bg-blue">{{ icon('users', 21) }}</div><div><div class="stat-value">{{ stats.total_children }}</div><div class="stat-label">Total Registered Children</div><div class="stat-caption">All children in your barangay</div></div></div>
-  <div class="stat-card"><div class="stat-icon bg-red">{{ icon('alert-triangle', 21) }}</div><div><div class="stat-value">{{ stats.at_risk }}</div><div class="stat-label">At-Risk Children</div><div class="stat-caption">Need closer monitoring</div></div></div>
+  <div class="stat-card"><div class="stat-icon bg-orange">{{ icon('alert-triangle', 21) }}</div><div><div class="stat-value">{{ stats.at_risk }}</div><div class="stat-label">At-Risk Children</div><div class="stat-caption">Need closer monitoring</div></div></div>
   <div class="stat-card"><div class="stat-icon bg-green">{{ icon('check-circle', 21) }}</div><div><div class="stat-value">{{ stats.fully_immunized }}</div><div class="stat-label">Fully Immunized</div><div class="stat-caption">Up to date on all doses</div></div></div>
-  <div class="stat-card"><div class="stat-icon bg-purple">{{ icon('activity', 21) }}</div><div><div class="stat-value">{{ stats.coverage_rate }}%</div><div class="stat-label">Coverage Rate</div><div class="stat-caption">Target: 95%</div></div></div>
+  <div class="stat-card"><div class="stat-icon bg-teal">{{ icon('activity', 21) }}</div><div><div class="stat-value">{{ stats.coverage_rate }}%</div><div class="stat-label">Coverage Rate</div><div class="stat-caption">Target: 95%</div></div></div>
 </div>
 
 {% if active_campaigns %}
@@ -98,7 +98,7 @@
 .due-list-head strong{font-size:13px}.due-list-head span{font-size:10px;font-weight:800;color:var(--text-secondary)}
 .due-items{overflow:auto;max-height:260px}.due-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border)}
 .due-item:last-child{border-bottom:0}.due-child{min-width:0}.due-child a{font-size:12px;font-weight:800;color:var(--accent);text-decoration:none}.due-child a:hover{text-decoration:underline}.due-vaccine{font-size:11px;color:var(--text-secondary);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
-.due-status{font-size:9px;font-weight:800;padding:4px 7px;border-radius:999px;white-space:nowrap}.due-status.today{background:#dbeafe;color:#1d4ed8}.due-status.upcoming{background:#fef3c7;color:#b45309}.due-status.overdue{background:#fee2e2;color:#dc2626}.due-status.due{background:#e0f2fe;color:#0369a1}
+.due-status{font-size:9px;font-weight:800;padding:4px 7px;border-radius:999px;white-space:nowrap}.due-status.today{background:#dbeafe;color:#1d4ed8}.due-status.upcoming{background:#fef3c7;color:var(--amber)}.due-status.overdue{background:#fee2e2;color:#dc2626}.due-status.due{background:var(--primary-light);color:#0369a1}
 .due-empty{padding:28px 14px;text-align:center;color:var(--text-secondary);font-size:12px}
 @media(max-width:1100px){.dashboard-action-grid{grid-template-columns:1fr}.due-layout{grid-template-columns:1fr}}
 
@@ -111,7 +111,7 @@
 .stat-grid .stat-card .stat-icon{flex-shrink:0}
 .stat-grid .stat-card .stat-icon + div{flex:1;min-width:0}
 .followup-card .card-head,.due-calendar-card .card-head{padding-bottom:2px}
-.calendar-panel{background:#f8fbff}.cal-day.selected{box-shadow:0 3px 8px rgba(37,99,235,.18)}.due-list{background:#fff}.due-item:hover{background:#f8fafc}
+.calendar-panel{background:var(--slate-bg-2)}.cal-day.selected{box-shadow:0 3px 8px rgba(37,99,235,.18)}.due-list{background:#fff}.due-item:hover{background:#f8fafc}
 @media(max-width:900px){.dashboard-action-grid{grid-template-columns:1fr}}
 
 <style>

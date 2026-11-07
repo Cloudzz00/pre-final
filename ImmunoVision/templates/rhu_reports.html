@@ -120,7 +120,7 @@
                 <a class="child-name" href="{{ url_for('rhu.child_record', child_id=r.child.id) }}">{{ r.child.display_name }}</a>
               </td>
               <td>{{ r.child.barangay.name }}</td>
-              <td><span class="risk-pill">{{ r.tier }} &middot; {{ r.risk_score }}%</span></td>
+              <td><span class="risk-pill{{ ' tier-high' if r.tier in ('High Risk', 'Visit Urgently') else (' tier-low' if r.tier in ('Low Risk', 'On Track') else '') }}">{{ r.tier }} &middot; {{ r.risk_score }}%</span></td>
               <td class="missed-count">{{ r.missed }} of {{ r.due }}</td>
               <td>{{ r.recommendation }}</td>
               <td>
