@@ -1,10 +1,10 @@
-<div class="modal-scrim" id="registerChildModal" data-bhw-age-rules="{{ 'true' if request.blueprint == 'bhw' else 'false' }}">
+<div class="modal-scrim" id="registerChildModal" data-reset-on-close data-bhw-age-rules="{{ 'true' if request.blueprint == 'bhw' else 'false' }}">
   <div class="modal-box wide">
     <div class="modal-head">
       <h3>Register New Child</h3>
       <button class="modal-close" data-close-modal>×</button>
     </div>
-    <form method="post" action="">
+    <form method="post" action="" novalidate>
       <div class="modal-body">
 
         <p style="font-size:13.5px;color:var(--text-secondary);margin:0 0 18px;line-height:1.6;">
@@ -16,11 +16,11 @@
         <div class="form-grid-2">
           <div class="form-group">
             <label>Full Name <span style="color:var(--danger)">*</span></label>
-            <input class="form-control" name="full_name" required placeholder="e.g. Juan dela Cruz">
+            <input class="form-control" name="full_name" required data-validate="name" data-required data-label="Full name" placeholder="e.g. Juan dela Cruz" autocomplete="off">
           </div>
           <div class="form-group">
             <label>Date of Birth <span style="color:var(--danger)">*</span></label>
-            <input class="form-control" type="date" name="date_of_birth" max="{{ today.isoformat() }}" required>
+            <input class="form-control" type="date" name="date_of_birth" max="{{ today.isoformat() }}" required data-validate="dob" data-required data-label="Date of birth">
           </div>
           <div class="form-group">
             <label>Sex <span style="color:var(--danger)">*</span></label>
@@ -31,7 +31,7 @@
           </div>
           <div class="form-group">
             <label>Date of Registration</label>
-            <input class="form-control" type="date" name="date_registered" value="{{ today.isoformat() }}">
+            <input class="form-control" type="date" name="date_registered" value="{{ today.isoformat() }}" max="{{ today.isoformat() }}" data-validate="registered" data-label="Date of registration">
           </div>
           {% if barangays %}
           <div class="form-group">
@@ -47,11 +47,11 @@
         <div class="form-grid-2">
           <div class="form-group">
             <label>Guardian Name</label>
-            <input class="form-control" name="guardian_name" placeholder="e.g. Maria dela Cruz">
+            <input class="form-control" name="guardian_name" data-validate="name" data-label="Guardian name" placeholder="e.g. Maria dela Cruz" autocomplete="off">
           </div>
           <div class="form-group">
             <label>Contact Number</label>
-            <input class="form-control" name="guardian_contact" placeholder="09XXXXXXXXX">
+            <input class="form-control" name="guardian_contact" data-validate="phone" inputmode="tel" maxlength="16" placeholder="09XXXXXXXXX" autocomplete="off">
           </div>
           <div class="form-group" style="grid-column:1/-1;">
             <label>Address</label>

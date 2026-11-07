@@ -432,3 +432,176 @@
   window.addEventListener("beforeprint", resizeCharts);
   window.addEventListener("afterprint", resizeCharts);
 })();
+
+// Field checks for the child forms. An input opts in with data-validate:
+//   name       letters, spaces, . ' - only (data-required for a required one)
+//   phone      Philippine mobile, 09XXXXXXXXX or +639XXXXXXXXX
+//   dob        not in the future
+//   registered not in the future, not before the form's date of birth
+// The message appears under the field once it has been left, updates as the
+// user types, and blocks submitting. app.py checks the same rules.
+(function () {
+  var NAME_OK = /^[\p{L} .'\-]+$/u;
+  var HAS_LETTER = /\p{L}/u;
+  function todayIso() {
+    var d = new Date();
+    return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, "0"), String(d.getDate()).padStart(2, "0")].join("-");
+  }
+  function message(input) {
+    var v = (input.value || "").trim();
+    var kind = input.getAttribute("data-validate");
+    var label = input.getAttribute("data-label") || "This field";
+    if (!v) return input.hasAttribute("data-required") ? label + " is required." : "";
+    // Edit forms: a value that came from the record and was not touched is
+    // left alone (imported records may use an older format).
+    if (input.hasAttribute("data-only-if-changed") && input.value === input.defaultValue) return "";
+    if (kind === "name" && (!NAME_OK.test(v) || !HAS_LETTER.test(v)))
+      return label + " can only contain letters, spaces, periods, apostrophes and hyphens.";
+    if (kind === "phone" && !/^(09\d{9}|\+639\d{9})$/.test(v.replace(/[\s-]/g, "")))
+      return "Enter an 11-digit mobile number, e.g. 09171234567.";
+    if (kind === "dob" && v > todayIso()) return "Date of birth cannot be in the future.";
+    if (kind === "registered") {
+      if (v > todayIso()) return "Date of registration cannot be in the future.";
+      var dob = input.form && input.form.querySelector('[data-validate="dob"]');
+      if (dob && dob.value && v < dob.value) return "Date of registration cannot be before the date of birth.";
+    }
+    return "";
+  }
+  function show(input) {
+    var msg = message(input);
+    var box = input.parentElement.querySelector(".field-error[data-for='" + input.name + "']");
+    if (!box) {
+      box = document.createElement("div");
+      box.className = "field-error";
+      box.setAttribute("data-for", input.name);
+      box.setAttribute("role", "alert");
+      input.insertAdjacentElement("afterend", box);
+    }
+    box.textContent = msg;
+    box.hidden = !msg;
+    input.classList.toggle("is-invalid", !!msg);
+    input.setAttribute("aria-invalid", msg ? "true" : "false");
+    return !msg;
+  }
+  window.ivValidateForm = function (form) {
+    var ok = true, first = null;
+    form.querySelectorAll("[data-validate]").forEach(function (input) {
+      input.dataset.touched = "1";
+      if (!show(input)) { ok = false; first = first || input; }
+    });
+    if (first) first.focus();
+    return ok;
+  };
+  window.ivClearErrors = function (form) {
+    form.querySelectorAll("[data-validate]").forEach(function (input) {
+      delete input.dataset.touched;
+      input.classList.remove("is-invalid");
+      input.removeAttribute("aria-invalid");
+    });
+    form.querySelectorAll(".field-error").forEach(function (box) { box.hidden = true; box.textContent = ""; });
+  };
+  document.querySelectorAll("form").forEach(function (form) {
+    var inputs = form.querySelectorAll("[data-validate]");
+    if (!inputs.length) return;
+    inputs.forEach(function (input) {
+      input.addEventListener("blur", function () { input.dataset.touched = "1"; show(input); });
+      input.addEventListener("input", function () { if (input.dataset.touched) show(input); });
+      input.addEventListener("change", function () {
+        input.dataset.touched = "1"; show(input);
+        // A new date of birth can make the registration date valid or not.
+        if (input.getAttribute("data-validate") === "dob") {
+          var reg = form.querySelector('[data-validate="registered"]');
+          if (reg && reg.dataset.touched) show(reg);
+        }
+      });
+    });
+    form.addEventListener("submit", function (e) {
+      if (!window.ivValidateForm(form)) e.preventDefault();
+    });
+  });
+})();
+
+// Register Child: closing the form clears it, so the next "Add Child" starts
+// blank. If something was already typed or ticked, ask before discarding.
+(function () {
+  // A form counts as changed when any field differs from its state at page
+  // load (comparing against defaultSelected would flag a select whose first
+  // option is only selected implicitly).
+  var initial = new WeakMap();
+  function snapshot(form) {
+    return Array.prototype.map.call(form.elements, function (el) {
+      return el.type === "checkbox" || el.type === "radio" ? el.checked : el.value;
+    });
+  }
+  function isDirty(form) {
+    var before = initial.get(form);
+    if (!before) return false;
+    var now = snapshot(form);
+    return now.some(function (v, i) {
+      var el = form.elements[i];
+      if (!el.name || el.type === "hidden" || el.type === "submit" || el.type === "button") return false;
+      return v !== before[i];
+    });
+  }
+  function resetForm(form) {
+    form.reset();
+    if (window.ivClearErrors) window.ivClearErrors(form);
+    // Let the form's own scripts react: hide vaccine date rows, recompute the
+    // BHW eligibility hints, refresh the custom dropdown labels.
+    form.querySelectorAll("input[type=checkbox], select, input[type=date]").forEach(function (el) {
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+  }
+  function confirmDiscard(onYes) {
+    var dlg = document.getElementById("ivDiscardDialog");
+    if (!dlg) {
+      dlg = document.createElement("div");
+      dlg.id = "ivDiscardDialog";
+      dlg.className = "modal-scrim discard-scrim";
+      dlg.innerHTML =
+        '<div class="modal-box discard-box" role="alertdialog" aria-modal="true" aria-labelledby="ivDiscardTitle">' +
+        '<div class="modal-head"><h3 id="ivDiscardTitle">Discard this child\'s details?</h3></div>' +
+        '<div class="modal-body"><p style="margin:0;font-size:13.5px;color:var(--text-secondary);line-height:1.6;">' +
+        "What you typed in the Register New Child form will be cleared.</p></div>" +
+        '<div class="modal-footer"><button type="button" class="btn btn-outline" data-discard="no">Keep editing</button>' +
+        '<button type="button" class="btn btn-danger" data-discard="yes">Discard</button></div></div>';
+      document.body.appendChild(dlg);
+    }
+    dlg.classList.add("open");
+    var yes = dlg.querySelector('[data-discard="yes"]'), no = dlg.querySelector('[data-discard="no"]');
+    function done(result) {
+      dlg.classList.remove("open");
+      yes.onclick = no.onclick = dlg.onclick = null;
+      if (result) onYes();
+    }
+    yes.onclick = function () { done(true); };
+    no.onclick = function () { done(false); };
+    dlg.onclick = function (e) { if (e.target === dlg) done(false); };
+    no.focus();
+  }
+  // Runs before the generic close handlers (capture phase) so it can keep the
+  // modal open when the user chooses "Keep editing".
+  function guardClose(scrim, e) {
+    var form = scrim.querySelector("form");
+    if (!form || !scrim.hasAttribute("data-reset-on-close")) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    if (!isDirty(form)) { resetForm(form); scrim.classList.remove("open"); return; }
+    confirmDiscard(function () { resetForm(form); scrim.classList.remove("open"); });
+  }
+  document.querySelectorAll(".modal-scrim[data-reset-on-close]").forEach(function (scrim) {
+    var f = scrim.querySelector("form");
+    if (f) initial.set(f, snapshot(f));
+    scrim.querySelectorAll("[data-close-modal]").forEach(function (btn) {
+      btn.addEventListener("click", function (e) { guardClose(scrim, e); }, true);
+    });
+    scrim.addEventListener("click", function (e) { if (e.target === scrim) guardClose(scrim, e); }, true);
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape") return;
+    var discard = document.getElementById("ivDiscardDialog");
+    if (discard && discard.classList.contains("open")) { discard.querySelector('[data-discard="no"]').click(); return; }
+    var open = document.querySelector(".modal-scrim.open[data-reset-on-close]");
+    if (open) guardClose(open, e);
+  });
+})();
