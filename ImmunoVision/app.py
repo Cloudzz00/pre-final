@@ -147,7 +147,7 @@ ADMIN_NAV = [
     ("dashboard", "home", "Dashboard", "admin.dashboard"),
     ("users", "users", "User Management", "admin.users"),
     ("assign", "map-pin", "Assign Barangay", "admin.assign_barangay"),
-    ("campaigns", "syringe", "Campaigns", "admin.campaigns"),
+    ("campaigns", "calendar", "Campaigns", "admin.campaigns"),
     ("map", "map", "Municipality Map", "admin.municipality_map"),
     ("vaccines", "package", "Vaccine Alerts", "admin.vaccine_alerts"),
 ]
