@@ -594,7 +594,7 @@ def feature_catalog():
     return rows
 
 
-def chart_insights(by_vaccine, by_barangay, trend):
+def chart_insights(by_vaccine, by_barangay, trend, trend_year=None):
     """One computed sentence per chart.
 
     Every figure is derived from the same data the chart plots, so an insight
@@ -640,6 +640,10 @@ def chart_insights(by_vaccine, by_barangay, trend):
                 f"{round(shortfall(worst))} of its {worst['children']} children short of target."
             )
 
+    if trend_year:
+        # Monthly cohort series: early months hold only a few births, so the
+        # sentence uses the months with enough children to mean something.
+        trend = [t for t in trend if t[1] is not None and t[2] >= TREND_MIN_COHORT]
     if len(trend) >= 2:
         first_y, first_p, _ = trend[0]
         last_y, last_p, last_n = trend[-1]
@@ -647,11 +651,18 @@ def chart_insights(by_vaccine, by_barangay, trend):
         step = round(last_p - prev_p, 1)
         direction = "rose" if step > 0 else "fell" if step < 0 else "held steady"
         change = "up" if last_p >= first_p else "down"
-        out["trend"] = (
-            f"Coverage is {change} from {first_p}% in {first_y} to {last_p}% now "
-            f"across {last_n} children, and {direction} "
-            f"{abs(step)} points since {trend[-2][0]}."
-        )
+        if trend_year:
+            out["trend"] = (
+                f"For children born in {trend_year}, coverage went {change} from {first_p}% at the end of "
+                f"{first_y} to {last_p}% at the end of {last_y.replace(' (to date)', '')} "
+                f"({last_n} children), and {direction} {abs(step)} points in the last month shown."
+            )
+        else:
+            out["trend"] = (
+                f"Coverage is {change} from {first_p}% in {first_y} to {last_p}% now "
+                f"across {last_n} children, and {direction} "
+                f"{abs(step)} points since {trend[-2][0]}."
+            )
     return out
 
 
@@ -774,6 +785,43 @@ def yearly_trend(barangay_id=None):
             label = str(y) + (" (to date)" if end == today and y == today.year else "")
             out.append((label, fig["coverage_rate"], fig["total_children"]))
     return out
+
+
+def monthly_cohort_trend(barangay_id, year, risk=None):
+    """Coverage at the end of each month of `year` for the children born in
+    that year - the dashboards' trend chart when a single birth year is
+    selected. Same calculation as the stat cards (report_figures() with the
+    cohort window), so the December point, or the selected month's point,
+    equals the card. Months after today are left out; a month with no
+    children yet is plotted as a gap (None)."""
+    today = date.today()
+    born_from = date(year, 1, 1)
+    out = []
+    for m in range(1, 13):
+        first = date(year, m, 1)
+        if first > today:
+            break
+        end = min((date(year + 1, 1, 1) if m == 12 else date(year, m + 1, 1)) - timedelta(days=1), today)
+        fig = report_figures(barangay_id, end, born_from, risk if risk is not None else {})
+        n = fig["total_children"]
+        out.append((first.strftime("%b") + (" (to date)" if end == today else ""),
+                    fig["coverage_rate"] if n else None, n))
+    return out
+
+
+def trend_for(barangay_id, period):
+    """The dashboards' trend chart: monthly for a single selected birth year,
+    annual (all children, every year) otherwise."""
+    if period.get("month_active"):
+        year = int(period["year_from"])
+        trend = monthly_cohort_trend(barangay_id, year)
+        month = int(period["month"]) if period.get("month") else 0
+        return {"trend": trend, "trend_monthly": True, "trend_year": year,
+                "trend_highlight": month - 1 if 0 < month <= len(trend) else -1,
+                "trend_min": TREND_MIN_COHORT,
+                "trend_faded": any(n and n < TREND_MIN_COHORT for _l, _v, n in trend)}
+    return {"trend": yearly_trend(barangay_id), "trend_monthly": False, "trend_year": None,
+            "trend_highlight": -1, "trend_min": TREND_MIN_COHORT, "trend_faded": False}
 
 
 def monthly_doses_administered(barangay_id=None, months=12, as_of=None):
@@ -2220,7 +2268,8 @@ def dashboard():
         by_barangay = [r for r in by_barangay if r["barangay"] == selected.name]
     by_vaccine = order_by_schedule(report_by_vaccine(None, as_of, born_from) if as_of
                                    else coverage_by_vaccine())
-    trend = yearly_trend(barangay_id)
+    trend_info = trend_for(barangay_id, period)
+    trend = trend_info["trend"]
     below_target = len([r for r in by_barangay if r["coverage"] < COVERAGE_TARGET])
     change = coverage_change(barangay_id)
     return render_template("rhu_dashboard.html", **_rhu_ctx(
@@ -2230,9 +2279,9 @@ def dashboard():
         selected_barangay=selected, selected_barangay_id=barangay_id,
         **period,
         follow_up=follow_up, follow_up_total=follow_up_total, low_stock=low_stock, pending_requests=pending,
-        by_barangay=by_barangay, by_vaccine=by_vaccine, trend=trend,
+        by_barangay=by_barangay, by_vaccine=by_vaccine,
         vaccine_colours=vaccine_colours(by_vaccine), vaccine_labels=schedule_labels(by_vaccine),
-        insights=chart_insights(by_vaccine, by_barangay, trend),
+        insights=chart_insights(by_vaccine, by_barangay, trend, trend_info["trend_year"]), **trend_info,
         below_target=below_target, change=change, active_campaigns=active_campaigns_summary(),
     ))
 
@@ -2753,7 +2802,8 @@ def dashboard():
     # Coverage Analytics merged into this page; its own route was retired.
     by_vaccine = order_by_schedule(report_by_vaccine(bid, as_of, born_from) if as_of
                                    else coverage_by_vaccine(bid))
-    trend = yearly_trend(bid)
+    trend_info = trend_for(bid, period)
+    trend = trend_info["trend"]
     change = coverage_change(bid)
     vt_lookup = {vt.code: vt for vt in VaccineType.query.all()}
     due_calendar = _due_calendar(filtered_children(bid), vt_lookup)
@@ -2764,9 +2814,9 @@ def dashboard():
         risk_level=risk_level, status=status,
         **period, follow_up=follow_up,
         follow_up_total=len(follow_up_all),
-        by_vaccine=by_vaccine, trend=trend, change=change,
+        by_vaccine=by_vaccine, change=change,
         vaccine_colours=vaccine_colours(by_vaccine), vaccine_labels=schedule_labels(by_vaccine),
-        insights=chart_insights(by_vaccine, [], trend),
+        insights=chart_insights(by_vaccine, [], trend, trend_info["trend_year"]), **trend_info,
         total_in_barangay=len(filtered_children(bid, as_of=as_of, born_from=born_from)),
         due_calendar=due_calendar,
         pending_requests=(VaccineRequest.query.filter_by(barangay_id=bid, status="pending")
@@ -3294,7 +3344,10 @@ def dashboard():
                                    else coverage_by_vaccine(barangay_id))
     # Annual rather than monthly: a month/year filter and a 12-month series
     # contradict each other, and yearly coverage can be computed for real.
-    trend = yearly_trend()
+    # Annual view stays municipality-wide; a single selected birth year
+    # follows the barangay filter so the monthly line matches the cards.
+    trend_info = trend_for(barangay_id, period) if period["month_active"] else trend_for(None, period)
+    trend = trend_info["trend"]
 
     # Barangay staffing: the Assign Barangay question, summarised here rather
     # than making the administrator visit that page to find out whether
@@ -3325,9 +3378,9 @@ def dashboard():
     return render_template("admin_dashboard.html", **_admin_ctx(
         "dashboard", page_title="Dashboard",
         municipality=municipality, barangay_rows=barangay_rows, now=datetime.now(),
-        by_vaccine=by_vaccine, trend=trend, staffing=staffing,
+        by_vaccine=by_vaccine, staffing=staffing,
         vaccine_colours=vaccine_colours(by_vaccine), vaccine_labels=schedule_labels(by_vaccine),
-        insights=chart_insights(by_vaccine, barangay_rows, trend),
+        insights=chart_insights(by_vaccine, barangay_rows, trend, trend_info["trend_year"]), **trend_info,
         active_campaigns=active_campaigns_summary(),
         **period,
         barangays=Barangay.query.order_by(Barangay.name).all(),
