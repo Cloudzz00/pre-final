@@ -21,9 +21,9 @@
     </div>
     <div class="flex-gap">
       {% if c.barangays.count() %}
-        <span class="badge badge-gray">{{ c.barangays.count() }} barangay{{ 's' if c.barangays.count() != 1 }}</span>
+        <span class="badge badge-blue">{{ c.barangays.count() }} barangay{{ 's' if c.barangays.count() != 1 }}</span>
       {% else %}
-        <span class="badge badge-gray">All barangays</span>
+        <span class="badge badge-blue">All Barangays</span>
       {% endif %}
       {% if c.is_active_now %}
         <span class="badge badge-green">Active</span>
