@@ -1752,3 +1752,6 @@ html { scroll-behavior: smooth; }
   .table-wrap.auto-height { max-height: none !important; overflow: visible !important; }
 }
 .filter-bar select.select-sm:disabled { opacity: .55; cursor: not-allowed; }
+.range-group { display: inline-flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
+.range-word { font-size: 13px; font-weight: 600; color: var(--text-secondary); white-space: nowrap; }
+.range-group select.select-sm { min-width: 104px; }
