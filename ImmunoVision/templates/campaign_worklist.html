@@ -53,7 +53,7 @@
               <input type="hidden" name="barangay_id" value="{{ selected_barangay_id or '' }}">
               <input type="hidden" name="pending" value="{{ '1' if pending_only else '' }}">
               <input type="hidden" name="q" value="{{ search }}">
-              <input class="form-control" type="date" name="dose_date" max="{{ today.isoformat() }}" value="{{ r.dose_date.isoformat() if r.dose_date else '' }}" style="max-width:160px;">
+              <input class="form-control table-input" type="date" name="dose_date" max="{{ today.isoformat() }}" value="{{ r.dose_date.isoformat() if r.dose_date else '' }}" style="max-width:160px;">
               <button class="btn btn-outline btn-sm" type="submit">{{ icon('check', 14) }} Save</button>
               {% if r.dose_date %}<span class="badge badge-green">Given</span>{% endif %}
             </form>
