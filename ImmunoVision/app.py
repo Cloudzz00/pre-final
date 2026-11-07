@@ -1306,6 +1306,33 @@ def period_end(period):
         return today
 
 
+def report_date_options():
+    """Choices for the Reports page's single "Report as of" selector:
+    the last 12 months, then whole years (the current one runs to today)."""
+    this_year = date.today().year
+    return {"months": month_options(),
+            "years": [(str(y), f"{y} (to date)" if y == this_year else f"{y} (as of Dec 31)")
+                      for y in data_years()]}
+
+
+def resolve_report_date(args):
+    """(as_of date, selected key) from the Reports query string.
+
+    as_of="" -> today; "YYYY-MM" -> end of that month; "YYYY" -> 31 Dec of
+    that year (today for the current year). Older links that used the
+    separate period= / year= parameters still work."""
+    key = args.get("as_of")
+    if key is None:  # older links
+        key = args.get("year") or args.get("period") or ""
+    key = (key or "").strip()
+    today = date.today()
+    if len(key) == 4 and key.isdigit() and int(key) in data_years():
+        return min(date(int(key), 12, 31), today), key
+    if key in {v for v, _ in month_options()}:
+        return period_end(key), key
+    return today, ""
+
+
 def report_figures(barangay_id=None, as_of=None, born_from=None, risk=None):
     """Coverage figures for one barangay (or all) as of a date.
 
@@ -2748,17 +2775,8 @@ def forecast():
 @rhu_bp.route("/reports")
 def reports():
     barangay_id = request.args.get("barangay_id", type=int)
-    period = request.args.get("period", "")
-    year = request.args.get("year", "")
     report_type = request.args.get("type", "coverage")
-    # A chosen Year wins over the month picker, so "as of end of 2025" doesn't
-    # require knowing to pick December specifically.
-    if year and year.isdigit() and len(year) == 4 and int(year) in data_years():
-        as_of = min(date(int(year), 12, 31), date.today())
-        period = ""
-    else:
-        year = ""
-        as_of = period_end(period)
+    as_of, report_key = resolve_report_date(request.args)
     fig = report_figures(barangay_id, as_of)
     barangays = Barangay.query.order_by(Barangay.name).all()
     barangay_obj = next((b for b in barangays if b.id == barangay_id), None)
@@ -2780,8 +2798,7 @@ def reports():
         "reports", page_title="Reports", report_type=report_type,
         stats=fig, by_barangay=fig["by_barangay"], generated_at=datetime.now(),
         barangays=barangays, scope_name=barangay_obj.name if barangay_obj else "All Barangays",
-        selected_barangay=barangay_id, periods=month_options(), selected_period=period,
-        years=data_years(), selected_year=year,
+        selected_barangay=barangay_id, date_options=report_date_options(), report_key=report_key,
         as_of=as_of, **extra,
     ))
 
@@ -2790,11 +2807,7 @@ def reports():
 def export_report_csv():
     """Downloads the on-screen report as CSV (opens directly in Excel)."""
     barangay_id = request.args.get("barangay_id", type=int)
-    year = request.args.get("year", "")
-    if year and year.isdigit() and len(year) == 4 and int(year) in data_years():
-        as_of = min(date(int(year), 12, 31), date.today())
-    else:
-        as_of = period_end(request.args.get("period", ""))
+    as_of, _key = resolve_report_date(request.args)
     fig = report_figures(barangay_id, as_of)
     scope = next((b.name for b in Barangay.query.filter_by(id=barangay_id)), "All Barangays")
 
@@ -3249,24 +3262,14 @@ def requests():
 @bhw_bp.route("/reports")
 def reports():
     bid = current_user.barangay_id
-    period = request.args.get("period", "")
-    year = request.args.get("year", "")
-    # A chosen Year wins over the month picker, so "as of end of 2025" doesn't
-    # require knowing to pick December specifically.
-    if year and year.isdigit() and len(year) == 4 and int(year) in data_years():
-        as_of = min(date(int(year), 12, 31), date.today())
-        period = ""
-    else:
-        year = ""
-        as_of = period_end(period)
+    as_of, report_key = resolve_report_date(request.args)
     fig = report_figures(bid, as_of)
     return render_template("bhw_reports.html", **_bhw_ctx(
         "reports", page_title="Reports", report_type=request.args.get("type", "coverage"),
         stats=fig, by_vaccine=report_by_vaccine(bid, as_of), generated_at=datetime.now(),
         at_risk_rows=vaccine_risk_table(bid, limit=50),
         doses_by_month=monthly_doses_administered(bid, as_of=as_of),
-        periods=month_options(), selected_period=period,
-        years=data_years(), selected_year=year, as_of=as_of,
+        date_options=report_date_options(), report_key=report_key, as_of=as_of,
     ))
 
 
@@ -3274,11 +3277,7 @@ def reports():
 def export_report_csv():
     """Downloads this barangay's report as CSV (opens directly in Excel)."""
     bid = current_user.barangay_id
-    year = request.args.get("year", "")
-    if year and year.isdigit() and len(year) == 4 and int(year) in data_years():
-        as_of = min(date(int(year), 12, 31), date.today())
-    else:
-        as_of = period_end(request.args.get("period", ""))
+    as_of, _key = resolve_report_date(request.args)
     fig = report_figures(bid, as_of)
     scope = current_user.barangay.name if current_user.barangay else "Unassigned"
 
