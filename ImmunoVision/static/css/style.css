@@ -1837,3 +1837,4 @@ html { scroll-behavior: smooth; }
   .summary-card .d { font-size: 9px; margin-top: 0; line-height: 1.3; }
   .bhw-report-page .chart-box { height: 155px !important; }
 }
+.select-group { padding: 8px 12px 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--text-muted); }

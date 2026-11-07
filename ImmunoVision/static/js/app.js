@@ -314,6 +314,15 @@
     function buildOptions() {
       panel.innerHTML = "";
       options = Array.prototype.map.call(select.options, function (opt, i) {
+        // <optgroup>: a non-selectable heading before the group's first option.
+        var grp = opt.parentElement;
+        if (grp && grp.tagName === "OPTGROUP" && grp.firstElementChild === opt) {
+          var head = document.createElement("div");
+          head.className = "select-group";
+          head.setAttribute("role", "presentation");
+          head.textContent = grp.label;
+          panel.appendChild(head);
+        }
         var row = document.createElement("div");
         row.className = "select-option";
         row.id = "select-opt-" + uid + "-" + i;
