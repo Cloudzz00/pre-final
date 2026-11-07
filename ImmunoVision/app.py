@@ -128,6 +128,7 @@ RHU_NAV = [
     ("dashboard", "home", "Dashboard", "rhu.dashboard"),
     ("children", "baby", "Child Records", "rhu.children"),
     ("vaccine_gaps", "syringe", "Vaccine Gaps", "rhu.vaccine_gaps"),
+    ("due_list", "calendar", "Vaccination Due List", "rhu.due_vaccines"),
     ("continuation", "target", "Continuation Predictor", "rhu.continuation"),
     ("map", "map", "Municipality Map", "rhu.municipality_map"),
     ("inventory", "package", "Vaccine Inventory", "rhu.inventory"),
@@ -139,6 +140,7 @@ BHW_NAV = [
     ("dashboard", "home", "Dashboard", "bhw.dashboard"),
     ("children", "baby", "Child Records", "bhw.children"),
     ("vaccine_gaps", "syringe", "Vaccine Gaps", "bhw.vaccine_gaps"),
+    ("due_list", "calendar", "Vaccination Due List", "bhw.due_vaccines"),
     ("continuation", "target", "Continuation Predictor", "bhw.continuation"),
     ("requests", "clipboard", "Vaccine Requests", "bhw.requests"),
     ("reports", "file-text", "Reports", "bhw.reports"),
@@ -1785,6 +1787,118 @@ def _due_calendar(children, vt_lookup, days_behind=90, days_ahead=60):
     return events
 
 
+DUE_MONTHS_AHEAD = 6       # "This month" plus the next five
+DUE_OVERDUE_DAYS = 90      # how far back an unpaid dose still shows as overdue
+
+
+def _month_options(today=None):
+    """[(\"YYYY-MM\", \"November 2026\"), ...] for this month and the next five."""
+    today = today or date.today()
+    y, m = today.year, today.month
+    out = []
+    for _ in range(DUE_MONTHS_AHEAD):
+        out.append((f"{y:04d}-{m:02d}", date(y, m, 1).strftime("%B %Y")))
+        y, m = (y + 1, 1) if m == 12 else (y, m + 1)
+    return out
+
+
+def _month_bounds(key):
+    y, m = (int(x) for x in key.split("-"))
+    first = date(y, m, 1)
+    nxt = date(y + 1, 1, 1) if m == 12 else date(y, m + 1, 1)
+    return first, nxt - timedelta(days=1)
+
+
+def monthly_due_list(children, month_key, include_overdue=True):
+    """Doses still to give, per child, for one calendar month.
+
+    month_key is "YYYY-MM" or "all". A month shows every dose whose due date
+    falls in it; with include_overdue, doses missed before that month (within
+    the last DUE_OVERDUE_DAYS) are carried in too, since those children still
+    need them. "all" covers the overdue window through the end of the sixth
+    month. Returns (events, summary): summary is one row per antigen with the
+    number of doses needed, in schedule order."""
+    today = date.today()
+    options = _month_options(today)
+    if month_key == "all":
+        first, last = today, _month_bounds(options[-1][0])[1]
+    else:
+        first, last = _month_bounds(month_key)
+    overdue_floor = today - timedelta(days=DUE_OVERDUE_DAYS)
+    vt_lookup = {vt.code: vt for vt in VaccineType.query.all()}
+    events = []
+    for child in children:
+        given = _doses_given(child.id)
+        for code, name, antigen, _dose_no, rec_days in dp.VACCINE_SCHEDULE:
+            vt = vt_lookup.get(code)
+            if vt is None or given.get(vt.id) is not None:
+                continue
+            due = child.date_of_birth + timedelta(days=rec_days)
+            in_month = first <= due <= last
+            carried = include_overdue and overdue_floor <= due < min(first, today)
+            if not (in_month or carried):
+                continue
+            delta = (due - today).days
+            if delta < 0:
+                status = "Overdue"
+            elif delta == 0:
+                status = "Due Today"
+            elif delta <= 7:
+                status = "Upcoming"
+            else:
+                status = "Scheduled"
+            events.append({"date": due.isoformat(), "child_id": child.id,
+                           "child_name": child.display_name,
+                           "barangay": child.barangay.name if child.barangay else "",
+                           "vaccine": name, "vaccine_code": code, "antigen": antigen,
+                           "status": status, "carried": not in_month})
+    events.sort(key=lambda e: (e["date"], e["child_name"]))
+    return events
+
+
+def due_summary(events):
+    """[{"antigen", "name", "count", "overdue"}] in schedule order, for the
+    "doses needed" strip - what the barangay should have on hand."""
+    names = {a.code: a.name for a in VaccineAntigen.query.all()}
+    order = []
+    for _c, _n, antigen, _d, _r in dp.VACCINE_SCHEDULE:
+        if antigen not in order:
+            order.append(antigen)
+    counts, overdue = Counter(e["antigen"] for e in events), Counter(
+        e["antigen"] for e in events if e["status"] == "Overdue")
+    return [{"antigen": a, "name": names.get(a, a), "count": counts[a], "overdue": overdue[a]}
+            for a in order if counts[a]]
+
+
+def _due_list_args():
+    """Reads and validates the Due List filters from the query string or,
+    after recording a dose, from the posted form."""
+    src = request.values
+    options = _month_options()
+    month = src.get("month") or options[0][0]
+    if month != "all" and month not in {k for k, _ in options}:
+        month = options[0][0]
+    return {"month": month, "include_overdue": src.get("overdue", "1") != "0",
+            "search": src.get("q", "").strip(), "status_filter": src.get("status", ""),
+            "month_options": options}
+
+
+def _render_due_list(template_ctx, children, can_record, **extra):
+    args = _due_list_args()
+    events = monthly_due_list(children, args["month"], args["include_overdue"])
+    summary = due_summary(events)
+    if args["search"]:
+        events = [e for e in events if args["search"].lower() in e["child_name"].lower()]
+    if args["status_filter"]:
+        events = [e for e in events if e["status"] == args["status_filter"]]
+    month_label = ("All months" if args["month"] == "all"
+                   else dict(args["month_options"])[args["month"]])
+    return render_template("bhw_due_vaccines.html", **template_ctx(
+        "due_list", page_title="Vaccination Due List", events=events, summary=summary,
+        summary_total=sum(r["count"] for r in summary), month_label=month_label,
+        can_record=can_record, today_iso=date.today().isoformat(), **args, **extra))
+
+
 # ---------------------------------------------------------------------------
 # Auth blueprint
 # ---------------------------------------------------------------------------
@@ -2118,6 +2232,22 @@ def recompute_risk(child_id):
     log_activity(f"Re-assessed risk for {child_label(child)}: {result['label']}")
     flash(f"Risk re-assessed for {child.display_name}: {result['label']}", "success")
     return redirect(request.referrer or url_for("rhu.children"))
+
+
+@rhu_bp.route("/due-vaccines")
+def due_vaccines():
+    """View-only Vaccination Due List across the municipality, filterable to
+    one barangay. Doses are recorded by the BHW of each barangay."""
+    barangays = Barangay.query.order_by(Barangay.name).all()
+    try:
+        bid = int(request.args.get("barangay") or 0) or None
+    except ValueError:
+        bid = None
+    chosen = next((b for b in barangays if b.id == bid), None)
+    bid = chosen.id if chosen else None
+    return _render_due_list(_rhu_ctx, filtered_children(bid), can_record=False,
+                            barangays=barangays, barangay_id=bid,
+                            scope_label=chosen.name if chosen else "All barangays")
 
 
 @rhu_bp.route("/children/<int:child_id>")
@@ -2669,32 +2799,17 @@ def recompute_risk(child_id):
 
 @bhw_bp.route("/due-vaccines")
 def due_vaccines():
-    """Full-page version of the dashboard's Vaccination Due Calendar list -
-    every (child, dose) due, overdue, or coming up, with a date field and
-    Record button right on each row, so working through a day's worth of
-    doses doesn't mean opening each child's full Edit Child form. The
-    dashboard widget stays a read-only preview; this page is where the
-    recording actually happens."""
-    bid = current_user.barangay_id
-    search = request.args.get("q", "").strip()
-    status_filter = request.args.get("status", "")
-    vt_lookup = {vt.code: vt for vt in VaccineType.query.all()}
-    events = _due_calendar(filtered_children(bid), vt_lookup)
-    # Home visits are separate calendar entries, not vaccine doses.
-    events = [e for e in events if e.get("vaccine_code")]
-    # Keep the existing Scheduled filter without changing dashboard statuses.
-    for e in events:
-        if e["status"] == "Upcoming" and (date.fromisoformat(e["date"]) - date.today()).days > 7:
-            e["status"] = "Scheduled"
-    if search:
-        events = [e for e in events if search.lower() in e["child_name"].lower()]
-    if status_filter:
-        events = [e for e in events if e["status"] == status_filter]
-    events.sort(key=lambda e: e["date"])
-    return render_template("bhw_due_vaccines.html", **_bhw_ctx(
-        "dashboard", page_title="Vaccination Due List", events=events,
-        search=search, status_filter=status_filter, today_iso=date.today().isoformat(),
-    ))
+    """Month-by-month list of every dose the barangay's children still need,
+    with a date field and Record button on each row, so working through a
+    month's doses doesn't mean opening each child's full Edit Child form."""
+    return _render_due_list(_bhw_ctx, filtered_children(current_user.barangay_id), can_record=True,
+                            scope_label=current_user.barangay.name if current_user.barangay else "")
+
+
+def _due_list_return_url():
+    f = request.form
+    return url_for("bhw.due_vaccines", q=f.get("q") or None, status=f.get("status") or None,
+                   month=f.get("month") or None, overdue=f.get("overdue") or None)
 
 
 @bhw_bp.route("/children/<int:child_id>/record-dose", methods=["POST"])
@@ -2711,9 +2826,7 @@ def record_dose(child_id):
     administered = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else date.today()
     if _doses_before_birth(child.date_of_birth, [(vt.name, administered)]):
         flash(_before_birth_message([vt.name]), "error")
-        return redirect(url_for("bhw.due_vaccines",
-                                 q=request.form.get("q") or None,
-                                 status=request.form.get("status") or None))
+        return redirect(_due_list_return_url())
     rec = child.vaccination_records.filter_by(vaccine_type_id=vt.id, campaign_id=None).first()
     warning = _write_dose(child, vt, rec, administered)
     db.session.commit()
@@ -2722,9 +2835,7 @@ def record_dose(child_id):
     flash(f"Saved {child.display_name}'s {vt.name} dose. Risk re-assessed: {result['label']}", "success")
     if warning:
         flash(f"{warning} was recorded past its usual eligibility age — please double-check this dose.", "warning")
-    return redirect(url_for("bhw.due_vaccines",
-                             q=request.form.get("q") or None,
-                             status=request.form.get("status") or None))
+    return redirect(_due_list_return_url())
 
 
 @bhw_bp.route("/children/<int:child_id>")
