@@ -1366,16 +1366,22 @@ html { scroll-behavior: smooth; }
 .filter-select.fs-shell { cursor: pointer; overflow: visible; }
 .filter-select.fs-shell:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .filter-select.fs-shell select { opacity: 0; pointer-events: none; position: absolute; inset: 0; }
+/* The value text is laid out in the normal flow (not absolutely positioned)
+   so the control grows to fit its label: absolutely positioned, it left the
+   box at its 158px minimum and long labels such as "All Registration Years"
+   ran under the chevron. On narrow screens the filters share the row and
+   long labels shrink to an ellipsis instead. */
 .filter-select.fs-shell .fs-value {
-  position: absolute; inset: 0; display: flex; align-items: center;
-  padding: 0 34px 0 35px; font-size: 12.5px; color: var(--text-primary);
+  position: relative; display: block; flex: 1 1 auto; min-width: 0;
+  line-height: 36px; padding: 0 34px 0 35px; font-size: 12.5px; color: var(--text-primary);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .filter-select.fs-shell[aria-expanded="true"] .filter-chevron { transform: translateY(-65%) rotate(225deg); }
 
 @media (max-width: 860px) {
   .filter-bar .search-input-wrap { min-width: 100%; }
-  .filter-select { flex: 1; min-width: 0; }
+  /* Two filters per row on phones; four in one row left ~3 letters each. */
+  .filter-select { flex: 1 1 calc(50% - 5px); min-width: 0; }
 }
 
 /* ---------------------------------------------------------------------------
