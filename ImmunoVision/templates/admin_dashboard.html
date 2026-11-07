@@ -1,5 +1,6 @@
 {% extends "layout_app.html" %}
 {% from "_icons.html" import icon %}
+{% from "_period_filter.html" import period_selects, period_note %}
 {% block content %}
 <div class="banner">
   <div>
@@ -27,24 +28,15 @@
       <option value="{{ b.id }}" {% if selected_barangay_id == b.id %}selected{% endif %}>{{ b.name }}</option>
       {% endfor %}
     </select>
-    <select class="form-control select-sm" name="month" onchange="this.form.submit()" aria-label="Reporting month">
-      <option value="">Month: All</option>
-      {% for name in months %}
-      <option value="{{ loop.index }}" {% if month == loop.index|string %}selected{% endif %}>{{ name }}</option>
-      {% endfor %}
-    </select>
-    <select class="form-control select-sm" name="year" onchange="this.form.submit()" aria-label="Reporting year">
-      <option value="">Year: All</option>
-      {% for y in years %}
-      <option value="{{ y }}" {% if year == y|string %}selected{% endif %}>{{ y }}</option>
-      {% endfor %}
-    </select>
+    {{ period_selects(years, months, year_from, year_to, month, month_active) }}
   </form>
   <span class="text-muted" style="margin-left:auto;font-size:12.5px;">
     {{ municipality.total_children }} children
     {%- if selected_barangay or as_of %} <a class="btn btn-outline btn-sm" href="{{ url_for('admin.dashboard') }}" style="margin-left:8px;">{{ icon('x', 14) }} Clear</a>{% endif %}
   </span>
 </div>
+
+{{ period_note(as_of, born_from, period_label, period_clamped) }}
 
 <div class="stat-grid">
   <div class="stat-card">

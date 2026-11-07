@@ -1,0 +1,37 @@
+{# Dashboard period filter: a birth-year range, with Month available when a
+   single year is selected (From and To the same). See resolve_range(). #}
+{% macro period_selects(years, months, year_from, year_to, month, month_active) %}
+<select class="form-control select-sm" name="from" onchange="this.form.submit()" aria-label="Start year">
+  <option value="">From: Any year</option>
+  {% for y in years|reverse %}
+  <option value="{{ y }}" {% if year_from == y|string %}selected{% endif %}>From {{ y }}</option>
+  {% endfor %}
+</select>
+<select class="form-control select-sm" name="to" onchange="this.form.submit()" aria-label="End year">
+  <option value="">To: Any year</option>
+  {% for y in years %}
+  <option value="{{ y }}" {% if year_to == y|string %}selected{% endif %}>To {{ y }}</option>
+  {% endfor %}
+</select>
+<select class="form-control select-sm" name="month" onchange="this.form.submit()" aria-label="Month"
+        {% if not month_active %}disabled title="Choose the same start and end year to filter by month"{% endif %}>
+  <option value="">Month: All</option>
+  {% for name in months %}
+  <option value="{{ loop.index }}" {% if month == loop.index|string %}selected{% endif %}>{{ name }}</option>
+  {% endfor %}
+</select>
+{% endmacro %}
+
+{% macro _d(d) %}{{ d.strftime('%B') }} {{ d.day }}, {{ d.year }}{% endmacro %}
+
+{% macro period_note(as_of, born_from, period_label, period_clamped) %}
+{% if as_of %}
+<p class="text-muted" style="font-size:12px;margin:-6px 0 14px;">
+  Showing <b>{{ period_label }}</b>: children born
+  {% if born_from %}from {{ _d(born_from) }} to{% else %}up to{% endif %}
+  {{ _d(as_of) }}, with coverage as at that date &mdash; doses recorded after it are
+  excluded.{% if period_clamped %} The selected period has not ended yet, so figures run to today.{% endif %}
+  Risk levels reflect each child's latest assessment, as risk is not stored historically.
+</p>
+{% endif %}
+{% endmacro %}
