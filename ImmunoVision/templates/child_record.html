@@ -4,8 +4,7 @@
 
 <div class="page-head child-record-head">
   <div>
-    <a class="link" style="font-size:15px;font-weight:650;" href="{{ back_url }}">&lsaquo; Back to {{ 'Dashboard' if request.args.get('from_dashboard') == '1' else 'Child Records' }}</a>
-    <h2 style="margin-top:5px;margin-bottom:3px;">{{ child.display_name }}</h2>
+    <h2 style="margin-top:0;margin-bottom:3px;">{{ child.display_name }}</h2>
     <div class="child-meta">{{ child.age_display }} &middot; {{ 'Male' if child.sex == 'M' else 'Female' }} &middot; born {{ child.date_of_birth.strftime('%b %d, %Y') }} &middot; {{ child.barangay.name }}</div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;">
