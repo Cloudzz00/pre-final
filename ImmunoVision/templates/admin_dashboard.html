@@ -195,7 +195,7 @@
     <div class="card card-pad">
       <div class="flex-between" style="margin-bottom:12px;">
         <div class="dashboard-card-title"><span class="dashboard-section-icon icon-teal">{{ icon('users', 18) }}</span><div><div class="card-title mb-0">Barangay Staffing</div></div></div>
-        <a class="link" style="font-size:12px;" href="{{ url_for('admin.assign_barangay') }}">Assign</a>
+        <a class="btn btn-outline btn-sm" href="{{ url_for('admin.assign_barangay') }}">{{ icon('map-pin', 14) }} Assign</a>
       </div>
       <div class="mini-stats">
         <div class="mini-stat"><span class="v {{ 'bad' if staffing.uncovered else 'good' }}">{{ staffing.covered }}/{{ staffing.total }}</span><span class="k">Barangays Covered</span></div>
@@ -218,7 +218,7 @@
     <div class="card card-pad" style="margin-top:18px;">
       <div class="flex-between" style="margin-bottom:12px;">
         <div class="dashboard-card-title"><span class="dashboard-section-icon icon-blue">{{ icon('lock', 18) }}</span><div><div class="card-title mb-0">User &amp; Access</div></div></div>
-        <a class="link" style="font-size:12px;" href="{{ url_for('admin.users') }}">Manage</a>
+        <a class="btn btn-outline btn-sm" href="{{ url_for('admin.users') }}">{{ icon('users', 14) }} Manage</a>
       </div>
       {# Grid covers account health; the bar below covers role composition.
          Neither repeats the other - RHU and BHW counts live only in the key. #}
