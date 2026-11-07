@@ -87,8 +87,7 @@
 <div class="split-2-1">
   <div>
   <div class="card card-pad">
-    <div class="card-title" id="coverage-by-barangay">Coverage by Barangay</div>
-      <div class="card-sub">{% if selected_barangay %}{{ selected_barangay.name }} only{% else %}All 19 barangays, lowest coverage first{% endif %} &middot; DOH Target is the projected population per DOH/PSA demographic estimates, entered here</div>
+    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-blue">{{ icon('map-pin', 18) }}</span><div><div class="card-title mb-0" id="coverage-by-barangay">Coverage by Barangay</div><div class="card-sub mb-0">{% if selected_barangay %}{{ selected_barangay.name }} only{% else %}All 19 barangays, lowest coverage first{% endif %} &middot; DOH Target is the projected population per DOH/PSA demographic estimates, entered here</div></div></div>
     <div class="table-wrap auto-height">
     <table class="data-table plain-head compact">
       <thead><tr><th>Barangay</th><th>Children</th><th>Immunized</th><th title="High risk tier">High</th><th title="Medium risk tier">Medium</th><th title="Low risk tier">Low</th><th style="width:15%;">Coverage (Actual)</th><th style="width:18%;">DOH Target Pop.</th><th style="width:12%;">Coverage (Target)</th></tr></thead>
@@ -139,8 +138,7 @@
      view duplicated the table above, so the whole page was retired and its two
      unique panels live here. #}
   <div class="card card-pad" style="margin-top:18px;">
-    <div class="card-title">Coverage by Vaccine</div>
-    <div class="card-sub">All 15 doses, in schedule order</div>
+    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-blue">{{ icon('syringe', 18) }}</span><div><div class="card-title mb-0">Coverage by Vaccine</div><div class="card-sub mb-0">All 15 doses, in schedule order</div></div></div>
     <div class="chart-box"><canvas id="vaccineChart"></canvas></div>
     {% if insights.vaccine %}
     <div class="insight">{{ icon('activity', 14) }}<span>{{ insights.vaccine }}</span></div>
@@ -148,8 +146,7 @@
   </div>
 
   <div class="card card-pad" style="margin-top:18px;">
-    <div class="card-title">Annual Coverage Trend</div>
-    <div class="card-sub">Coverage at each year end</div>
+    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('activity', 18) }}</span><div><div class="card-title mb-0">Annual Coverage Trend</div><div class="card-sub mb-0">Coverage at each year end</div></div></div>
     {# Computed from actual dose dates - coverage as at 31 December of each year
        the data covers - so this is measured, not simulated. #}
     <div class="chart-box"><canvas id="trendChart"></canvas></div>
@@ -161,7 +158,7 @@
 
   <div>
     <div class="card card-pad" style="margin-bottom:18px;">
-      <div class="card-title">Quick Actions</div>
+      <div class="dashboard-card-title"><span class="dashboard-section-icon icon-blue">{{ icon('arrow-right', 18) }}</span><div><div class="card-title mb-0">Quick Actions</div></div></div>
       <a href="{{ url_for('admin.users') }}" class="settings-row" style="text-decoration:none;">
         <div class="left"><div class="ic">{{ icon('user-plus', 18) }}</div><div class="label">Create New User</div></div><div>&rsaquo;</div>
       </a>
@@ -182,8 +179,7 @@
     <div class="card card-pad" style="margin-bottom:18px;">
       <div class="flex-between" style="margin-bottom:4px;">
         <div>
-          <div class="card-title mb-0">Active Campaigns</div>
-          <div class="card-sub mb-0">Supplementary immunization drives open right now</div>
+          <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('calendar', 18) }}</span><div><div class="card-title mb-0">Active Campaigns</div><div class="card-sub mb-0">Supplementary immunization drives open right now</div></div></div>
         </div>
         <a class="btn btn-outline btn-sm" href="{{ url_for('admin.campaigns') }}">{{ icon('calendar', 14) }} Manage</a>
       </div>
@@ -207,7 +203,7 @@
 
     <div class="card card-pad">
       <div class="flex-between" style="margin-bottom:12px;">
-        <div class="card-title mb-0">Barangay Staffing</div>
+        <div class="dashboard-card-title"><span class="dashboard-section-icon icon-teal">{{ icon('users', 18) }}</span><div><div class="card-title mb-0">Barangay Staffing</div></div></div>
         <a class="link" style="font-size:12px;" href="{{ url_for('admin.assign_barangay') }}">Assign</a>
       </div>
       <div class="mini-stats">
@@ -240,7 +236,7 @@
 <div class="grid-2">
   <div class="card card-pad">
     <div class="flex-between" style="margin-bottom:12px;">
-      <div class="card-title mb-0">User &amp; Access</div>
+      <div class="dashboard-card-title"><span class="dashboard-section-icon icon-blue">{{ icon('lock', 18) }}</span><div><div class="card-title mb-0">User &amp; Access</div></div></div>
       <a class="link" style="font-size:12px;" href="{{ url_for('admin.users') }}">Manage</a>
     </div>
     {# Grid covers account health; the bar below covers role composition.
@@ -270,7 +266,7 @@
   </div>
 
   <div class="card card-pad">
-    <div class="card-title">Account Status</div>
+    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-green">{{ icon('shield', 18) }}</span><div><div class="card-title mb-0">Account Status</div></div></div>
     {% for u in users[:3] %}
     <div class="settings-row">
       <div class="left">
