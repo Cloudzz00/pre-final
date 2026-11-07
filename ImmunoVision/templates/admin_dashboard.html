@@ -42,7 +42,7 @@
   </form>
   <span class="text-muted" style="margin-left:auto;font-size:12.5px;">
     {{ municipality.total_children }} children
-    {%- if selected_barangay or as_of %} <a class="btn btn-outline btn-sm" href="{{ url_for('admin.dashboard') }}" style="height:36px;margin-left:8px;">{{ icon('x', 13) }} Clear</a>{% endif %}
+    {%- if selected_barangay or as_of %} <a class="btn btn-outline btn-sm" href="{{ url_for('admin.dashboard') }}" style="margin-left:8px;">{{ icon('x', 13) }} Clear</a>{% endif %}
   </span>
 </div>
 
@@ -90,7 +90,7 @@
     <div class="card-title" id="coverage-by-barangay">Coverage by Barangay</div>
       <div class="card-sub">{% if selected_barangay %}{{ selected_barangay.name }} only{% else %}All 19 barangays, lowest coverage first{% endif %} &middot; DOH Target is the projected population per DOH/PSA demographic estimates, entered here</div>
     <div class="table-wrap auto-height">
-    <table class="data-table compact">
+    <table class="data-table plain-head compact">
       <thead><tr><th>Barangay</th><th>Children</th><th>Immunized</th><th title="High risk tier">High</th><th title="Medium risk tier">Medium</th><th title="Low risk tier">Low</th><th style="width:15%;">Coverage (Actual)</th><th style="width:18%;">DOH Target Pop.</th><th style="width:12%;">Coverage (Target)</th></tr></thead>
       <tbody>
         {% for r in barangay_rows %}
@@ -160,7 +160,7 @@
   </div>
 
   <div>
-    <div class="card card-pad" style="margin-bottom:16px;">
+    <div class="card card-pad" style="margin-bottom:18px;">
       <div class="card-title">Quick Actions</div>
       <a href="{{ url_for('admin.users') }}" class="settings-row" style="text-decoration:none;">
         <div class="left"><div class="ic">{{ icon('user-plus', 18) }}</div><div class="label">Create New User</div></div><div>&rsaquo;</div>
@@ -179,7 +179,7 @@
       </a>
     </div>
 
-    <div class="card card-pad" style="margin-bottom:16px;">
+    <div class="card card-pad" style="margin-bottom:18px;">
       <div class="flex-between" style="margin-bottom:4px;">
         <div>
           <div class="card-title mb-0">Active Campaigns</div>
@@ -255,15 +255,15 @@
     <div class="role-split-label">By role</div>
     {% set total = role_dist.admin + role_dist.superadmin + role_dist.rhu + role_dist.bhw %}
     <div class="role-bar" role="img"
-         aria-label="{{ role_dist.admin }} admin, {{ role_dist.superadmin }} super admin, {{ role_dist.rhu }} RHU, {{ role_dist.bhw }} BHW">
+         aria-label="{{ role_dist.admin }} admin, {{ role_dist.superadmin }} ICTMO administrator, {{ role_dist.rhu }} RHU, {{ role_dist.bhw }} BHW">
       <span style="width:{{ (role_dist.admin / total * 100)|round(2) }}%;background:#7c3aed;" title="Admin: {{ role_dist.admin }}"></span>
-      <span style="width:{{ (role_dist.superadmin / total * 100)|round(2) }}%;background:#dc2626;" title="Super Admin: {{ role_dist.superadmin }}"></span>
+      <span style="width:{{ (role_dist.superadmin / total * 100)|round(2) }}%;background:var(--navy-800);" title="ICTMO Administrator: {{ role_dist.superadmin }}"></span>
       <span style="width:{{ (role_dist.rhu / total * 100)|round(2) }}%;background:#2563eb;" title="RHU: {{ role_dist.rhu }}"></span>
       <span style="width:{{ (role_dist.bhw / total * 100)|round(2) }}%;background:#0d9488;" title="BHW: {{ role_dist.bhw }}"></span>
     </div>
     <div class="role-key">
       <span><i style="background:#7c3aed"></i>Admin <b>{{ role_dist.admin }}</b></span>
-      <span><i style="background:#dc2626"></i>Super Admin <b>{{ role_dist.superadmin }}</b></span>
+      <span><i style="background:var(--navy-800)"></i>ICTMO Administrator <b>{{ role_dist.superadmin }}</b></span>
       <span><i style="background:#2563eb"></i>RHU <b>{{ role_dist.rhu }}</b></span>
       <span><i style="background:#0d9488"></i>BHW <b>{{ role_dist.bhw }}</b></span>
     </div>

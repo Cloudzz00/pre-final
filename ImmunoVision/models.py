@@ -72,7 +72,7 @@ class User(UserMixin, db.Model):
 
     @property
     def role_label(self):
-        return {"admin": "RHU Administrator", "superadmin": "Super Admin", "rhu": "RHU Personnel",
+        return {"admin": "RHU Administrator", "superadmin": "ICTMO Administrator", "rhu": "RHU Personnel",
                 "bhw": "Barangay Health Worker"}.get(self.role, self.role)
 
 

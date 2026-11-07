@@ -1,11 +1,12 @@
 {% extends "layout_app.html" %}
 {% from "_icons.html" import icon %}
 {% from "_brand.html" import brand_mark %}
+{% block page_subtitle %}View vaccination coverage and the children who need a visit in your barangay.{% endblock %}
 {% block content %}
 {% set report_types = [
-  ('coverage', 'trending-up', 'Vaccination Coverage', ''),
-  ('atrisk', 'alert-triangle', 'Children Who Need a Visit', ''),
-  ('barangay', 'map-pin', 'Barangay Overview', ''),
+  ('coverage', 'trending-up', 'Vaccination Coverage', 'Coverage rates for each vaccine in your barangay'),
+  ('atrisk', 'alert-triangle', 'Children Who Need a Visit', 'Children at risk of incomplete immunization'),
+  ('barangay', 'map-pin', 'Barangay Overview', 'Complete statistics for your barangay'),
 ] %}
 {% set current = report_types|selectattr('0', 'equalto', report_type)|first %}
 {% set lowest = by_vaccine|min(attribute='pct') if by_vaccine else none %}
@@ -22,7 +23,8 @@
       <div class="ic">{{ icon(icon_name, 18) }}</div>
       <div>
         <div class="t">{{ title }}</div>
-        </div>
+        <div class="d">{{ desc }}</div>
+      </div>
     </a>
     {% endfor %}
   </div>
@@ -31,7 +33,10 @@
   <div class="report-toolbar no-print">
     <div class="toolbar-info">
       <span class="badge">{{ icon('calendar', 16) }}</span>
-      <b>Reporting Period</b>
+      <div>
+        <b>Reporting period</b><br>
+        <span>{{ as_of.strftime('%B %d, %Y') }}</span>
+      </div>
     </div>
     <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;">
       <form method="get" action="{{ url_for('bhw.reports') }}" class="toolbar-form">

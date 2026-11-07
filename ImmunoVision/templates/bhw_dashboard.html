@@ -210,7 +210,7 @@
 
 <div class="split-2-1">
   <div class="card card-pad">
-    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-blue">{{ icon('syringe', 18) }}</span><div><div class="card-title mb-0" style="font-size:18px;">Coverage by Vaccine</div><div class="card-sub mb-0" style="font-size:13px;">All 15 doses, in schedule order</div></div></div>
+    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-blue">{{ icon('syringe', 18) }}</span><div><div class="card-title mb-0">Coverage by Vaccine</div><div class="card-sub mb-0">All 15 doses, in schedule order</div></div></div>
     <div class="chart-box" style="margin-top:16px;"><canvas id="vaccineChart"></canvas></div>
     {% if insights.vaccine %}
     <div class="insight">{{ icon('activity', 14) }}<span>{{ insights.vaccine }}</span></div>
@@ -218,7 +218,7 @@
   </div>
 
   <div class="card card-pad risk-distribution-card">
-    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-green">{{ icon('shield', 18) }}</span><div><div class="card-title mb-0" style="font-size:18px;">How Children Are Doing</div><div class="card-sub mb-0" style="font-size:13px;">Who is on track and who needs a visit.</div></div></div>
+    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-green">{{ icon('shield', 18) }}</span><div><div class="card-title mb-0">How Children Are Doing</div><div class="card-sub mb-0">Who is on track and who needs a visit.</div></div></div>
     <div class="risk-summary">
       <div class="risk-total">
         <strong>{{ risk_dist.low_count + risk_dist.high_count + risk_dist.medium_count }}</strong>
@@ -243,7 +243,7 @@
   align-items:stretch;
 ">
   <div class="card card-pad" style="display:flex;flex-direction:column;min-height:380px;">
-    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('activity', 18) }}</span><div><div class="card-title mb-0" style="font-size:18px;">Annual Coverage Trend</div><div class="card-sub mb-0" style="font-size:13px;">Coverage at each year end</div></div></div>
+    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('activity', 18) }}</span><div><div class="card-title mb-0">Annual Coverage Trend</div><div class="card-sub mb-0">Coverage at each year end</div></div></div>
     {# Labelled as simulated: the database holds a current snapshot, not
        month-by-month history, so this series cannot be measured. #}
     <div class="chart-box" style="flex:1;min-height:270px;margin-top:16px;"><canvas id="trendChart"></canvas></div>
@@ -253,7 +253,7 @@
   </div>
 
   <div class="card card-pad" style="display:flex;flex-direction:column;min-height:380px;">
-    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-teal">{{ icon('clipboard', 18) }}</span><div><div class="card-title mb-0" style="font-size:18px;">Vaccine Request Status</div><div class="card-sub mb-0" style="font-size:13px;">Barangay {{ current_user.barangay.name }}</div></div></div>
+    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-teal">{{ icon('clipboard', 18) }}</span><div><div class="card-title mb-0">Vaccine Request Status</div><div class="card-sub mb-0">Barangay {{ current_user.barangay.name }}</div></div></div>
 
     {% if pending_requests %}
     <div style="margin-top:20px;padding:15px;border:1px solid var(--border);border-radius:12px;">
@@ -279,7 +279,7 @@
     </div>
     {% endif %}
 
-    <a href="{{ url_for('bhw.requests', new=1) }}" class="btn btn-accent btn-block" style="margin-top:16px;font-size:14px;padding:11px 14px;">
+    <a href="{{ url_for('bhw.requests', new=1) }}" class="btn btn-accent btn-block" style="margin-top:16px;">
       + New Vaccine Request
     </a>
   </div>

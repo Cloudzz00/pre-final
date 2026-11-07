@@ -21,7 +21,7 @@
 <div class="stat-grid">
   <div class="stat-card">
     <div class="stat-icon bg-blue">{{ icon('users', 21) }}</div>
-    <div class="stat-value">{% if cohort %}{{ cohort.low }}&ndash;{{ cohort.high }}{% else %}&mdash;{% endif %}</div>
+    <div class="stat-value stat-value-range">{% if cohort %}{{ cohort.low }}&ndash;{{ cohort.high }}{% else %}&mdash;{% endif %}</div>
     <div class="stat-label">Expected Births Per Year</div>
     <div class="stat-caption">
       {% if cohort %}average of {{ cohort.years|join(', ') }}{% else %}not enough data{% endif %}
@@ -30,7 +30,7 @@
   {% for y in forecast.years %}
   <div class="stat-card">
     <div class="stat-icon {{ 'bg-teal' if loop.first else 'bg-purple' }}">{{ icon('package', 21) }}</div>
-    <div class="stat-value" style="font-size:22px;">{{ y.total_low }}&ndash;{{ y.total_high }}</div>
+    <div class="stat-value stat-value-range">{{ y.total_low }}&ndash;{{ y.total_high }}</div>
     <div class="stat-label">Doses Needed in {{ y.year }}</div>
     <div class="stat-caption">{{ y.known_total }} already due from current records</div>
   </div>

@@ -2,6 +2,10 @@
 {% from "_icons.html" import icon %}
 {% block page_subtitle %}View and manage registered children in your barangay.{% endblock %}
 {% block content %}
+<div class="page-head">
+  <button type="button" class="btn btn-primary rounded-pill-btn" data-open-modal="registerChildModal">+ Add Child</button>
+</div>
+
 <form class="filter-bar" method="get">
   <div class="search-input-wrap">
     <span class="si-icon">{{ icon('search', 16) }}</span>
@@ -50,9 +54,8 @@
     <span class="filter-chevron">{{ icon('chevron-left', 12, 2.5) }}</span>
   </div>
 
-  {% if search or selected_risk or selected_year or age_group != 'all' or selected_sort != 'newest' %}<a class="btn btn-outline btn-sm" href="{{ url_for(request.endpoint) }}" style="height:36px;">{{ icon('x', 13) }} Clear filters</a>{% endif %}
+  {% if search or selected_risk or selected_year or age_group != 'all' or selected_sort != 'newest' %}<a class="btn btn-outline btn-sm" href="{{ url_for(request.endpoint) }}">{{ icon('x', 13) }} Clear filters</a>{% endif %}
 
-  <button type="button" class="btn btn-primary rounded-pill-btn" data-open-modal="registerChildModal">+ Add Child</button>
 </form>
 
 {% if due_now_child %}
@@ -126,7 +129,7 @@
   <td>{% if label %}<span class="badge badge-{{ 'red' if label=='At-Risk' else 'green' }}">{{ label }}</span>{% else %}<span class="badge badge-gray">Pending</span>{% endif %}</td>
   <td class="flex-gap">
     <a href="{{ url_for('bhw.child_record', child_id=c.id) }}" class="btn btn-outline btn-sm">{{ icon('search', 14) }} View</a>
-    <a href="{{ url_for('bhw.edit_child', child_id=c.id) }}" class="btn btn-outline btn-sm">{{ icon('pencil', 14) }} Update</a>
+    <a href="{{ url_for('bhw.edit_child', child_id=c.id) }}" class="btn btn-outline btn-sm">{{ icon('pencil', 14) }} Edit</a>
     </td>
 </tr>
 {% else %}
