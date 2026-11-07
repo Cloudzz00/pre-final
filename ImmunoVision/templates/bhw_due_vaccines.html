@@ -1,14 +1,45 @@
 {% extends "layout_app.html" %}
 {% from "_icons.html" import icon %}
-{% block page_subtitle %}Every child with a dose due, overdue, or coming up in your barangay.{% endblock %}
+{% block page_subtitle %}{% if can_record %}Children in your barangay who need a dose in the selected month, and which vaccine.{% else %}Children who need a dose in the selected month, by barangay. View only — doses are recorded by each barangay's BHW.{% endif %}{% endblock %}
 {% block content %}
-<form class="filter-bar" method="get" action="{{ request.path }}">
+{% set rec_endpoint = 'bhw.child_record' if can_record else 'rhu.child_record' %}
+<form class="filter-bar no-print" method="get" action="{{ request.path }}">
   <div class="search-input-wrap">
     <span class="si-icon">{{ icon('search', 16) }}</span>
     <input type="text" name="q" value="{{ search }}" placeholder="Search by name...">
   </div>
   <div class="filter-select">
     <span class="filter-select-icon">{{ icon('calendar', 15) }}</span>
+    <select name="month" class="select-sm" onchange="this.form.submit()" aria-label="Month">
+      {% for key, label in month_options %}
+      <option value="{{ key }}" {% if month==key %}selected{% endif %}>{{ 'This month (' ~ label ~ ')' if loop.first else label }}</option>
+      {% endfor %}
+      <option value="all" {% if month=='all' %}selected{% endif %}>All months</option>
+    </select>
+    <span class="filter-chevron">{{ icon('chevron-left', 12, 2.5) }}</span>
+  </div>
+  {% if not can_record %}
+  <div class="filter-select">
+    <span class="filter-select-icon">{{ icon('map-pin', 15) }}</span>
+    <select name="barangay" class="select-sm" onchange="this.form.submit()" aria-label="Barangay">
+      <option value="">All barangays</option>
+      {% for b in barangays %}
+      <option value="{{ b.id }}" {% if barangay_id==b.id %}selected{% endif %}>{{ b.name }}</option>
+      {% endfor %}
+    </select>
+    <span class="filter-chevron">{{ icon('chevron-left', 12, 2.5) }}</span>
+  </div>
+  {% endif %}
+  <div class="filter-select">
+    <span class="filter-select-icon">{{ icon('alert-triangle', 15) }}</span>
+    <select name="overdue" class="select-sm" onchange="this.form.submit()" aria-label="Overdue doses">
+      <option value="1" {% if include_overdue %}selected{% endif %}>Include overdue</option>
+      <option value="0" {% if not include_overdue %}selected{% endif %}>Exclude overdue</option>
+    </select>
+    <span class="filter-chevron">{{ icon('chevron-left', 12, 2.5) }}</span>
+  </div>
+  <div class="filter-select">
+    <span class="filter-select-icon">{{ icon('clock', 15) }}</span>
     <select name="status" class="select-sm" onchange="this.form.submit()" aria-label="Filter by status">
       <option value="">All statuses</option>
       <option value="Overdue" {% if status_filter=='Overdue' %}selected{% endif %}>Overdue</option>
@@ -18,33 +49,65 @@
     </select>
     <span class="filter-chevron">{{ icon('chevron-left', 12, 2.5) }}</span>
   </div>
-  <span class="text-muted" style="margin-left:auto;font-size:12.5px;white-space:nowrap;">{{ events|length }} due</span>
 </form>
+
+<div class="print-only due-print-head">
+  <div class="due-print-title">Vaccination Due List — {{ month_label }}</div>
+  <div class="due-print-sub">{{ scope_label }}{% if include_overdue %} · includes overdue doses{% endif %} · printed {{ today_iso }}</div>
+</div>
+
+<div class="card card-pad due-summary-card">
+  <div class="due-summary-head">
+    <div class="dashboard-card-title">Doses needed — {{ month_label }}{% if not can_record %} · {{ scope_label }}{% endif %}</div>
+    <div class="due-summary-actions">
+      <span class="text-muted due-summary-total">{{ summary_total }} dose{{ '' if summary_total == 1 else 's' }} · {{ events|length }} shown</span>
+      <button type="button" class="btn btn-outline btn-sm no-print" onclick="window.print()">{{ icon('printer', 14) }} Print</button>
+    </div>
+  </div>
+  {% if summary %}
+  <div class="due-summary">
+    {% for r in summary %}
+    <div class="due-chip" title="{{ r.overdue }} of these are overdue">
+      <span class="due-chip-name">{{ r.name }}</span>
+      <span class="due-chip-count">{{ r.count }}</span>
+      {% if r.overdue %}<span class="due-chip-overdue">{{ r.overdue }} overdue</span>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="text-muted" style="font-size:13px;">No doses due for this selection.</div>
+  {% endif %}
+</div>
 
 <div class="card card-pad">
   <div class="table-wrap auto-height">
     <table class="data-table compact">
-      <thead><tr><th>Child</th><th>Vaccine</th><th>Due Date</th><th>Status</th><th>Record Dose</th></tr></thead>
+      <thead><tr><th>Child</th>{% if not can_record %}<th>Barangay</th>{% endif %}<th>Vaccine</th><th>Due Date</th><th>Status</th>{% if can_record %}<th class="no-print">Record Dose</th>{% endif %}</tr></thead>
       <tbody>
         {% for e in events %}
         <tr>
-          <td><a class="link" href="{{ url_for('bhw.child_record', child_id=e.child_id, from_dashboard=1) }}">{{ e.child_name }}</a></td>
+          <td><a class="link" href="{{ url_for(rec_endpoint, child_id=e.child_id) }}">{{ e.child_name }}</a></td>
+          {% if not can_record %}<td>{{ e.barangay }}</td>{% endif %}
           <td>{{ e.vaccine }}</td>
           <td>{{ e.date }}</td>
           <td><span class="badge badge-{{ 'red' if e.status=='Overdue' else 'blue' if e.status=='Due Today' else 'amber' if e.status=='Upcoming' else 'gray' }}">{{ e.status }}</span></td>
-          <td>
+          {% if can_record %}
+          <td class="no-print">
             <form method="post" action="{{ url_for('bhw.record_dose', child_id=e.child_id) }}" style="display:flex;align-items:center;gap:8px;">
               <input type="hidden" name="vaccine_code" value="{{ e.vaccine_code }}">
               <input type="hidden" name="q" value="{{ search }}">
               <input type="hidden" name="status" value="{{ status_filter }}">
+              <input type="hidden" name="month" value="{{ month }}">
+              <input type="hidden" name="overdue" value="{{ '1' if include_overdue else '0' }}">
               <input class="form-control" type="date" name="date" value="{{ today_iso }}" style="max-width:160px;">
               <button class="btn btn-outline btn-sm" type="submit">{{ icon('check', 14) }} Record</button>
             </form>
           </td>
+          {% endif %}
         </tr>
         {% else %}
         <tr><td colspan="5"><div class="empty-state"><div class="ic">{{ icon('check-circle', 34) }}</div>
-          <div class="t">Nothing due right now</div></div></td></tr>
+          <div class="t">No children need a dose in {{ month_label if month != 'all' else 'the coming months' }}</div></div></td></tr>
         {% endfor %}
       </tbody>
     </table>
