@@ -1630,12 +1630,12 @@ html { scroll-behavior: smooth; }
   .bhw-report-page .summary-card .l { font-size: 10px; margin-top: 2px; }
   .bhw-report-page .report-section-head { margin-top: 9px; margin-bottom: 6px; }
   .bhw-report-page .coverage-table th { padding: 5px 8px; font-size: 9px; }
-  .bhw-report-page .coverage-table td { padding: 5px 8px; font-size: 10px; }
+  .bhw-report-page .coverage-table td { padding: 3px 8px; font-size: 10px; }
   .bhw-report-page .coverage-table tr { break-inside: avoid; }
   .bhw-report-page .status-pill { padding: 2px 6px; font-size: 9px; }
   .bhw-report-page .chart-panel { margin-top: 8px; padding: 8px; break-inside: avoid; }
   .bhw-report-page .chart-panel .report-section-head { margin-top: 0; }
-  .bhw-report-page .chart-box { height: 175px !important; }
+  .bhw-report-page .chart-box { height: 165px !important; }
 }
 
 /* BHW Reports: compact navigation and actions; report title lives in document. */
@@ -1765,3 +1765,29 @@ html { scroll-behavior: smooth; }
 
 /* Icon-only small buttons (no text line) otherwise come out 28px. */
 .btn.btn-sm { min-height: 32px; }
+
+/* Print safety net: a chart is clipped to its own box and scaled to the page
+   width, so even if the browser prints before it is redrawn it can never
+   cover the next chart. The brand mark keeps its blue tile on paper. */
+@media print {
+  .chart-box { overflow: hidden; }
+  .chart-box canvas { max-width: 100% !important; max-height: 100% !important; }
+  .brand-mark { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
+/* RHU Reports on paper: the whole table fits the page width (it was clipped
+   at "DOH Target Pop."), and bars, pills and status colours print even when
+   the browser's "Background graphics" option is off. */
+@media print {
+  .report-doc, .report-doc * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .rhu-report-page .coverage-table-wrap { overflow: visible; }
+  .rhu-report-page .coverage-table { min-width: 0 !important; }
+  .rhu-report-page .coverage-table th { padding: 6px 7px; font-size: 9px; white-space: normal; }
+  .rhu-report-page .coverage-table td { padding: 5px 7px; font-size: 10px; }
+  .rhu-report-page .coverage-table tr { break-inside: avoid; }
+  .rhu-report-page .coverage-bar-cell { display: table-cell !important; width: 22%; }
+}
+@media print {
+  /* Buttons such as "View" are for the screen; on paper they are noise. */
+  .report-doc .btn { display: none !important; }
+}
