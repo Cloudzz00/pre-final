@@ -20,7 +20,7 @@
           </div>
           <div class="form-group">
             <label>Date of Birth <span style="color:var(--danger)">*</span></label>
-            <input class="form-control" type="date" name="date_of_birth" required>
+            <input class="form-control" type="date" name="date_of_birth" max="{{ today.isoformat() }}" required>
           </div>
           <div class="form-group">
             <label>Sex <span style="color:var(--danger)">*</span></label>
@@ -97,7 +97,7 @@
               </div>
               <div class="vacc-date-row" id="daterow_{{ code }}" hidden>
                 <span>Given on</span>
-                <input type="date" name="dose_{{ code }}" id="date_{{ code }}" value="{{ today.isoformat() }}">
+                <input type="date" max="{{ today.isoformat() }}" name="dose_{{ code }}" id="date_{{ code }}" value="{{ today.isoformat() }}">
               </div>
             </div>
             {% endfor %}

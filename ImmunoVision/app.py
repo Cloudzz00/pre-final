@@ -83,7 +83,8 @@ def create_app():
 LOG_CATEGORIES = (
     ("Login",   ("Logged in", "Logged out")),
     ("Admin",   ("Created user", "Enabled user", "Disabled user", "Reassigned")),
-    ("Record",  ("Registered child", "Updated child", "Re-assessed risk")),
+    ("Record",  ("Registered child", "Updated child", "Re-assessed risk", " date for ", "Removed",
+                 "Recorded")),
     ("Vaccine", ("vaccine stock", "vaccine request", "Approved", "Rejected", "Distributed", "Submitted")),
     ("Report",  ("Exported",)),
 )
@@ -1669,6 +1670,22 @@ def _before_birth_message(names):
             + ", ".join(names) + ". Nothing was saved.")
 
 
+def _dose_date_error(dob, dated_doses):
+    """Error message for dose dates that cannot be right - before the child
+    was born, or after today (a dose is only recorded once given) - or None.
+    Checked on the server for every form that records a dose, so it holds
+    even if the browser's date limits are bypassed."""
+    bad = _doses_before_birth(dob, dated_doses)
+    if bad:
+        return _before_birth_message(bad)
+    today = date.today()
+    future = [name for name, given in dated_doses if given is not None and given > today]
+    if future:
+        return ("A dose cannot be dated after today. Please check: "
+                + ", ".join(future) + ". Nothing was saved.")
+    return None
+
+
 def _create_form_errors(form):
     """Validation for the Register Child form, shared by RHU and BHW.
     Returns an error message, or None if the form can be saved."""
@@ -1678,8 +1695,7 @@ def _create_form_errors(form):
     names = _schedule_names()
     dated = [(names[code], _parse_form_date(form.get(f"dose_{code}")))
              for code, *_ in dp.VACCINE_SCHEDULE if form.get(f"dose_{code}_given")]
-    bad = _doses_before_birth(dob, dated)
-    return _before_birth_message(bad) if bad else None
+    return _dose_date_error(dob, dated)
 
 
 def _edit_form_errors(child, form):
@@ -1693,8 +1709,7 @@ def _edit_form_errors(child, form):
     dated = [(names[code], _parse_form_date(form.get(f"dose_{code}"))) for code in _KNOWN_DOSE_CODES]
     dated += [(c.name, _parse_form_date(form.get(f"dose_campaign_{c.id}")))
               for c in eligible_campaigns_for_child(child)]
-    bad = _doses_before_birth(dob, dated)
-    return _before_birth_message(bad) if bad else None
+    return _dose_date_error(dob, dated)
 
 
 # The core/optional dose codes the Edit Child form's generic per-code loop is
@@ -1781,6 +1796,7 @@ def _update_child(child, form):
     vt_by_code = {vt.code: vt for vt in VaccineType.query.all()}
     existing_by_vt_id = {rec.vaccine_type_id: rec for rec in child.vaccination_records if rec.campaign_id is None}
     past_window_warnings = []
+    date_changes = []
     for code in _KNOWN_DOSE_CODES:
         vt = vt_by_code.get(code)
         if vt is None:
@@ -1791,6 +1807,8 @@ def _update_child(child, form):
         if rec is None:
             rec = VaccinationRecord(child_id=child.id, vaccine_type_id=vt.id)
             db.session.add(rec)
+        if rec.date_administered is not None and rec.date_administered != administered:
+            date_changes.append((vt.name, rec.date_administered, administered))
         rec.date_administered = administered
         rec.status = "completed" if administered else "pending"
         # Optional doses like Rotavirus stop being given past a real age
@@ -1818,12 +1836,15 @@ def _update_child(child, form):
                 continue  # nothing to save - don't create an empty row for every eligible campaign
             rec = VaccinationRecord(child_id=child.id, vaccine_type_id=campaign.vaccine_type_id, campaign_id=campaign.id)
             db.session.add(rec)
+        if rec.date_administered is not None and rec.date_administered != administered:
+            date_changes.append((campaign.name, rec.date_administered, administered))
         rec.date_administered = administered
         rec.status = "completed" if administered else "pending"
     db.session.commit()
 
     result = _recompute_risk(child)
     log_activity(f"Updated child record {child_label(child)}")
+    _log_dose_date_changes(child, date_changes)
     result["past_window_warnings"] = past_window_warnings
     return result
 
@@ -1844,6 +1865,19 @@ def _recompute_risk(child):
     return result
 
 
+def _log_dose_date_changes(child, changes):
+    """One activity-log entry per changed or removed dose date, so an edit to
+    an already-recorded dose is always traceable to who made it and when.
+    changes: [(dose name, old date, new date|None)]. First-time recordings are
+    not listed here; they are logged by the save itself."""
+    for name, old, new in changes:
+        if new is None:
+            log_activity(f"Removed {name} (was {old.isoformat()}) for {child_label(child)}")
+        else:
+            log_activity(f"Changed {name} date for {child_label(child)} from "
+                         f"{old.isoformat()} to {new.isoformat()}")
+
+
 def _write_dose(child, vt, rec, administered):
     """Writes one dose onto a VaccinationRecord (creating it if it doesn't
     exist yet), same per-dose logic _update_child applies when saving the
@@ -1852,8 +1886,11 @@ def _write_dose(child, vt, rec, administered):
     if rec is None:
         rec = VaccinationRecord(child_id=child.id, vaccine_type_id=vt.id)
         db.session.add(rec)
+    previous = rec.date_administered
     rec.date_administered = administered
     rec.status = "completed" if administered else "pending"
+    if previous is not None and previous != administered:
+        _log_dose_date_changes(child, [(vt.name, previous, administered)])
     if administered and vt.is_optional and vt.catch_up_deadline_days is not None:
         age_at_dose = (administered - child.date_of_birth).days
         if age_at_dose > vt.catch_up_deadline_days:
@@ -2735,17 +2772,22 @@ def campaign_record_dose(campaign_id, child_id):
     date_str = request.form.get("dose_date")
     administered = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else None
     rec = child.vaccination_records.filter_by(campaign_id=campaign.id).first()
-    if _doses_before_birth(child.date_of_birth, [(campaign.name, administered)]):
-        flash(_before_birth_message([campaign.name]), "error")
+    date_error = _dose_date_error(child.date_of_birth, [(campaign.name, administered)])
+    if date_error:
+        flash(date_error, "error")
     else:
         if rec is None and administered is not None:
             rec = VaccinationRecord(child_id=child.id, vaccine_type_id=campaign.vaccine_type_id, campaign_id=campaign.id)
             db.session.add(rec)
         if rec is not None:
+            previous = rec.date_administered
             rec.date_administered = administered
             rec.status = "completed" if administered else "pending"
             db.session.commit()
-            log_activity(f"Recorded {campaign.name} dose for {child_label(child)}")
+            if previous is not None and previous != administered:
+                _log_dose_date_changes(child, [(campaign.name, previous, administered)])
+            else:
+                log_activity(f"Recorded {campaign.name} dose for {child_label(child)}")
             flash(f"Saved {child.full_name}'s dose.", "success")
     return redirect(url_for("rhu.campaign_worklist", campaign_id=campaign.id,
                              barangay_id=request.form.get("barangay_id") or None,
@@ -2957,8 +2999,9 @@ def record_dose(child_id):
     vt = VaccineType.query.filter_by(code=request.form.get("vaccine_code")).first() or abort(404)
     date_str = request.form.get("date")
     administered = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else date.today()
-    if _doses_before_birth(child.date_of_birth, [(vt.name, administered)]):
-        flash(_before_birth_message([vt.name]), "error")
+    date_error = _dose_date_error(child.date_of_birth, [(vt.name, administered)])
+    if date_error:
+        flash(date_error, "error")
         return redirect(_due_list_return_url())
     rec = child.vaccination_records.filter_by(vaccine_type_id=vt.id, campaign_id=None).first()
     warning = _write_dose(child, vt, rec, administered)
@@ -3215,17 +3258,22 @@ def campaign_record_dose(campaign_id, child_id):
     date_str = request.form.get("dose_date")
     administered = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else None
     rec = child.vaccination_records.filter_by(campaign_id=campaign.id).first()
-    if _doses_before_birth(child.date_of_birth, [(campaign.name, administered)]):
-        flash(_before_birth_message([campaign.name]), "error")
+    date_error = _dose_date_error(child.date_of_birth, [(campaign.name, administered)])
+    if date_error:
+        flash(date_error, "error")
     else:
         if rec is None and administered is not None:
             rec = VaccinationRecord(child_id=child.id, vaccine_type_id=campaign.vaccine_type_id, campaign_id=campaign.id)
             db.session.add(rec)
         if rec is not None:
+            previous = rec.date_administered
             rec.date_administered = administered
             rec.status = "completed" if administered else "pending"
             db.session.commit()
-            log_activity(f"Recorded {campaign.name} dose for {child_label(child)}")
+            if previous is not None and previous != administered:
+                _log_dose_date_changes(child, [(campaign.name, previous, administered)])
+            else:
+                log_activity(f"Recorded {campaign.name} dose for {child_label(child)}")
             flash(f"Saved {child.full_name}'s dose.", "success")
     return redirect(url_for("bhw.campaign_worklist", campaign_id=campaign.id,
                              pending=request.form.get("pending") or None,

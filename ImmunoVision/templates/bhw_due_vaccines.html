@@ -99,7 +99,7 @@
               <input type="hidden" name="status" value="{{ status_filter }}">
               <input type="hidden" name="month" value="{{ month }}">
               <input type="hidden" name="overdue" value="{{ '1' if include_overdue else '0' }}">
-              <input class="form-control" type="date" name="date" value="{{ today_iso }}" style="max-width:160px;">
+              <input class="form-control" type="date" name="date" value="{{ today_iso }}" max="{{ today_iso }}" style="max-width:160px;">
               <button class="btn btn-outline btn-sm" type="submit">{{ icon('check', 14) }} Record</button>
             </form>
           </td>
