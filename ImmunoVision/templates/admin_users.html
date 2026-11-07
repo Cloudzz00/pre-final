@@ -30,7 +30,7 @@
 {% for u in users %}
 <tr data-role="{{ u.role }}" data-name="{{ u.full_name|lower }} {{ u.username|lower }}">
   <td><span class="id-chip"><span class="avatar-chip" style="background:{{ u.role_color }};width:30px;height:30px;font-size:11px;">{{ u.full_name.split(' ')|map('first')|join('') }}</span>{{ u.full_name }}</span></td>
-  <td>{{ u.username }}</td>
+  <td>{{ u.username }}{% if u.id == current_user.id %} <span class="you-tag">You</span>{% endif %}</td>
   <td><span class="badge badge-{{ u.role_badge }}">{{ u.role_label }}</span></td>
   <td>{{ u.barangay.name if u.barangay else 'All' }}</td>
   <td>
@@ -46,7 +46,7 @@
     <form method="post" action="{{ url_for('admin.toggle_user', user_id=u.id) }}" style="display:inline">
       <button class="btn {{ 'btn-danger' if u.is_active_flag else 'btn-success' }} btn-sm" data-confirm="{{ 'Disable' if u.is_active_flag else 'Enable' }} this account?">{% if u.is_active_flag %}{{ icon('x', 14) }} Disable{% else %}{{ icon('check', 14) }} Enable{% endif %}</button>
     </form>
-    {% else %}<span class="text-muted">—</span>{% endif %}
+    {% endif %}
   </div></td>
 </tr>
 {% endfor %}
