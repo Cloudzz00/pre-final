@@ -224,10 +224,13 @@
   align-items:stretch;
 ">
   <div class="card card-pad" style="display:flex;flex-direction:column;min-height:380px;">
-    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('activity', 18) }}</span><div><div class="card-title mb-0">Annual Coverage Trend{{ live_tag(as_of, "All years") }}</div><div class="card-sub mb-0">Coverage at each year end</div></div></div>
+    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('activity', 18) }}</span><div>{% if trend_monthly %}<div class="card-title mb-0">Monthly Coverage &mdash; children born in {{ trend_year }}</div><div class="card-sub mb-0">Coverage at each month end, as that year's births are added</div>{% else %}<div class="card-title mb-0">Annual Coverage Trend{{ live_tag(as_of, "All years") }}</div><div class="card-sub mb-0">Coverage at each year end</div>{% endif %}</div></div>
     {# Labelled as simulated: the database holds a current snapshot, not
        month-by-month history, so this series cannot be measured. #}
     <div class="chart-box" style="flex:1;min-height:270px;"><canvas id="trendChart"></canvas></div>
+    {% if trend_faded %}
+    <div class="text-muted" style="font-size:12px;margin-top:6px;">Faded points cover fewer than {{ trend_min }} children, so a single child moves them sharply.</div>
+    {% endif %}
     {% if insights.trend %}
     <div class="insight" style="font-size:13px;">{{ icon('activity', 14) }}<span>{{ insights.trend }}</span></div>
     {% endif %}
@@ -281,17 +284,20 @@ new Chart(document.getElementById('vaccineChart'), {
                        x: { ticks: { autoSkip: false, maxRotation: 60, minRotation: 45, font: { size: 10 } } } } }
 });
 const trendCounts = [{% for y, v, n in trend %}{{ n }},{% endfor %}];
+const trendMonthly = {{ 'true' if trend_monthly else 'false' }}, trendMin = {{ trend_min }}, trendHi = {{ trend_highlight }};
+const trendPointColor = trendCounts.map((n, i) => (trendMonthly && n < trendMin) ? 'rgba(13,148,136,0.3)' : '#0d9488');
+const trendPointRadius = trendCounts.map((n, i) => i === trendHi ? 8 : 5);
 new Chart(document.getElementById('trendChart'), {
   type: 'line',
   data: { labels: [{% for y, v, n in trend %}{{ y|tojson }},{% endfor %}],
     datasets: [
-      { label: 'Coverage %', data: [{% for y, v, n in trend %}{{ v }},{% endfor %}], borderColor: '#0d9488', backgroundColor: 'rgba(13,148,136,0.1)', fill: true, tension: 0.3, pointRadius: 5 },
+      { label: 'Coverage %', data: [{% for y, v, n in trend %}{{ 'null' if v is none else v }},{% endfor %}], borderColor: '#0d9488', backgroundColor: 'rgba(13,148,136,0.1)', fill: true, tension: 0.3, pointRadius: trendPointRadius, pointBackgroundColor: trendPointColor, pointBorderColor: trendPointColor, spanGaps: true },
       { label: '95% Target', data: [{% for y, v, n in trend %}95,{% endfor %}], borderColor: '#94a3b8', borderDash: [6,6], pointRadius: 0 }
     ] },
   options: {
     scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' } } },
     plugins: { tooltip: { callbacks: {
-      afterLabel: c => c.datasetIndex === 0 ? trendCounts[c.dataIndex] + ' children enrolled' : ''
+      afterLabel: c => c.datasetIndex === 0 ? trendCounts[c.dataIndex] + (trendMonthly ? ' children born by then' : ' children enrolled') : ''
     } } }
   }
 });
