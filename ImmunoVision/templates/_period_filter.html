@@ -33,9 +33,22 @@
 <p class="text-muted" style="font-size:12px;margin:-6px 0 14px;">
   Showing <b>{{ period_label }}</b>: children born
   {% if born_from %}from {{ _d(born_from) }} to{% else %}up to{% endif %}
-  {{ _d(as_of) }}, with coverage as at that date &mdash; doses recorded after it are
-  excluded.{% if period_clamped %} The selected period has not ended yet, so figures run to today.{% endif %}
-  Risk levels reflect each child's latest assessment, as risk is not stored historically.
+  {{ _d(as_of) }}, with coverage and risk as at that date &mdash; doses recorded after it are
+  excluded, and each child's risk is recalculated for that date.{% if period_clamped %} The selected
+  period has not ended yet, so figures run to today.{% endif %} Panels marked <span class="live-tag">Today</span>
+  are not affected by the filter.
 </p>
+{% endif %}
+{% endmacro %}
+
+{# Tags a panel the period filter does not change, shown only while a period
+   is selected (with no filter every panel is live anyway). #}
+{% macro live_tag(as_of, text="Today") %}{% if as_of %} <span class="live-tag" title="Not affected by the period filter">{{ text }}</span>{% endif %}{% endmacro %}
+
+{# Percentages over a handful of children swing on a single child. #}
+{% macro small_group_note(n) %}
+{% if 0 < n < 20 %}
+<p class="small-group-note">{{ n }} child{{ '' if n == 1 else 'ren' }} in this selection &mdash; percentages
+  can change sharply with a single child.</p>
 {% endif %}
 {% endmacro %}

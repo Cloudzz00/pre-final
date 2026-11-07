@@ -1,6 +1,6 @@
 {% extends "layout_app.html" %}
 {% from "_icons.html" import icon %}
-{% from "_period_filter.html" import period_selects, period_note %}
+{% from "_period_filter.html" import period_selects, period_note, live_tag, small_group_note %}
 {% block content %}
 <div class="banner">
   <div>
@@ -37,6 +37,7 @@
 </div>
 
 {{ period_note(as_of, born_from, period_label, period_clamped) }}
+{{ small_group_note(municipality.total_children) }}
 
 <div class="stat-grid">
   <div class="stat-card">
@@ -138,7 +139,7 @@
   </div>
 
   <div class="card card-pad" style="margin-top:18px;">
-    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('activity', 18) }}</span><div><div class="card-title mb-0">Annual Coverage Trend</div><div class="card-sub mb-0">Coverage at each year end</div></div></div>
+    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('activity', 18) }}</span><div><div class="card-title mb-0">Annual Coverage Trend{{ live_tag(as_of, "All years") }}</div><div class="card-sub mb-0">Coverage at each year end</div></div></div>
     {# Computed from actual dose dates - coverage as at 31 December of each year
        the data covers - so this is measured, not simulated. #}
     <div class="chart-box"><canvas id="trendChart"></canvas></div>
@@ -171,7 +172,7 @@
     <div class="card card-pad" style="margin-bottom:18px;">
       <div class="flex-between" style="margin-bottom:4px;">
         <div>
-          <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('calendar', 18) }}</span><div><div class="card-title mb-0">Active Campaigns</div><div class="card-sub mb-0">Supplementary immunization drives open right now</div></div></div>
+          <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('calendar', 18) }}</span><div><div class="card-title mb-0">Active Campaigns{{ live_tag(as_of) }}</div><div class="card-sub mb-0">Supplementary immunization drives open right now</div></div></div>
         </div>
         <a class="btn btn-outline btn-sm" href="{{ url_for('admin.campaigns') }}">{{ icon('calendar', 14) }} Manage</a>
       </div>

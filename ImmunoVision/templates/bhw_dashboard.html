@@ -1,6 +1,6 @@
 {% extends "layout_app.html" %}
 {% from "_icons.html" import icon %}
-{% from "_period_filter.html" import period_selects, period_note %}
+{% from "_period_filter.html" import period_selects, period_note, live_tag, small_group_note %}
 {% block content %}
 <div class="banner">
   <div>
@@ -25,6 +25,7 @@
 </div>
 
 {{ period_note(as_of, born_from, period_label, period_clamped) }}
+{{ small_group_note(stats.total_children) }}
 
 <div class="stat-grid">
   <div class="stat-card"><div class="stat-icon bg-blue">{{ icon('users', 21) }}</div><div><div class="stat-value">{{ stats.total_children }}</div><div class="stat-label">Total Registered Children</div><div class="stat-caption">All children in your barangay</div></div></div>
@@ -35,7 +36,7 @@
 
 {% if active_campaigns %}
 <div class="card card-pad" style="margin-top:18px;">
-  <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('calendar', 18) }}</span><div><div class="card-title mb-0">Active Campaigns</div><div class="card-sub mb-0">Supplementary immunization drives open right now in Barangay {{ current_user.barangay.name }}</div></div></div>
+  <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('calendar', 18) }}</span><div><div class="card-title mb-0">Active Campaigns{{ live_tag(as_of) }}</div><div class="card-sub mb-0">Supplementary immunization drives open right now in Barangay {{ current_user.barangay.name }}</div></div></div>
   <div style="margin-top:12px;">
     {% for c in active_campaigns %}
     <a class="stock-row" href="{{ url_for('bhw.campaign_worklist', campaign_id=c.id) }}">
@@ -118,7 +119,7 @@
       <div class="dashboard-card-title">
         <span class="dashboard-section-icon icon-red">{{ icon('alert-triangle', 18) }}</span>
         <div>
-          <div class="card-title mb-0">Needs Follow-Up Checkup</div>
+          <div class="card-title mb-0">Needs Follow-Up Checkup{{ live_tag(as_of) }}</div>
           <div class="card-sub mb-0">At-risk children under 12 months.</div>
         </div>
       </div>
@@ -151,7 +152,7 @@
       <div class="dashboard-card-title">
         <span class="dashboard-section-icon icon-blue">{{ icon('calendar', 18) }}</span>
         <div>
-          <div class="card-title mb-0">Vaccination Due Calendar</div>
+          <div class="card-title mb-0">Vaccination Due Calendar{{ live_tag(as_of) }}</div>
           <div class="card-sub mb-0">See which children need vaccines on a specific date.</div>
         </div>
       </div>
@@ -223,7 +224,7 @@
   align-items:stretch;
 ">
   <div class="card card-pad" style="display:flex;flex-direction:column;min-height:380px;">
-    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('activity', 18) }}</span><div><div class="card-title mb-0">Annual Coverage Trend</div><div class="card-sub mb-0">Coverage at each year end</div></div></div>
+    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('activity', 18) }}</span><div><div class="card-title mb-0">Annual Coverage Trend{{ live_tag(as_of, "All years") }}</div><div class="card-sub mb-0">Coverage at each year end</div></div></div>
     {# Labelled as simulated: the database holds a current snapshot, not
        month-by-month history, so this series cannot be measured. #}
     <div class="chart-box" style="flex:1;min-height:270px;"><canvas id="trendChart"></canvas></div>
@@ -233,7 +234,7 @@
   </div>
 
   <div class="card card-pad" style="display:flex;flex-direction:column;min-height:380px;">
-    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-teal">{{ icon('clipboard', 18) }}</span><div><div class="card-title mb-0">Vaccine Request Status</div><div class="card-sub mb-0">Barangay {{ current_user.barangay.name }}</div></div></div>
+    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-teal">{{ icon('clipboard', 18) }}</span><div><div class="card-title mb-0">Vaccine Request Status{{ live_tag(as_of) }}</div><div class="card-sub mb-0">Barangay {{ current_user.barangay.name }}</div></div></div>
 
     {% if pending_requests %}
     <div style="padding:15px;border:1px solid var(--border);border-radius:12px;">
