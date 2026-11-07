@@ -221,6 +221,46 @@ def _latest_risk(child):
     return _latest_risk_by_child().get(child.id)
 
 
+class _RiskAsOf:
+    """Stands in for a RiskAssessment row when risk is worked out for a past
+    date: same risk_label / risk_probability attributes the callers read."""
+    __slots__ = ("risk_label", "risk_probability")
+
+    def __init__(self, probability):
+        self.risk_probability = probability
+        self.risk_label = "At-Risk" if probability >= dp.RISK_THRESHOLD else "Not At-Risk"
+
+
+def risk_as_of(as_of):
+    """{child_id: risk} for the dashboards' period filter.
+
+    No period -> each child's latest stored assessment (live figures).
+    A period -> every child born by `as_of` re-scored as they stood on that
+    date (doses after it ignored, age measured at it), so the risk cards
+    describe the same moment as the coverage figures beside them. Nothing
+    is written to the database."""
+    if as_of is None:
+        return _latest_risk_by_child()
+
+    def build():
+        vt_code = {vt.id: vt.code for vt in _vaccine_types_by_id().values()}
+        names = {b.id: b.name for b in _cache("all_barangays", lambda: Barangay.query.all())}
+        records = _records_by_child()
+        items = []
+        for c in _cache("children:None", lambda: _children_query(None).all()):
+            if c.date_of_birth > as_of:
+                continue
+            doses = {}
+            for rec in records.get(c.id, ()):
+                code = vt_code.get(rec.vaccine_type_id)
+                if code and (rec.campaign_id is None or code not in doses):
+                    doses[code] = rec.date_administered
+            items.append((c.id, c.date_of_birth, c.date_registered or c.date_of_birth, c.sex,
+                          doses, names.get(c.barangay_id, "")))
+        return {cid: _RiskAsOf(p) for cid, p in dp.score_children_as_of(items, as_of).items()}
+    return _cache(f"risk_as_of:{as_of.isoformat()}", build)
+
+
 def _doses_given(child_id):
     """{vaccine_type_id: date_administered or None} for one child."""
     def build():
@@ -823,8 +863,9 @@ def immunized_as_of(child, as_of=None):
     return True if due == 0 else (given / due >= 0.9)
 
 
-def filtered_children(barangay_id=None, risk_level="", status="", as_of=None, born_from=None):
-    risk = _latest_risk_by_child()
+def filtered_children(barangay_id=None, risk_level="", status="", as_of=None, born_from=None,
+                      risk=None):
+    risk = risk if risk is not None else _latest_risk_by_child()
     kids = _children_query(barangay_id).all()
     if as_of is not None:
         # A child not yet born at the reporting date is not in scope.
@@ -840,13 +881,12 @@ def filtered_children(barangay_id=None, risk_level="", status="", as_of=None, bo
     return kids
 
 
-def stats_for(children, as_of=None):
+def stats_for(children, as_of=None, risk=None):
     """Same shape as dashboard_stats(), over an explicit child list.
 
-    Note: at_risk uses each child's latest risk assessment. Risk is not stored
-    historically, so it is always current even when an earlier period is
-    selected - the UI says so rather than implying a back-dated figure."""
-    risk = _latest_risk_by_child()
+    at_risk uses `risk` when given (the dashboards pass risk_as_of() for a
+    selected period), otherwise each child's latest stored assessment."""
+    risk = risk if risk is not None else _latest_risk_by_child()
     total = len(children)
     fully = sum(1 for c in children if immunized_as_of(c, as_of))
     at_risk = sum(1 for c in children
@@ -855,9 +895,9 @@ def stats_for(children, as_of=None):
             "coverage_rate": round(fully / total * 100, 1) if total else 0.0}
 
 
-def risk_distribution_for(children):
+def risk_distribution_for(children, risk=None):
     counts = Counter()
-    risk = _latest_risk_by_child()
+    risk = risk if risk is not None else _latest_risk_by_child()
     for c in children:
         latest = risk.get(c.id)
         counts[dp.risk_tier(latest.risk_probability) if latest else "Low Risk"] += 1
@@ -1195,7 +1235,7 @@ def period_end(period):
         return today
 
 
-def report_figures(barangay_id=None, as_of=None, born_from=None):
+def report_figures(barangay_id=None, as_of=None, born_from=None, risk=None):
     """Coverage figures for one barangay (or all) as of a date.
 
     Doses recorded after `as_of` count as not-yet-given, and children born
@@ -1204,7 +1244,7 @@ def report_figures(barangay_id=None, as_of=None, born_from=None):
     as_of = as_of or date.today()
     vt_by_id = _vaccine_types_by_id()
     records = _records_by_child()
-    risk = _latest_risk_by_child()
+    risk = risk if risk is not None else _latest_risk_by_child()
     # Neither the barangay list nor the (pre-as_of-filter) children list
     # depends on `as_of`, but yearly_trend() calls this once per year of
     # data (~17 calls for a single dashboard render) - caching both per
@@ -2148,9 +2188,10 @@ def dashboard():
     # "no period filter", not a silent "as of today".
     period = _dashboard_period()
     as_of, born_from = period["as_of"], period["born_from"]
+    risk = risk_as_of(as_of)
     kids = filtered_children(barangay_id, as_of=as_of, born_from=born_from)
-    stats = stats_for(kids, as_of)
-    dist = risk_distribution_for(kids)
+    stats = stats_for(kids, as_of, risk)
+    dist = risk_distribution_for(kids, risk)
     # Two actionable panels: who needs a visit, and what stock is running out.
     # Both summarise their dedicated pages rather than reproducing them. The
     # "All N" link points at Continuation Predictor, so N has to be its own
@@ -2173,7 +2214,7 @@ def dashboard():
     # admin dashboard's table. Follows the scope filter like every other panel.
     # Follows the period filter too, so this table and the stat cards
     # describe the same children.
-    by_barangay = sorted(report_figures(None, as_of, born_from)["by_barangay"] if as_of
+    by_barangay = sorted(report_figures(None, as_of, born_from, risk)["by_barangay"] if as_of
                          else coverage_by_barangay(), key=lambda r: r["coverage"])
     if selected:
         by_barangay = [r for r in by_barangay if r["barangay"] == selected.name]
@@ -2700,7 +2741,8 @@ def dashboard():
     status = request.args.get("status", "")
     period = _dashboard_period()
     as_of, born_from = period["as_of"], period["born_from"]
-    kids = filtered_children(bid, risk_level, status, as_of, born_from)
+    risk = risk_as_of(as_of)
+    kids = filtered_children(bid, risk_level, status, as_of, born_from, risk)
     # The BHW does the home visits, so the "who to chase" list matters most
     # here. "View All (N)" reads straight off follow_up|length in the
     # template, so the full (unlimited) list is what gets passed - slicing
@@ -2716,8 +2758,8 @@ def dashboard():
     vt_lookup = {vt.code: vt for vt in VaccineType.query.all()}
     due_calendar = _due_calendar(filtered_children(bid), vt_lookup)
     return render_template("bhw_dashboard.html", **_bhw_ctx(
-        "dashboard", page_title="Dashboard", stats=stats_for(kids, as_of),
-        risk_dist=risk_distribution_for(kids), now=datetime.now(),
+        "dashboard", page_title="Dashboard", stats=stats_for(kids, as_of, risk),
+        risk_dist=risk_distribution_for(kids, risk), now=datetime.now(),
         risk_levels=RISK_LEVELS, status_levels=STATUS_LEVELS,
         risk_level=risk_level, status=status,
         **period, follow_up=follow_up,
@@ -3216,7 +3258,7 @@ def dashboard():
     as_of, born_from = period["as_of"], period["born_from"]
 
     if as_of:
-        fig = report_figures(barangay_id, as_of, born_from)
+        fig = report_figures(barangay_id, as_of, born_from, risk_as_of(as_of))
         muni = {"total_children": fig["total_children"], "fully_immunized": fig["fully_immunized"],
                 "at_risk": fig["at_risk"], "coverage_rate": fig["coverage_rate"]}
         rows = fig["by_barangay"]

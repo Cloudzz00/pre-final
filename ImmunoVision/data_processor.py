@@ -1035,6 +1035,46 @@ def predict_for_child(date_of_birth, date_registered, sex, doses_dict, barangay_
     }
 
 
+def score_children_as_of(children, assessment_date):
+    """Risk for many children as they stood on `assessment_date`, for the
+    dashboards' period filter.
+
+    children: iterable of (key, date_of_birth, date_registered, sex,
+    doses_dict, barangay_name). Doses given after the date are ignored by
+    compute_features(), and age is measured at the date, so the same rule
+    as predict_for_child() applies: the trained model for children aged
+    ML_ASSESSMENT_FLOOR_DAYS..CONTINUATION_WINDOW_DAYS on that date, the
+    rule-based scorer for everyone else. Model-eligible children are scored
+    in one batch. Returns {key: probability}."""
+    out, ml_keys, ml_rows = {}, [], []
+    use_model = model_is_trained()
+    for key, dob, registered, sex, doses_dict, barangay_name in children:
+        feats = compute_features(
+            dob, registered, sex, _dose_records_for(doses_dict), assessment_date,
+            barangay_risk_rate=BARANGAY_BASE_RISK.get(barangay_name, 0.15),
+        )
+        age_days = (assessment_date - dob).days
+        if use_model and ML_ASSESSMENT_FLOOR_DAYS <= age_days <= CONTINUATION_WINDOW_DAYS:
+            ml_keys.append(key)
+            ml_rows.append(feats)
+        else:
+            out[key] = score_child(feats)
+    if ml_rows:
+        try:
+            artifact = _load_artifact()
+            import numpy as np  # lazy: only needed on this path
+            x = np.array([[f[c] for c in artifact["feature_columns"]] for f in ml_rows], dtype=float)
+            if artifact.get("needs_scaler") and artifact.get("scaler") is not None:
+                x = artifact["scaler"].transform(x)
+            for key, p in zip(ml_keys, artifact["model"].predict_proba(x)[:, 1]):
+                out[key] = round(float(p), 4)
+        except Exception as exc:
+            print(f"WARNING: ML scoring failed ({exc}); falling back to rule-based scorer.")
+            for key, feats in zip(ml_keys, ml_rows):
+                out[key] = score_child(feats)
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Vaccine allocation when stock is short
 # ---------------------------------------------------------------------------
