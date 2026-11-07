@@ -73,6 +73,15 @@
 
     {# ── 1. At-Risk Children ── #}
     {% if report_type == 'atrisk' %}
+      <div class="report-doc-head">
+        <div>
+          <div class="report-letterhead">{{ brand_mark(22, 6) }}<b style="color:var(--primary)">ImmunoVision</b></div>
+          <h1 class="report-doc-title">At-Risk Children Report</h1>
+          <p class="report-doc-sub">Barangay {{ current_user.barangay.name }} · {{ as_of.strftime('%B %Y') }}</p>
+        </div>
+        <div class="generated-meta">{{ icon('clock', 12) }}<br>Generated {{ generated_at.strftime('%b %d, %Y %I:%M %p') }}</div>
+      </div>
+
       <div class="report-section-head">
         <div>
           <div class="report-section-title">

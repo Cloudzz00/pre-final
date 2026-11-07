@@ -415,3 +415,20 @@
     if (!e.target.closest(".select-shell")) closeAllPanels(null);
   });
 })();
+
+// Printing: charts are drawn for the screen, and Chrome lays out the printed
+// page without telling Chart.js, so a chart kept its screen size and spilled
+// over its neighbours. Redraw every chart when print layout starts and ends.
+(function () {
+  function resizeCharts() {
+    if (!window.Chart || !Chart.instances) return;
+    Object.keys(Chart.instances).forEach(function (id) { Chart.instances[id].resize(); });
+  }
+  if (window.matchMedia) {
+    var mq = window.matchMedia("print");
+    if (mq.addEventListener) mq.addEventListener("change", resizeCharts);
+    else if (mq.addListener) mq.addListener(resizeCharts);
+  }
+  window.addEventListener("beforeprint", resizeCharts);
+  window.addEventListener("afterprint", resizeCharts);
+})();
