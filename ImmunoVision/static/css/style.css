@@ -1762,6 +1762,3 @@ html { scroll-behavior: smooth; }
 }
 .live-tag { display: inline-block; vertical-align: middle; margin-left: 6px; padding: 1px 7px; border-radius: var(--radius-pill); background: var(--slate-bg); border: 1px solid var(--border); color: var(--text-secondary); font-size: 10.5px; font-weight: 700; letter-spacing: .02em; line-height: 16px; white-space: nowrap; }
 .small-group-note { margin: -6px 0 14px; padding: 8px 12px; border-radius: var(--radius-sm); background: var(--amber-bg); color: #92400e; font-size: 12.5px; }
-.data-notice { display: flex; align-items: flex-start; gap: 10px; margin: -6px 0 14px; padding: 9px 12px; border: 1px solid var(--border); border-left: 3px solid var(--amber); border-radius: var(--radius-sm); background: #fff; color: var(--text-secondary); font-size: 12.5px; line-height: 1.5; }
-.data-notice b { color: var(--text-primary); }
-.data-notice-icon { color: var(--amber); flex-shrink: 0; margin-top: 1px; display: inline-flex; }
