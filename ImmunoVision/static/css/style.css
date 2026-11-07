@@ -493,7 +493,14 @@ body.no-scroll { overflow: hidden; }
 .stat-card {
   background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; position: relative;
   display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto auto; align-items: center; column-gap: 16px;
+  /* Cards in a row stretch to the tallest; keeping the text at the top means
+     every number and label lines up across the row instead of each card
+     centring its own (differently long) text. */
+  align-content: start;
 }
+.stat-card .stat-icon { align-self: start; }
+.stat-card .stat-label { margin-top: 2px; }
+.stat-card .stat-caption { margin-top: 2px; }
 /* 52px/24px glyph: sized against the 3-line value+label+caption stack beside
    it (roughly 68px tall), not against the value alone - a square keyed only
    to the number left visible empty space above and below a too-small tile. */
@@ -501,7 +508,7 @@ body.no-scroll { overflow: hidden; }
 .stat-icon .ic-svg { width: 24px; height: 24px; }
 .stat-value { font-size: 28px; font-weight: 800; line-height: 1.1; }
 /* Ranges (e.g. 5340–6120 on the Vaccine Forecast) wrap at 28px. */
-.stat-value-range { font-size: 22px; }
+.stat-value-range { font-size: 22px; white-space: nowrap; }
 .stat-label { font-size: 13.5px; font-weight: 600; color: var(--text-primary); }
 .stat-caption { font-size: 12px; color: var(--text-secondary); }
 
