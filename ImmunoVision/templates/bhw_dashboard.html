@@ -35,7 +35,7 @@
 
 {% if active_campaigns %}
 <div class="card card-pad" style="margin-top:18px;">
-  <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('calendar', 18) }}</span><div><div class="card-title mb-0">Active Campaigns</div><div class="card-sub mb-0">{{ live_tag(as_of) }}Supplementary immunization drives open right now in Barangay {{ current_user.barangay.name }}</div></div></div>
+  <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('calendar', 18) }}</span><div><div class="card-title mb-0">Active <span class="nowrap">Campaigns{{ live_tag(as_of) }}</span></div><div class="card-sub mb-0">Supplementary immunization drives open right now in Barangay {{ current_user.barangay.name }}</div></div></div>
   <div style="margin-top:12px;">
     {% for c in active_campaigns %}
     <a class="stock-row" href="{{ url_for('bhw.campaign_worklist', campaign_id=c.id) }}">
@@ -118,8 +118,8 @@
       <div class="dashboard-card-title">
         <span class="dashboard-section-icon icon-red">{{ icon('alert-triangle', 18) }}</span>
         <div>
-          <div class="card-title mb-0">Needs Follow-Up Checkup</div>
-          <div class="card-sub mb-0">{{ live_tag(as_of) }}At-risk children under 12 months.</div>
+          <div class="card-title mb-0">Needs Follow-Up <span class="nowrap">Checkup{{ live_tag(as_of) }}</span></div>
+          <div class="card-sub mb-0">At-risk children under 12 months.</div>
         </div>
       </div>
       <a href="{{ url_for('bhw.continuation') }}" class="btn btn-outline btn-sm followup-view-btn" style="margin-left:auto;">
@@ -151,8 +151,8 @@
       <div class="dashboard-card-title">
         <span class="dashboard-section-icon icon-blue">{{ icon('calendar', 18) }}</span>
         <div>
-          <div class="card-title mb-0">Vaccination Due Calendar</div>
-          <div class="card-sub mb-0">{{ live_tag(as_of) }}See which children need vaccines on a specific date.</div>
+          <div class="card-title mb-0">Vaccination Due <span class="nowrap">Calendar{{ live_tag(as_of) }}</span></div>
+          <div class="card-sub mb-0">See which children need vaccines on a specific date.</div>
         </div>
       </div>
       <a href="{{ url_for('bhw.due_vaccines') }}" class="btn btn-outline btn-sm">View All &rsaquo;</a>
@@ -223,7 +223,7 @@
   align-items:stretch;
 ">
   <div class="card card-pad" style="display:flex;flex-direction:column;min-height:380px;">
-    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('activity', 18) }}</span><div>{% if trend_monthly %}<div class="card-title mb-0">Monthly Coverage &mdash; children born in {{ trend_year }}</div><div class="card-sub mb-0">Coverage at each month end, as that year's births are added</div>{% else %}<div class="card-title mb-0">Annual Coverage Trend</div><div class="card-sub mb-0">{{ live_tag(as_of, "All years") }}Coverage at each year end</div>{% endif %}</div></div>
+    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-purple">{{ icon('activity', 18) }}</span><div>{% if trend_monthly %}<div class="card-title mb-0">Monthly Coverage &mdash; children born in {{ trend_year }}</div><div class="card-sub mb-0">Coverage at each month end, as that year's births are added</div>{% else %}<div class="card-title mb-0">Annual Coverage <span class="nowrap">Trend{{ live_tag(as_of, "All years") }}</span></div><div class="card-sub mb-0">Coverage at each year end</div>{% endif %}</div></div>
     {# Labelled as simulated: the database holds a current snapshot, not
        month-by-month history, so this series cannot be measured. #}
     <div class="chart-box" style="flex:1;min-height:270px;"><canvas id="trendChart"></canvas></div>
@@ -236,7 +236,7 @@
   </div>
 
   <div class="card card-pad" style="display:flex;flex-direction:column;min-height:380px;">
-    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-teal">{{ icon('clipboard', 18) }}</span><div><div class="card-title mb-0">Vaccine Request Status</div><div class="card-sub mb-0">{{ live_tag(as_of) }}Barangay {{ current_user.barangay.name }}</div></div></div>
+    <div class="dashboard-card-title"><span class="dashboard-section-icon icon-teal">{{ icon('clipboard', 18) }}</span><div><div class="card-title mb-0">Vaccine Request <span class="nowrap">Status{{ live_tag(as_of) }}</span></div><div class="card-sub mb-0">Barangay {{ current_user.barangay.name }}</div></div></div>
 
     {% if pending_requests %}
     <div style="padding:15px;border:1px solid var(--border);border-radius:12px;">
