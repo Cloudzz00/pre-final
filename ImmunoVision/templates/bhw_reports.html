@@ -5,7 +5,7 @@
 {% block content %}
 {% set report_types = [
   ('coverage', 'trending-up', 'Vaccination Coverage', 'Coverage rates for each vaccine in your barangay'),
-  ('atrisk', 'alert-triangle', 'Children Who Need a Visit', 'Children at risk of incomplete immunization'),
+  ('atrisk', 'alert-triangle', 'At-Risk Children', 'Children who need a follow-up visit'),
   ('barangay', 'map-pin', 'Barangay Overview', 'Complete statistics for your barangay'),
 ] %}
 {% set current = report_types|selectattr('0', 'equalto', report_type)|first %}
@@ -71,13 +71,13 @@
   {# ── Report document ── #}
   <main class="report-doc">
 
-    {# ── 1. Children Who Need a Visit ── #}
+    {# ── 1. At-Risk Children ── #}
     {% if report_type == 'atrisk' %}
       <div class="report-section-head">
         <div>
           <div class="report-section-title">
             <span class="section-icon orange">{{ icon('users', 16) }}</span>
-            Children Who Need a Visit
+            At-Risk Children
           </div>
         </div>
       </div>
@@ -148,8 +148,8 @@
       </div>
       <div class="snapshot-grid">
         <div><span>Coverage</span><strong>{{ stats.coverage_rate }}%</strong></div>
-        <div><span>Fully Vaccinated</span><strong>{{ stats.fully_immunized }}</strong></div>
-        <div><span>Need a Visit</span><strong>{{ stats.at_risk }}</strong></div>
+        <div><span>Fully Immunized</span><strong>{{ stats.fully_immunized }}</strong></div>
+        <div><span>At-Risk</span><strong>{{ stats.at_risk }}</strong></div>
       </div>
 
     {# ── 3. Vaccination Coverage ── #}
@@ -172,12 +172,12 @@
         <div class="summary-card green">
           <div class="summary-icon">{{ icon('check-circle', 17) }}</div>
           <div class="v" style="color:#16a34a">{{ stats.fully_immunized }}</div>
-          <div class="l">Fully Vaccinated</div>
+          <div class="l">Fully Immunized</div>
         </div>
         <div class="summary-card orange">
           <div class="summary-icon">{{ icon('alert-triangle', 17) }}</div>
           <div class="v" style="color:#d97706">{{ stats.at_risk }}</div>
-          <div class="l">Need a Visit</div>
+          <div class="l">At-Risk</div>
         </div>
       </div>
 
