@@ -813,19 +813,24 @@ def immunized_as_of(child, as_of=None):
     due = given = 0
     for rec in _records_by_child().get(child.id, ()):
         vtype = vt_by_id.get(rec.vaccine_type_id)
-        if vtype is not None and vtype.recommended_age_days <= age:
+        # Same rule as report_figures(): optional doses and doses past their
+        # catch-up age are not counted as due.
+        if (vtype is not None and not vtype.is_optional and vtype.recommended_age_days <= age
+                and _still_catchable(vtype, age)):
             due += 1
             if rec.date_administered is not None and rec.date_administered <= as_of:
                 given += 1
     return True if due == 0 else (given / due >= 0.9)
 
 
-def filtered_children(barangay_id=None, risk_level="", status="", as_of=None):
+def filtered_children(barangay_id=None, risk_level="", status="", as_of=None, born_from=None):
     risk = _latest_risk_by_child()
     kids = _children_query(barangay_id).all()
     if as_of is not None:
         # A child not yet born at the reporting date is not in scope.
         kids = [c for c in kids if c.date_of_birth <= as_of]
+    if born_from is not None:
+        kids = [c for c in kids if c.date_of_birth >= born_from]
     if risk_level in ("At-Risk", "Not At-Risk"):
         kids = [c for c in kids if (ra := risk.get(c.id)) and ra.risk_label == risk_level]
     if status == "complete":
@@ -1110,42 +1115,71 @@ def data_years():
     return list(range(date.today().year, first - 1, -1))
 
 
-def resolve_period(month, year):
-    """Turn separate month/year selections into a reporting date.
+def resolve_range(start_year, end_year, month=""):
+    """Turn the dashboards' From year / To year / Month selections into a
+    birth-cohort window and a reporting date.
 
-    Both blank        -> no period filter (live figures).
-    Year only         -> as at 31 December of that year.
-    Month only        -> that month in the current year.
-    Either in future  -> clamped to today, so a forward-dated selection can
-                         never show an empty dashboard.
-    Returns (as_of|None, label|None, clamped:bool).
+    The range selects children BORN from 1 January of the start year, and
+    measures them as at 31 December of the end year (or the end of the chosen
+    month), so "2020 to 2023" reports the 2020-2023 birth cohorts as they
+    stood at the end of 2023. Month applies only when both years are the
+    same, i.e. a single year is selected.
+
+    Both blank      -> no filter (live figures).
+    To only         -> every child born by the end of that year.
+    From only       -> born from that year, measured as at today.
+    From > To       -> swapped.
+    Past today      -> clamped to today, so a period that has not ended yet
+                       never shows an empty dashboard.
+    Returns (born_from|None, as_of|None, label|None, clamped:bool, month_active:bool).
     """
     today = date.today()
+    years = set(data_years())
+
+    def year_or_none(v):
+        try:
+            y = int(v)
+        except (TypeError, ValueError):
+            return None
+        return y if y in years else None
+
+    y1, y2 = year_or_none(start_year), year_or_none(end_year)
+    if y1 is None and y2 is None:
+        return None, None, None, False, False
+    if y1 is not None and y2 is not None and y1 > y2:
+        y1, y2 = y2, y1
     try:
         m = int(month) if month else 0
-        y = int(year) if year else 0
     except (TypeError, ValueError):
-        return None, None, False
-    if not (1 <= m <= 12):
         m = 0
-    if y and y not in data_years():
-        y = 0
-    if not m and not y:
-        return None, None, False
+    month_active = y1 is not None and y1 == y2
+    if not (month_active and 1 <= m <= 12):
+        m = 0
 
-    if m and y:
-        end = date(y + 1, 1, 1) if m == 12 else date(y, m + 1, 1)
-        as_of, label = end - timedelta(days=1), f"{MONTH_NAMES[m - 1]} {y}"
-    elif y:
-        as_of, label = date(y, 12, 31), f"{y}"
+    born_from = date(y1, 1, 1) if y1 is not None else None
+    if y2 is None:
+        as_of, label = today, f"{y1} to date"
+    elif m:
+        end = date(y2 + 1, 1, 1) if m == 12 else date(y2, m + 1, 1)
+        as_of, label = end - timedelta(days=1), f"{MONTH_NAMES[m - 1]} {y2}"
     else:
-        y = today.year
-        end = date(y + 1, 1, 1) if m == 12 else date(y, m + 1, 1)
-        as_of, label = end - timedelta(days=1), f"{MONTH_NAMES[m - 1]} {y}"
+        as_of = date(y2, 12, 31)
+        label = (f"{y2}" if y1 == y2 else f"{y1}–{y2}" if y1 is not None else f"Up to {y2}")
 
-    if as_of > today:
-        return today, f"{label} (to date)", True
-    return as_of, label, False
+    clamped = as_of > today
+    if clamped:
+        as_of, label = today, f"{label} (to date)"
+    return born_from, as_of, label, clamped, month_active
+
+
+def _dashboard_period():
+    """Reads and resolves the dashboard period filter from the query string."""
+    start, end, month = (request.args.get(k, "") for k in ("from", "to", "month"))
+    born_from, as_of, label, clamped, month_active = resolve_range(start, end, month)
+    return {"born_from": born_from, "as_of": as_of, "period_label": label,
+            "period_clamped": clamped, "month_active": month_active,
+            "year_from": start, "year_to": end, "month": month if month_active else "",
+            "months": MONTH_NAMES, "years": data_years()}
 
 
 def period_end(period):
@@ -1161,7 +1195,7 @@ def period_end(period):
         return today
 
 
-def report_figures(barangay_id=None, as_of=None):
+def report_figures(barangay_id=None, as_of=None, born_from=None):
     """Coverage figures for one barangay (or all) as of a date.
 
     Doses recorded after `as_of` count as not-yet-given, and children born
@@ -1180,7 +1214,8 @@ def report_figures(barangay_id=None, as_of=None):
     targets = {b.id: b.target_population for b in all_barangays}
 
     all_children = _cache(f"children:{barangay_id}", lambda: _children_query(barangay_id).all())
-    children = [c for c in all_children if c.date_of_birth <= as_of]
+    children = [c for c in all_children
+                if c.date_of_birth <= as_of and (born_from is None or c.date_of_birth >= born_from)]
 
     def immunized(child):
         age = (as_of - child.date_of_birth).days
@@ -1233,7 +1268,7 @@ def report_figures(barangay_id=None, as_of=None):
     }
 
 
-def report_by_vaccine(barangay_id=None, as_of=None):
+def report_by_vaccine(barangay_id=None, as_of=None, born_from=None):
     """Completion rate per scheduled dose as of a date, for the BHW report
     chart. Mirrors report_figures(): doses recorded after `as_of` count as
     not yet given, and children born after it are excluded."""
@@ -1244,7 +1279,8 @@ def report_by_vaccine(barangay_id=None, as_of=None):
         for record in records:
             given_on[(child_id, record.vaccine_type_id)] = record.date_administered
 
-    children = [c for c in _children_query(barangay_id).all() if c.date_of_birth <= as_of]
+    children = [c for c in _children_query(barangay_id).all()
+                if c.date_of_birth <= as_of and (born_from is None or c.date_of_birth >= born_from)]
     rows = []
     for code, name, antigen_code, dose_no, rec_days in dp.VACCINE_SCHEDULE:
         vt = vt_by_code.get(code)
@@ -2110,10 +2146,9 @@ def dashboard():
 
     # Validate against the offered months: an unrecognised value must mean
     # "no period filter", not a silent "as of today".
-    month = request.args.get("month", "")
-    year = request.args.get("year", "")
-    as_of, period_label, clamped = resolve_period(month, year)
-    kids = filtered_children(barangay_id, as_of=as_of)
+    period = _dashboard_period()
+    as_of, born_from = period["as_of"], period["born_from"]
+    kids = filtered_children(barangay_id, as_of=as_of, born_from=born_from)
     stats = stats_for(kids, as_of)
     dist = risk_distribution_for(kids)
     # Two actionable panels: who needs a visit, and what stock is running out.
@@ -2136,10 +2171,14 @@ def dashboard():
     # Coverage Analytics merged into this page; its own route was retired.
     # Lowest coverage first: the barangays needing attention lead, matching the
     # admin dashboard's table. Follows the scope filter like every other panel.
-    by_barangay = sorted(coverage_by_barangay(), key=lambda r: r["coverage"])
+    # Follows the period filter too, so this table and the stat cards
+    # describe the same children.
+    by_barangay = sorted(report_figures(None, as_of, born_from)["by_barangay"] if as_of
+                         else coverage_by_barangay(), key=lambda r: r["coverage"])
     if selected:
         by_barangay = [r for r in by_barangay if r["barangay"] == selected.name]
-    by_vaccine = order_by_schedule(report_by_vaccine(barangay_id, as_of) if as_of else coverage_by_vaccine(barangay_id))
+    by_vaccine = order_by_schedule(report_by_vaccine(None, as_of, born_from) if as_of
+                                   else coverage_by_vaccine())
     trend = yearly_trend(barangay_id)
     below_target = len([r for r in by_barangay if r["coverage"] < COVERAGE_TARGET])
     change = coverage_change(barangay_id)
@@ -2148,8 +2187,7 @@ def dashboard():
         risk_dist=dist, now=datetime.now(),
         barangays=Barangay.query.order_by(Barangay.name).all(),
         selected_barangay=selected, selected_barangay_id=barangay_id,
-        months=MONTH_NAMES, years=data_years(), month=month, year=year,
-        as_of=as_of, period_label=period_label, period_clamped=clamped,
+        **period,
         follow_up=follow_up, follow_up_total=follow_up_total, low_stock=low_stock, pending_requests=pending,
         by_barangay=by_barangay, by_vaccine=by_vaccine, trend=trend,
         vaccine_colours=vaccine_colours(by_vaccine), vaccine_labels=schedule_labels(by_vaccine),
@@ -2660,10 +2698,9 @@ def dashboard():
     bid = current_user.barangay_id
     risk_level = request.args.get("risk_level", "")
     status = request.args.get("status", "")
-    month = request.args.get("month", "")
-    year = request.args.get("year", "")
-    as_of, period_label, clamped = resolve_period(month, year)
-    kids = filtered_children(bid, risk_level, status, as_of)
+    period = _dashboard_period()
+    as_of, born_from = period["as_of"], period["born_from"]
+    kids = filtered_children(bid, risk_level, status, as_of, born_from)
     # The BHW does the home visits, so the "who to chase" list matters most
     # here. "View All (N)" reads straight off follow_up|length in the
     # template, so the full (unlimited) list is what gets passed - slicing
@@ -2672,7 +2709,8 @@ def dashboard():
     follow_up = follow_up_all[:5]
 
     # Coverage Analytics merged into this page; its own route was retired.
-    by_vaccine = order_by_schedule(report_by_vaccine(bid, as_of) if as_of else coverage_by_vaccine(bid))
+    by_vaccine = order_by_schedule(report_by_vaccine(bid, as_of, born_from) if as_of
+                                   else coverage_by_vaccine(bid))
     trend = yearly_trend(bid)
     change = coverage_change(bid)
     vt_lookup = {vt.code: vt for vt in VaccineType.query.all()}
@@ -2682,13 +2720,12 @@ def dashboard():
         risk_dist=risk_distribution_for(kids), now=datetime.now(),
         risk_levels=RISK_LEVELS, status_levels=STATUS_LEVELS,
         risk_level=risk_level, status=status,
-        months=MONTH_NAMES, years=data_years(), month=month, year=year,
-        as_of=as_of, period_label=period_label, period_clamped=clamped, follow_up=follow_up,
+        **period, follow_up=follow_up,
         follow_up_total=len(follow_up_all),
         by_vaccine=by_vaccine, trend=trend, change=change,
         vaccine_colours=vaccine_colours(by_vaccine), vaccine_labels=schedule_labels(by_vaccine),
         insights=chart_insights(by_vaccine, [], trend),
-        total_in_barangay=len(filtered_children(bid, as_of=as_of)),
+        total_in_barangay=len(filtered_children(bid, as_of=as_of, born_from=born_from)),
         due_calendar=due_calendar,
         pending_requests=(VaccineRequest.query.filter_by(barangay_id=bid, status="pending")
                           .order_by(VaccineRequest.requested_at.desc()).first()),
@@ -3175,12 +3212,11 @@ def dashboard():
     selected = db.session.get(Barangay, barangay_id) if barangay_id else None
     if not selected:
         barangay_id = None
-    month = request.args.get("month", "")
-    year = request.args.get("year", "")
-    as_of, period_label, clamped = resolve_period(month, year)
+    period = _dashboard_period()
+    as_of, born_from = period["as_of"], period["born_from"]
 
     if as_of:
-        fig = report_figures(barangay_id, as_of)
+        fig = report_figures(barangay_id, as_of, born_from)
         muni = {"total_children": fig["total_children"], "fully_immunized": fig["fully_immunized"],
                 "at_risk": fig["at_risk"], "coverage_rate": fig["coverage_rate"]}
         rows = fig["by_barangay"]
@@ -3212,7 +3248,8 @@ def dashboard():
 
     # The admin Coverage Analytics page was retired: its barangay view duplicated
     # the table above, so its two unique panels moved onto this page.
-    by_vaccine = order_by_schedule(report_by_vaccine(None, as_of) if as_of else coverage_by_vaccine())
+    by_vaccine = order_by_schedule(report_by_vaccine(barangay_id, as_of, born_from) if as_of
+                                   else coverage_by_vaccine(barangay_id))
     # Annual rather than monthly: a month/year filter and a 12-month series
     # contradict each other, and yearly coverage can be computed for real.
     trend = yearly_trend()
@@ -3250,8 +3287,7 @@ def dashboard():
         vaccine_colours=vaccine_colours(by_vaccine), vaccine_labels=schedule_labels(by_vaccine),
         insights=chart_insights(by_vaccine, barangay_rows, trend),
         active_campaigns=active_campaigns_summary(),
-        months=MONTH_NAMES, years=data_years(), month=month, year=year,
-        as_of=as_of, period_label=period_label, period_clamped=clamped,
+        **period,
         barangays=Barangay.query.order_by(Barangay.name).all(),
         selected_barangay=selected, selected_barangay_id=barangay_id,
         stats=user_stats, role_dist=role_dist, users=all_users,

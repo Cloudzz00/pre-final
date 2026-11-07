@@ -1751,3 +1751,4 @@ html { scroll-behavior: smooth; }
   .due-chip { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .table-wrap.auto-height { max-height: none !important; overflow: visible !important; }
 }
+.filter-bar select.select-sm:disabled { opacity: .55; cursor: not-allowed; }
