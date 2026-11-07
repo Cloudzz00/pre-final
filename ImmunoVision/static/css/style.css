@@ -1000,7 +1000,6 @@ table.data-table.pin-first-2 tbody tr:hover td:nth-child(-n+2) { background: var
   padding: 12px 16px; margin-bottom: 14px;
   background: var(--primary-light);
   border: 1px solid var(--border);
-  border-left: 3px solid var(--primary);
   border-radius: var(--radius);
 }
 .audit-context .who { display: flex; align-items: center; gap: 10px; }
@@ -1494,9 +1493,6 @@ html { scroll-behavior: smooth; }
   border: 1px solid var(--border); border-radius: 13px; padding: 16px;
   background: #fff; position: relative; overflow: hidden;
 }
-.summary-card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--primary); }
-.summary-card.green::before { background: #16a34a; }
-.summary-card.orange::before { background: #f59e0b; }
 .summary-card .summary-icon {
   width: 32px; height: 32px; border-radius: 9px; display: flex; align-items: center;
   justify-content: center; background: var(--primary-tint); color: var(--primary); margin-bottom: 10px;
@@ -1651,7 +1647,7 @@ html { scroll-behavior: smooth; }
 .bhw-report-page .report-toolbar { justify-content: space-between; }
 .bhw-report-page .report-type-card { min-height: 62px; }
 .bhw-report-page .report-doc-head { align-items: center; }
-.bhw-report-page .report-summary .summary-card { padding: 14px 18px 14px 20px; }
+.bhw-report-page .report-summary .summary-card { padding: 14px 18px; }
 @media (max-width: 720px) {
   .bhw-report-page .report-toolbar > div { width: 100%; }
 }
@@ -1661,7 +1657,7 @@ html { scroll-behavior: smooth; }
   .bhw-report-page .report-toolbar { padding: 10px 16px; min-height: 64px; }
   .bhw-report-page .toolbar-info .badge { width: 32px; height: 32px; }
   .bhw-report-page .report-summary { margin: 14px 0; }
-  .bhw-report-page .summary-card { padding: 14px 18px 14px 20px; }
+  .bhw-report-page .summary-card { padding: 14px 18px; }
   .bhw-report-page .summary-card .summary-icon { margin: 0; width: 42px; height: 42px; }
   .bhw-report-page .summary-card .l { margin-top: 4px; }
 }
@@ -1823,7 +1819,7 @@ html { scroll-behavior: smooth; }
    above the number with the rest of the card left empty. */
 .summary-card {
   display: grid; grid-template-columns: auto 1fr; column-gap: 14px;
-  align-items: center; align-content: start; padding: 16px 18px 16px 20px;
+  align-items: center; align-content: start; padding: 16px 18px;
 }
 .summary-card .summary-icon { grid-column: 1; grid-row: 1 / span 3; width: 42px; height: 42px; border-radius: 11px; margin: 0; }
 .summary-card .summary-icon .ic-svg { width: 20px; height: 20px; }
@@ -1831,7 +1827,7 @@ html { scroll-behavior: smooth; }
 .summary-card .l { margin-top: 4px; }
 .summary-card .d { margin-top: 2px; }
 @media print {
-  .summary-card { padding: 8px 10px 8px 12px; column-gap: 9px; }
+  .summary-card { padding: 8px 10px; column-gap: 9px; }
   .summary-card .summary-icon { width: 26px; height: 26px; border-radius: 7px; }
   .summary-card .summary-icon .ic-svg { width: 14px; height: 14px; }
 }
