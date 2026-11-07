@@ -253,27 +253,62 @@
   display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0;
 }
 
-/* Who it's for: a 2x2 card grid rather than a stacked list, so four roles
-   stay roughly as tall as the text column next to it instead of running
-   well past it. Same icon-square language as the capabilities cards. */
-.lp-roles-grid { margin-top: 8px; display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; }
-.lp-role-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
-.lp-role-card .ic {
-  width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center;
-  justify-content: center; color: #fff; margin-bottom: 10px;
+/* Who it's for: a "who sees what" access matrix. The headline claims every
+   role sees exactly what it needs, so the section shows that claim directly
+   - one row per role, one column per area of the system - instead of
+   describing it in five differently shaped cards. Built from the app's own
+   pieces: the plain-head data-table header, the icon squares used by the
+   capability cards, and the app icon set. Below 760px each row becomes a
+   card listing only what that role can open. */
+.lp-access { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow-x: auto; box-shadow: var(--shadow-sm); }
+.lp-access table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.lp-access thead th {
+  background: var(--slate-bg-2); color: var(--text-secondary); text-align: left;
+  padding: 14px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .04em; border-bottom: 1px solid var(--border); vertical-align: bottom;
 }
-.lp-role-card b.tag { display: block; font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 6px; }
-.lp-role-card p { font-size: 13px; color: var(--text-secondary); margin: 0 0 10px; line-height: 1.55; }
-.lp-role-card .lp-chips { gap: 6px; }
-.lp-role-card .lp-chip { padding: 6px 10px 6px 8px; font-size: 12px; }
-.lp-role-card-wide { grid-column: 1 / -1; display: flex; align-items: center; gap: 16px; }
-.lp-role-card-wide .ic { margin-bottom: 0; flex-shrink: 0; }
-.lp-role-card-wide b.tag { margin-bottom: 3px; }
-.lp-role-card-wide p { margin-bottom: 0; }
-.lp-role-card-wide .lp-chips { flex-shrink: 0; }
-@media (max-width: 560px) {
-  .lp-roles-grid { grid-template-columns: minmax(0,1fr); }
-  .lp-role-card-wide { flex-direction: column; align-items: flex-start; }
+.lp-access tbody td { padding: 16px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.lp-access th:first-child, .lp-access td:first-child { padding-left: 18px; }
+.lp-access tbody tr:last-child td { border-bottom: none; }
+.lp-access tbody tr.public td { background: var(--slate-bg-2); }
+.lp-access .role { display: flex; align-items: center; gap: 12px; min-width: 200px; }
+.lp-access .role .ic {
+  width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center;
+  justify-content: center; color: #fff; flex-shrink: 0;
+}
+.lp-access .role b { display: block; font-size: 14px; color: var(--text-primary); }
+.lp-access .role span { display: block; font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.lp-access .yes { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text-primary); white-space: nowrap; }
+.lp-access .yes .ic-svg { color: var(--green); flex-shrink: 0; }
+.lp-access .no { color: var(--text-muted); }
+.lp-access-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  margin-top: 18px; font-size: 13px; color: var(--text-secondary);
+}
+.lp-access-foot .note { display: inline-flex; align-items: center; gap: 8px; }
+.lp-access-foot .note .ic-svg { color: var(--primary); flex-shrink: 0; }
+.lp-access-foot .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.lp-btn.outline { background: var(--card-bg); color: var(--text-primary); border: 1px solid var(--border-strong); }
+@media (max-width: 1080px) {
+  .lp-access { background: transparent; border: none; box-shadow: none; overflow: visible; }
+  .lp-access thead { display: none; }
+  .lp-access table, .lp-access tr, .lp-access td { display: block; width: 100%; }
+  .lp-access tbody { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; align-items: start; }
+  .lp-access tbody tr {
+    background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 6px 16px 10px;
+  }
+  .lp-access tbody tr.public, .lp-access tbody tr.public td { background: var(--card-bg); }
+  .lp-access tbody td { border-bottom: none; padding: 7px 0; display: flex; justify-content: space-between; gap: 12px; }
+  .lp-access tbody td:first-child { padding: 10px 0 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px; justify-content: flex-start; }
+  .lp-access th:first-child, .lp-access td:first-child { padding-left: 0; }
+  .lp-access tbody td[data-label]::before { content: attr(data-label); color: var(--text-secondary); font-size: 12.5px; }
+  .lp-access tbody td.empty { display: none; }
+  .lp-access .role { min-width: 0; }
+}
+@media (max-width: 640px) {
+  .lp-access tbody { grid-template-columns: minmax(0,1fr); }
+  .lp-access-foot { flex-direction: column; align-items: flex-start; }
 }
 
 @media (max-width: 900px) {
@@ -322,7 +357,7 @@
 
 /* ---- light-tinted closing section for "who it's for", so it still reads
    as a distinct beat from "why this matters" without going dark. ---- */
-.lp-flow.tint-role { background: var(--slate-bg); }
+.tint-role { background: var(--slate-bg); }
 
 /* ---- step carousel: the "how it works" 1-4 sequence as a fanned stack of
    cards, auto-advancing (pauses on hover, same as the scroll canvas). The
@@ -627,7 +662,7 @@
       <div class="lp-card">
         <div class="ic" style="background:var(--violet)">{{ icon('users', 20) }}</div>
         <h3>Role-based access</h3>
-        <p>A health worker sees her own barangay, RHU personnel see the municipality, and the
+        <p>A health worker sees their own barangay, RHU personnel see the municipality, and the
            administrator sees totals but never a child's record. Every change is logged.</p>
       </div>
     </div>
@@ -657,62 +692,64 @@
   </div>
 </section>
 
-<section class="lp-flow tint-role" aria-label="Who it's for">
-  <div class="lp-wrap lp-flow-inner">
-    <div class="lp-flow-visual">
-      <div class="lp-roles-grid">
-        <div class="lp-role-card">
-          <div class="ic" style="background:var(--primary)">{{ icon('bar-chart', 18) }}</div>
-          <b class="tag" style="color:var(--primary)">RHU Personnel</b>
-          <p>Monitor coverage across all {{ barangay_count }} barangays and act on what the data shows.</p>
-          <div class="lp-chips">
-            <span class="lp-chip">{{ icon('bar-chart', 13) }} Analytics</span>
-          </div>
-        </div>
-        <div class="lp-role-card">
-          <div class="ic" style="background:var(--teal)">{{ icon('baby', 18) }}</div>
-          <b class="tag" style="color:var(--teal)">Barangay Health Workers</b>
-          <p>See exactly which children need a visit and what dose they're missing.</p>
-          <div class="lp-chips">
-            <span class="lp-chip">{{ icon('alert-triangle', 13) }} At-risk list</span>
-          </div>
-        </div>
-        <div class="lp-role-card">
-          <div class="ic" style="background:var(--violet)">{{ icon('map-pin', 18) }}</div>
-          <b class="tag" style="color:var(--violet)">RHU Administrator</b>
-          <p>Manage staffing, coverage oversight, and accounts &mdash; never a child's record.</p>
-          <div class="lp-chips">
-            <span class="lp-chip">{{ icon('map', 13) }} Assignments</span>
-            <span class="lp-chip">{{ icon('users', 13) }} Accounts</span>
-          </div>
-        </div>
-        <div class="lp-role-card">
-          <div class="ic" style="background:#dc2626">{{ icon('history', 18) }}</div>
-          <b class="tag" style="color:#dc2626">Super Admin</b>
-          <p>Independent oversight of every account's activity, kept separate from account management.</p>
-          <div class="lp-chips">
-            <span class="lp-chip">{{ icon('history', 13) }} Audit log</span>
-          </div>
-        </div>
-        <div class="lp-role-card lp-role-card-wide">
-          <div class="ic" style="background:var(--text-secondary)">{{ icon('globe', 18) }}</div>
-          <div>
-            <b class="tag" style="color:var(--text-secondary)">Community</b>
-            <p>Check immunization coverage across San Jacinto without signing in.</p>
-          </div>
-          <div class="lp-chips">
-            <span class="lp-chip">{{ icon('map', 13) }} Coverage</span>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="lp-flow-text">
+{% macro access_cell(label, text) -%}
+  {%- if text -%}
+  <td data-label="{{ label }}"><span class="yes">{{ icon('check', 15, 2.5) }} {{ text }}</span></td>
+  {%- else -%}
+  <td class="empty"><span class="no" aria-label="No access">&mdash;</span></td>
+  {%- endif -%}
+{%- endmacro %}
+{% set access_columns = ["Coverage", "Child records", "Follow-up lists",
+                         "Vaccine stock", "Accounts", "Activity log"] %}
+{% set access_rows = [
+  {"name": "RHU Personnel", "scope": "All " ~ barangay_count ~ " barangays", "icon": "bar-chart", "color": "var(--primary)",
+   "cells": ["All barangays", "All barangays", "At-risk & gaps", "Manage", "", ""]},
+  {"name": "Barangay Health Worker", "scope": "Own barangay only", "icon": "baby", "color": "var(--teal)",
+   "cells": ["Own barangay", "Own barangay", "At-risk & gaps", "Request", "", ""]},
+  {"name": "RHU Administrator", "scope": "Municipal totals", "icon": "users", "color": "var(--violet)",
+   "cells": ["Municipal totals", "", "", "Warning levels", "Manage", ""]},
+  {"name": "ICTMO Administrator", "scope": "System activity", "icon": "history", "color": "var(--navy-800)",
+   "cells": ["", "", "", "", "", "Every account"]},
+  {"name": "Public", "scope": "No sign-in needed", "icon": "globe", "color": "var(--text-secondary)",
+   "cells": ["Public page", "", "", "", "", ""], "public": true},
+] %}
+<section class="lp-section tint-role" aria-label="Who it's for">
+  <div class="lp-wrap">
+    <div class="lp-head">
       <div class="lp-flow-eyebrow">Who it's for</div>
       <h2>Every account sees exactly the view its role needs.</h2>
-      <p>Four account roles share the same system, each scoped to what it actually needs to act on
-         &mdash; a barangay, a municipality, or accounts and access &mdash; and public coverage
-         numbers are open with no login at all.</p>
-      <a class="lp-btn" href="{{ url_for('auth.login') }}">Sign in <span class="lp-fwd">{{ icon('chevron-left', 15, 2.5) }}</span></a>
+      <p>Four account roles and the public share one system. Each sees only what it needs to act on
+         &mdash; a barangay, the whole municipality, accounts, or the activity log.</p>
+    </div>
+    <div class="lp-access">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Role</th>
+            {% for col in access_columns %}<th scope="col">{{ col }}</th>{% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in access_rows %}
+          <tr{% if row.public %} class="public"{% endif %}>
+            <td>
+              <div class="role">
+                <div class="ic" style="background:{{ row.color }}">{{ icon(row.icon, 17) }}</div>
+                <div><b>{{ row.name }}</b><span>{{ row.scope }}</span></div>
+              </div>
+            </td>
+            {% for col in access_columns %}{{ access_cell(col, row.cells[loop.index0]) }}{% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="lp-access-foot">
+      <span class="note">{{ icon('lock', 15) }} Access is enforced on the server, not only hidden on screen, and every action is logged.</span>
+      <div class="actions">
+        <a class="lp-btn outline" href="{{ url_for('auth.public_coverage') }}">View public coverage</a>
+        <a class="lp-btn" href="{{ url_for('auth.login') }}">Sign in <span class="lp-fwd">{{ icon('chevron-left', 15, 2.5) }}</span></a>
+      </div>
     </div>
   </div>
 </section>
