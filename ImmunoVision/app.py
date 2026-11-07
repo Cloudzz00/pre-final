@@ -3713,7 +3713,7 @@ superadmin_bp = Blueprint("superadmin", __name__, url_prefix="/superadmin")
 
 def _superadmin_ctx(active, **extra):
     return dict(role="superadmin", nav_items=build_nav(SUPERADMIN_NAV), active=active, current_user=current_user,
-                settings_url=url_for("superadmin.settings"), unread_count=0, notif_url="#", **extra)
+                settings_url=url_for("superadmin.settings"), unread_count=0, notif_url=None, **extra)
 
 
 @superadmin_bp.before_request

@@ -104,8 +104,8 @@
           <td>
             <form method="post" action="{{ url_for('admin.set_target_population') }}" style="display:flex;align-items:center;gap:6px;">
               <input type="hidden" name="barangay_id" value="{{ r.barangay_id }}">
-              <input class="form-control" type="number" min="1" step="1" name="target_population"
-                     value="{{ r.target_population or '' }}" placeholder="Not set" style="width:90px;padding:5px 8px;font-size:12.5px;">
+              <input class="form-control table-input" type="number" min="1" step="1" name="target_population"
+                     value="{{ r.target_population or '' }}" placeholder="Not set" style="width:90px;">
               <button class="btn btn-outline btn-sm" type="submit" title="Save target population">{{ icon('check', 14) }}</button>
             </form>
           </td>

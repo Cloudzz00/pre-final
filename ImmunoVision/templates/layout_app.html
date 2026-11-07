@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "_brand.html" import brand_mark %}
 {% from "_icons.html" import icon %}
+{% block title %}{{ page_title or "ImmunoVision" }}{% endblock %}
 {% block body %}
 <div class="app-shell">
   <aside class="sidebar" id="sidebar">
@@ -70,7 +71,8 @@
       <div class="topbar-right">
         {# The bell is now the only route to Notifications, so it shows a count
            rather than a bare dot - "3" is actionable, an unlabelled dot is not. #}
-        <a href="{{ notif_url|default('#') }}" class="bell-btn {{ 'has-unread' if unread_count and unread_count > 0 }}"
+        {% if notif_url and notif_url != '#' %}
+        <a href="{{ notif_url }}" class="bell-btn {{ 'has-unread' if unread_count and unread_count > 0 }}"
            title="{{ unread_count ~ ' unread notification' ~ ('s' if unread_count != 1 else '') if unread_count else 'Notifications' }}"
            aria-label="{{ unread_count ~ ' unread notifications' if unread_count else 'Notifications' }}">
           {{ icon('bell', 19) }}
@@ -78,6 +80,7 @@
           <span class="bell-count">{{ unread_count if unread_count < 100 else '99+' }}</span>
           {% endif %}
         </a>
+        {% endif %}
         {# Account menu. Replaces the bare Log out button: profile, settings and
            sign-out are all account actions and belong in one place. #}
         <div class="account-menu">

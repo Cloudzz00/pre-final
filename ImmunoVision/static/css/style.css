@@ -1758,3 +1758,10 @@ html { scroll-behavior: smooth; }
   .range-group .select-shell .select-sm, .range-group .select-sm { min-width: 0; width: 100%; }
 }
 .small-group-note { margin: -6px 0 14px; padding: 8px 12px; border-radius: var(--radius-sm); background: var(--amber-bg); color: #92400e; font-size: 12.5px; }
+
+/* Inputs inside table rows (Record Dose date, campaign dose date, target
+   population) match the 32px btn-sm beside them. */
+.form-control.table-input { height: 32px; padding: 0 10px; font-size: 13px; }
+
+/* Icon-only small buttons (no text line) otherwise come out 28px. */
+.btn.btn-sm { min-height: 32px; }

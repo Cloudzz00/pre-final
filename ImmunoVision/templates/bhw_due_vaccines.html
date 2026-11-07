@@ -58,7 +58,7 @@
 
 <div class="card card-pad due-summary-card">
   <div class="due-summary-head">
-    <div class="dashboard-card-title">Doses needed — {{ month_label }}{% if not can_record %} · {{ scope_label }}{% endif %}</div>
+    <div class="card-title mb-0">Doses needed — {{ month_label }}{% if not can_record %} · {{ scope_label }}{% endif %}</div>
     <div class="due-summary-actions">
       <span class="text-muted due-summary-total">{{ summary_total }} dose{{ '' if summary_total == 1 else 's' }} · {{ events|length }} shown</span>
       <button type="button" class="btn btn-outline btn-sm no-print" onclick="window.print()">{{ icon('printer', 14) }} Print</button>
@@ -99,7 +99,7 @@
               <input type="hidden" name="status" value="{{ status_filter }}">
               <input type="hidden" name="month" value="{{ month }}">
               <input type="hidden" name="overdue" value="{{ '1' if include_overdue else '0' }}">
-              <input class="form-control" type="date" name="date" value="{{ today_iso }}" max="{{ today_iso }}" style="max-width:160px;">
+              <input class="form-control table-input" type="date" name="date" value="{{ today_iso }}" max="{{ today_iso }}" style="max-width:160px;">
               <button class="btn btn-outline btn-sm" type="submit">{{ icon('check', 14) }} Record</button>
             </form>
           </td>
