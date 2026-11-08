@@ -9,7 +9,6 @@
   .child-report{background:#fff;border:1px solid var(--border);border-radius:16px;padding:26px;box-shadow:var(--shadow-sm)}
   .report-head{display:flex;justify-content:space-between;gap:20px;padding-bottom:18px;border-bottom:1px solid var(--border)}
   .letterhead{display:flex;align-items:center;gap:7px;font-size:12px;margin-bottom:8px}
-  .report-kicker{font-size:10.5px;font-weight:800;color:var(--primary);background:var(--primary-tint);border-radius:999px;padding:5px 9px;display:inline-flex;align-items:center;gap:6px}
   .report-title{font-size:23px;margin:10px 0 3px;letter-spacing:-.02em}.report-sub{margin:0;color:var(--text-secondary);font-size:11.5px}
   .generated{font-size:10.5px;color:var(--text-muted);text-align:right;white-space:nowrap}
   .child-identity{margin:18px 0;display:grid;grid-template-columns:1.5fr repeat(4,1fr);gap:9px}
@@ -40,7 +39,6 @@
     <div class="report-head">
       <div>
         <div class="letterhead">{{ brand_mark(22, 6) }}<b style="color:var(--primary)">ImmunoVision</b></div>
-        <div class="report-kicker">{{ icon('file-text', 12) }} Individual Follow-Up Report</div>
         <h1 class="report-title">{{ child.display_name }}</h1>
         <p class="report-sub">Child follow-up report for Barangay {{ current_user.barangay.name }}.</p>
       </div>

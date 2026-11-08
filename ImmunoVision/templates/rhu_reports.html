@@ -82,7 +82,6 @@
       <div class="report-doc-head">
         <div>
           <div class="report-letterhead">{{ brand_mark(22, 6) }}<b style="color:var(--primary)">ImmunoVision</b></div>
-          <div class="report-kicker">{{ icon(current[1], 12) }} {{ current[2] }}</div>
           <h1 class="report-doc-title">At-Risk Children Report</h1>
           <p class="report-doc-sub">{{ scope_name }} &middot; {{ as_of.strftime('%B %Y') }}</p>
         </div>
@@ -146,7 +145,6 @@
       <div class="report-doc-head">
         <div>
           <div class="report-letterhead">{{ brand_mark(22, 6) }}<b style="color:var(--primary)">ImmunoVision</b></div>
-          <div class="report-kicker">{{ icon(current[1], 12) }} {{ current[2] }}</div>
           <h1 class="report-doc-title">Vaccine Inventory Report</h1>
           <p class="report-doc-sub">San Jacinto Rural Health Unit &middot; {{ as_of.strftime('%B %Y') }}</p>
         </div>
@@ -199,7 +197,6 @@
       <div class="report-doc-head">
         <div>
           <div class="report-letterhead">{{ brand_mark(22, 6) }}<b style="color:var(--primary)">ImmunoVision</b></div>
-          <div class="report-kicker">{{ icon(current[1], 12) }} {{ current[2] }}</div>
           <h1 class="report-doc-title">Barangay {{ barangay_obj.name }} Overview</h1>
           <p class="report-doc-sub">Overall immunization status &middot; {{ as_of.strftime('%B %Y') }}</p>
         </div>
@@ -236,7 +233,6 @@
       <div class="report-doc-head">
         <div>
           <div class="report-letterhead">{{ brand_mark(22, 6) }}<b style="color:var(--primary)">ImmunoVision</b></div>
-          <div class="report-kicker">{{ icon(current[1], 12) }} {{ current[2] }}</div>
           <h1 class="report-doc-title">Barangay Report</h1>
           <p class="report-doc-sub">Complete statistics for an individual barangay</p>
         </div>
@@ -255,7 +251,6 @@
       <div class="report-doc-head">
         <div>
           <div class="report-letterhead">{{ brand_mark(22, 6) }}<b style="color:var(--primary)">ImmunoVision</b></div>
-          <div class="report-kicker">{{ icon(current[1], 12) }} {{ current[2] }}</div>
           <h1 class="report-doc-title">Performance Summary</h1>
           <p class="report-doc-sub">{{ scope_name }} &middot; {{ as_of.strftime('%B %Y') }}</p>
         </div>
@@ -308,7 +303,6 @@
       <div class="report-doc-head">
         <div>
           <div class="report-letterhead">{{ brand_mark(22, 6) }}<b style="color:var(--primary)">ImmunoVision</b></div>
-          <div class="report-kicker">{{ icon(current[1], 12) if current else icon('trending-up', 12) }} {{ current[2] if current else 'Coverage Report' }}</div>
           <h1 class="report-doc-title">Coverage Report</h1>
           <p class="report-doc-sub">San Jacinto Rural Health Unit, Pangasinan &middot; {{ scope_name }} &middot; {{ as_of.strftime('%B %Y') }}</p>
         </div>
