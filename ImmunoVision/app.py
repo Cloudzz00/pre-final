@@ -2712,9 +2712,38 @@ def requests():
     ))
 
 
+def _deduct_stock(antigen_id, qty):
+    """Takes `qty` doses from usable stock, first-expiry-first-out across
+    batches (skipping empty, archived and expired ones). Returns True if
+    there was enough; otherwise changes nothing and returns False."""
+    batches = (InventoryBatch.query
+               .filter(InventoryBatch.antigen_id == antigen_id, InventoryBatch.is_archived.is_(False),
+                       InventoryBatch.quantity_on_hand > 0, InventoryBatch.expiry_date >= date.today())
+               .order_by(InventoryBatch.expiry_date, InventoryBatch.id).all())
+    if sum(b.quantity_on_hand for b in batches) < qty:
+        return False
+    remaining = qty
+    for b in batches:
+        take = min(b.quantity_on_hand, remaining)
+        b.quantity_on_hand -= take
+        remaining -= take
+        if not remaining:
+            break
+    return True
+
+
 @rhu_bp.route("/requests/<int:req_id>/<action>", methods=["POST"])
 def request_action(req_id, action):
     vr = db.session.get(VaccineRequest, req_id) or abort(404)
+    # Each step only from the status before it, so a request cannot be
+    # approved twice, distributed without approval, or distributed twice
+    # (which would deduct the stock twice).
+    allowed_from = {"approve": "pending", "reject": "pending", "distribute": "approved"}
+    if action not in allowed_from:
+        abort(404)
+    if vr.status != allowed_from[action]:
+        flash(f"Request {vr.request_code} is {vr.status}; it cannot be {action}d.", "error")
+        return redirect(request.referrer or url_for("rhu.requests"))
     if action == "approve":
         # Defaults to the full amount (the plain Approve button on the
         # Requests list never sends a quantity); the Stock Allocation page
@@ -2733,12 +2762,12 @@ def request_action(req_id, action):
         vr.status, vr.reviewed_by_id, vr.reviewed_at = "rejected", current_user.id, datetime.utcnow()
         log_activity(f"Rejected vaccine request {vr.request_code}")
     elif action == "distribute":
-        vr.status, vr.distributed_at = "fulfilled", datetime.utcnow()
         qty = vr.quantity_approved or vr.quantity_requested
-        batch = (InventoryBatch.query.filter_by(antigen_id=vr.antigen_id, is_archived=False)
-                 .order_by(InventoryBatch.expiry_date).first())
-        if batch and batch.quantity_on_hand >= qty:
-            batch.quantity_on_hand -= qty
+        if not _deduct_stock(vr.antigen_id, qty):
+            flash(f"Not enough usable {vr.antigen.name} stock to distribute {qty} for {vr.request_code}. "
+                  "Add stock in Vaccine Inventory first; the request stays approved.", "error")
+            return redirect(request.referrer or url_for("rhu.requests"))
+        vr.status, vr.distributed_at = "fulfilled", datetime.utcnow()
         log_activity(f"Distributed vaccine request {vr.request_code}")
     db.session.commit()
     flash(f"Request {vr.request_code} {action}d.", "success")

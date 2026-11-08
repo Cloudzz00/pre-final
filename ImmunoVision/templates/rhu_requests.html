@@ -129,8 +129,8 @@
   <td><span class="badge badge-{{ 'amber' if r.status=='pending' else 'blue' if r.status=='approved' else 'green' if r.status=='fulfilled' else 'red' }}">{{ r.status|capitalize }}</span></td>
   <td class="flex-gap">
     {% if r.status == 'pending' %}
-      <form method="post" action="{{ url_for('rhu.request_action', req_id=r.id, action='approve') }}"><button class="btn btn-outline btn-sm" title="Approve">{{ icon('check', 15) }}</button></form>
-      <form method="post" action="{{ url_for('rhu.request_action', req_id=r.id, action='reject') }}"><button class="btn btn-outline btn-sm" title="Reject">{{ icon('x', 15) }}</button></form>
+      <form method="post" action="{{ url_for('rhu.request_action', req_id=r.id, action='approve') }}"><button class="btn btn-success btn-sm" title="Approve">{{ icon('check', 15) }}</button></form>
+      <form method="post" action="{{ url_for('rhu.request_action', req_id=r.id, action='reject') }}"><button class="btn btn-danger btn-sm" title="Reject">{{ icon('x', 15) }}</button></form>
     {% elif r.status == 'approved' %}
       <form method="post" action="{{ url_for('rhu.request_action', req_id=r.id, action='distribute') }}"><button class="btn btn-outline btn-sm">{{ icon('arrow-right', 14) }} Distribute</button></form>
     {% else %}<span class="text-muted">—</span>{% endif %}
