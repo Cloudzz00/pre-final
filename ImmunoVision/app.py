@@ -2682,7 +2682,6 @@ def requests():
     groups = None
     reqs = None
     if tab == "pending":
-        stock = {r["antigen"].id: r["total"] for r in stock_levels()}
         coverage = {r["barangay"]: r["coverage"] for r in coverage_by_barangay()}
         pending = (VaccineRequest.query.filter_by(status="pending")
                    .order_by(VaccineRequest.requested_at.asc()).all())
@@ -2700,8 +2699,10 @@ def requests():
                      "requested_at": r.requested_at, "requested": r.quantity_requested,
                      "priority": r.priority, "coverage": coverage.get(r.barangay.name)}
                     for r in antigen_reqs]
-            result = dp.allocate_stock(rows, stock.get(antigen_id, 0), "priority", coverage)
-            groups.append({"antigen": antigen, **result})
+            result = dp.allocate_stock(rows, usable_stock(antigen_id), "priority", coverage)
+            # Vaccines outside the RHU's 7 stocked antigens (e.g. an older
+            # Rotavirus request) can never be distributed from inventory.
+            groups.append({"antigen": antigen, "tracked": antigen.code in _CORE_ANTIGEN_CODES, **result})
         # Short vaccines first: those are the decisions that need making.
         groups.sort(key=lambda g: (g["can_meet_all"], -g["shortfall"]))
     else:
@@ -2712,14 +2713,26 @@ def requests():
     ))
 
 
+def _usable_batches(antigen_id):
+    """Batches that can actually be given out: not empty, archived or
+    expired, soonest expiry first. Shared by the allocation suggestion and
+    by distribution, so a suggestion never counts vials distribution would
+    refuse."""
+    return (InventoryBatch.query
+            .filter(InventoryBatch.antigen_id == antigen_id, InventoryBatch.is_archived.is_(False),
+                    InventoryBatch.quantity_on_hand > 0, InventoryBatch.expiry_date >= date.today())
+            .order_by(InventoryBatch.expiry_date, InventoryBatch.id).all())
+
+
+def usable_stock(antigen_id):
+    return sum(b.quantity_on_hand for b in _usable_batches(antigen_id))
+
+
 def _deduct_stock(antigen_id, qty):
     """Takes `qty` doses from usable stock, first-expiry-first-out across
     batches (skipping empty, archived and expired ones). Returns True if
     there was enough; otherwise changes nothing and returns False."""
-    batches = (InventoryBatch.query
-               .filter(InventoryBatch.antigen_id == antigen_id, InventoryBatch.is_archived.is_(False),
-                       InventoryBatch.quantity_on_hand > 0, InventoryBatch.expiry_date >= date.today())
-               .order_by(InventoryBatch.expiry_date, InventoryBatch.id).all())
+    batches = _usable_batches(antigen_id)
     if sum(b.quantity_on_hand for b in batches) < qty:
         return False
     remaining = qty
@@ -2749,11 +2762,16 @@ def request_action(req_id, action):
         # Requests list never sends a quantity); the Stock Allocation page
         # sends its suggested or RHU-adjusted quantity instead, so stock can
         # actually be rationed rather than only approved in full or refused.
-        qty_raw = request.form.get("quantity")
-        if qty_raw and qty_raw.isdigit() and 0 < int(qty_raw) <= vr.quantity_requested:
+        qty_raw = (request.form.get("quantity") or "").strip()
+        if not qty_raw:
+            qty = vr.quantity_requested       # plain Approve: the full amount
+        elif qty_raw.isdigit() and 0 < int(qty_raw) <= vr.quantity_requested:
             qty = int(qty_raw)
         else:
-            qty = vr.quantity_requested
+            # A typed 0, a value above the request, or text is a mistake to
+            # report - never silently approve the full request instead.
+            flash(f"Enter a quantity from 1 to {vr.quantity_requested} to approve {vr.request_code}.", "error")
+            return redirect(request.referrer or url_for("rhu.requests"))
         vr.status, vr.quantity_approved = "approved", qty
         vr.reviewed_by_id, vr.reviewed_at = current_user.id, datetime.utcnow()
         suffix = f" ({qty} of {vr.quantity_requested} requested)" if qty < vr.quantity_requested else ""

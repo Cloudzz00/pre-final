@@ -1849,3 +1849,4 @@ html { scroll-behavior: smooth; }
   .bhw-report-page .chart-box { height: 155px !important; }
 }
 .select-group { padding: 8px 12px 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--text-muted); }
+.no-stock-note { display: inline-flex; align-items: center; height: 32px; padding: 0 10px; border-radius: var(--radius-sm); background: var(--slate-bg); color: var(--text-secondary); font-size: 12.5px; font-weight: 600; white-space: nowrap; }
