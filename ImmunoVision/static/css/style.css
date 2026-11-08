@@ -134,7 +134,7 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 40px;
+  margin-bottom: 24px;
 }
 /* Brand mark: gradient tile + vector shield glyph. Sized by --mark-size
    so the same markup serves the login hero (44px) and sidebar (38px). */
@@ -156,8 +156,8 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
 .login-hero .brand-title { font-weight: 700; font-size: 18px; }
 .login-hero .brand-sub { color: #93c5fd; font-size: 13px; }
 .login-hero h1 { font-size: clamp(30px, 3.2vw, 44px); line-height: 1.12; font-weight: 800; letter-spacing: -.02em;
-  margin: 0 0 18px; max-width: 13em; text-wrap: balance; text-shadow: 0 2px 18px rgba(0,0,0,.35); }
-.login-hero p.lead { color: #dbe4f0; font-size: 16px; line-height: 1.6; max-width: 440px; margin-bottom: 32px; text-wrap: pretty; text-shadow: 0 1px 10px rgba(0,0,0,.35); }
+  margin: 0 0 14px; max-width: 13em; text-wrap: balance; text-shadow: 0 2px 18px rgba(0,0,0,.35); }
+.login-hero p.lead { color: #dbe4f0; font-size: 16px; line-height: 1.6; max-width: 440px; margin-top: 0; margin-bottom: 32px; text-wrap: pretty; text-shadow: 0 1px 10px rgba(0,0,0,.35); }
 
 .login-panel-wrap {
   flex: 1;
@@ -189,7 +189,7 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
    side by side, but with less padding so the headline keeps two lines. */
 @media (min-width: 861px) and (max-width: 1180px) {
   .login-hero { padding: 40px 32px 40px 48px; }
-  .login-hero .brand { margin-bottom: 28px; }
+  .login-hero .brand { margin-bottom: 20px; }
   .login-panel-wrap { padding: 32px 40px 32px 16px; }
   .login-card { padding: 32px; max-width: 400px; }
 }
