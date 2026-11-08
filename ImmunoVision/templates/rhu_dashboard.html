@@ -125,7 +125,7 @@
                 <div>
                   <div class="dashboard-card-title"><span class="dashboard-section-icon icon-red">{{ icon('alert-triangle', 18) }}</span><div><div class="card-title mb-0">Needs Follow-Up</div><div class="card-sub mb-0">Highest-risk children under 12 months{% if selected_barangay %} in {{ selected_barangay.name }}{% endif %}</div></div></div>
                 </div>
-                <a class="btn btn-outline btn-sm" href="{{ url_for('rhu.continuation') }}">All {{ follow_up_total }} &rsaquo;</a>
+                <a class="btn btn-outline btn-sm" href="{{ url_for('rhu.continuation') }}">{{ icon('target', 14) }} View all {{ follow_up_total }}</a>
               </div>
               <div style="margin-top:10px;">
                 {% for r in follow_up %}
@@ -171,7 +171,7 @@
             <div>
               <div class="dashboard-card-title"><span class="dashboard-section-icon icon-amber">{{ icon('package', 18) }}</span><div><div class="card-title mb-0">Vaccines Running Low</div><div class="card-sub mb-0">At or below reorder level{% if selected_barangay %} &middot; municipality-wide stock{% endif %}</div></div></div>
             </div>
-            <a class="btn btn-outline btn-sm" href="{{ url_for('rhu.inventory') }}">Inventory &rsaquo;</a>
+            <a class="btn btn-outline btn-sm" href="{{ url_for('rhu.inventory') }}">{{ icon('package', 14) }} Inventory</a>
           </div>
           <div style="margin-top:10px;">
             {% for r in low_stock %}

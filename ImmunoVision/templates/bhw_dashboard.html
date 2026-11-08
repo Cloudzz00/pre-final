@@ -115,7 +115,7 @@
         </div>
       </div>
       <a href="{{ url_for('bhw.continuation') }}" class="btn btn-outline btn-sm followup-view-btn" style="margin-left:auto;">
-        View All ({{ follow_up_total }}) &rsaquo;
+        {{ icon('target', 14) }} View all {{ follow_up_total }}
       </a>
     </div>
     <div class="table-wrap auto-height" style="margin-top:12px;">
@@ -147,7 +147,7 @@
           <div class="card-sub mb-0">See which children need vaccines on a specific date.</div>
         </div>
       </div>
-      <a href="{{ url_for('bhw.due_vaccines') }}" class="btn btn-outline btn-sm">View All &rsaquo;</a>
+      <a href="{{ url_for('bhw.due_vaccines') }}" class="btn btn-outline btn-sm">{{ icon('calendar', 14) }} View all</a>
     </div>
     <div class="due-legend" style="margin-left:43px;margin-top:6px;">
       <span><i class="due-dot today"></i>Due Today</span>
