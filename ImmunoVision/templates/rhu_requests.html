@@ -34,7 +34,8 @@
       <div>
         <div class="card-title mb-0">{{ g.antigen.name }}</div>
         <div class="card-sub mb-0">
-          {{ g.requested }} vials requested &middot; {{ g.available }} in stock
+          {{ g.requested }} vials requested &middot; {{ g.available }} usable in stock
+          {% if not g.tracked %}&middot; not stocked in Vaccine Inventory{% endif %}
         </div>
       </div>
       {% if g.can_meet_all %}
@@ -51,9 +52,9 @@
            row content (e.g. barangay name length), so columns drifted out of
            alignment from one card to the next. #}
         <colgroup>
-          <col style="width:16%;"><col style="width:16%;"><col style="width:13%;">
-          <col style="width:11%;"><col style="width:11%;"><col style="width:11%;">
-          <col style="width:22%;">
+          <col style="width:15%;"><col style="width:14%;"><col style="width:11%;">
+          <col style="width:10%;"><col style="width:10%;"><col style="width:10%;">
+          <col style="width:30%;">
         </colgroup>
         <thead><tr>
           <th>Barangay</th><th>Request</th><th>Date</th><th>Priority</th><th>Coverage</th>
@@ -78,13 +79,17 @@
             <td>{{ r.requested }}</td>
             <td>
               <div class="actions-cluster">
+                {% if r.allocated > 0 %}
                 <form method="post" action="{{ url_for('rhu.request_action', req_id=r.id, action='approve') }}"
                       style="display:flex;align-items:center;gap:8px;">
-                  <input class="form-control" type="number" name="quantity" value="{{ r.allocated }}"
+                  <input class="form-control table-input" type="number" name="quantity" value="{{ r.allocated }}"
                          min="1" max="{{ r.requested }}" style="width:70px;"
                          aria-label="Quantity to approve for {{ r.barangay }}">
                   <button class="btn btn-success btn-sm" type="submit">{{ icon('check', 14) }} Approve</button>
                 </form>
+                {% else %}
+                <span class="no-stock-note" title="{{ 'Add ' ~ g.antigen.name ~ ' stock in Vaccine Inventory to approve this request.' if g.tracked else g.antigen.name ~ ' is not stocked in Vaccine Inventory.' }}">No stock to approve</span>
+                {% endif %}
                 <form method="post" action="{{ url_for('rhu.request_action', req_id=r.id, action='reject') }}">
                   <button class="btn btn-danger btn-sm" type="submit" title="Reject">{{ icon('x', 14) }}</button>
                 </form>
