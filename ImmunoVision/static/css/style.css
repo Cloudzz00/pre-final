@@ -1848,3 +1848,8 @@ html { scroll-behavior: smooth; }
 .form-control:disabled { background: var(--slate-bg); color: var(--text-muted); cursor: not-allowed; }
 /* Start the total under the number inside the quantity box (box border 1px + padding 10px). */
 table.data-table tfoot td.alloc-total { padding-left: 21px; }
+
+/* Notifications: tabs on the left, unread count on the right */
+.notif-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+.notif-toolbar .pill-tabs { margin-bottom: 0; }
+.notif-toolbar > .badge { margin-left: auto; }

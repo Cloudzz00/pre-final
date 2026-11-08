@@ -1,15 +1,14 @@
 {% extends "layout_app.html" %}
 {% from "_icons.html" import icon %}
 {% block content %}
-<div class="page-head">
-  {% set unread = notes|selectattr('unread')|list|length %}
+{% set unread = notes|selectattr('unread')|list|length %}
+<div class="notif-toolbar">
+  <div class="pill-tabs" data-tabgroup="notifTabs">
+    <button class="pill-tab active" data-tab="All">All</button>
+    <button class="pill-tab" data-tab="Accounts">Accounts</button>
+    <button class="pill-tab" data-tab="Coverage">Coverage</button>
+  </div>
   {% if unread %}<span class="badge badge-red">{{ unread }} unread</span>{% endif %}
-</div>
-
-<div class="pill-tabs" data-tabgroup="notifTabs">
-  <button class="pill-tab active" data-tab="All">All</button>
-  <button class="pill-tab" data-tab="Accounts">Accounts</button>
-  <button class="pill-tab" data-tab="Coverage">Coverage</button>
 </div>
 
 {% for cat in ['All', 'Accounts', 'Coverage'] %}
