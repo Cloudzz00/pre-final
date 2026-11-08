@@ -1490,11 +1490,6 @@ html { scroll-behavior: smooth; }
   padding-bottom: 18px; border-bottom: 1px solid var(--border);
 }
 .report-letterhead { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 7px; }
-.report-kicker {
-  display: inline-flex; align-items: center; gap: 6px; font-size: 12px;
-  font-weight: 800; color: var(--primary); background: var(--primary-tint);
-  border-radius: 999px; padding: 5px 10px; margin-bottom: 10px;
-}
 .report-doc-title { font-size: 22px; font-weight: 850; margin: 0; letter-spacing: -.02em; }
 .report-doc-sub { margin: 5px 0 0; color: var(--text-secondary); font-size: 13px; }
 .generated-meta { color: var(--text-muted); font-size: 12px; text-align: right; white-space: nowrap; padding-top: 4px; }
