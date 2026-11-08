@@ -109,7 +109,7 @@
           <tr>
             <td><b>Total</b></td><td></td><td></td><td></td><td></td>
             <td><b>{{ g.requested }}</b></td>
-            <td>{% if g.available == 0 %}<b>No usable stock</b>{% else %}<b>{{ g.allocated }}</b> suggested{% endif %}{% if g.shortfall %}, <span class="text-muted">{{ g.shortfall }} short</span>{% endif %}</td>
+            <td class="alloc-total">{% if g.available == 0 %}<b>No usable stock</b>{% else %}<b>{{ g.allocated }}</b> suggested{% endif %}{% if g.shortfall %}, <span class="text-muted">{{ g.shortfall }} short</span>{% endif %}</td>
           </tr>
         </tfoot>
       </table>
