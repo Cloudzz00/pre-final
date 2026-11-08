@@ -88,7 +88,14 @@
                   <button class="btn btn-success btn-sm" type="submit">{{ icon('check', 14) }} Approve</button>
                 </form>
                 {% else %}
-                <span class="no-stock-note" title="{{ 'Add ' ~ g.antigen.name ~ ' stock in Vaccine Inventory to approve this request.' if g.tracked else g.antigen.name ~ ' is not stocked in Vaccine Inventory.' }}">No stock to approve</span>
+                {# Nothing can be allocated: show what the barangay needs, but
+                   locked, since there are no usable vials to approve it from. #}
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <input class="form-control table-input" type="number" value="{{ r.requested }}" disabled
+                         style="width:70px;" aria-label="Requested quantity for {{ r.barangay }} (no stock)">
+                  <span class="no-stock-note"
+                        title="{{ ('Add ' ~ g.antigen.name ~ ' stock in Vaccine Inventory to approve this request.') if g.available == 0 else 'Usable stock has been allocated to higher-priority requests above.' }}">{{ 'No stock to approve' if g.available == 0 else 'All stock allocated' }}</span>
+                </div>
                 {% endif %}
                 <form method="post" action="{{ url_for('rhu.request_action', req_id=r.id, action='reject') }}">
                   <button class="btn btn-danger btn-sm" type="submit" title="Reject">{{ icon('x', 14) }}</button>
@@ -102,7 +109,7 @@
           <tr>
             <td><b>Total</b></td><td></td><td></td><td></td><td></td>
             <td><b>{{ g.requested }}</b></td>
-            <td><b>{{ g.allocated }}</b> suggested{% if g.shortfall %}, <span class="text-muted">{{ g.shortfall }} short</span>{% endif %}</td>
+            <td>{% if g.available == 0 %}<b>No usable stock</b>{% else %}<b>{{ g.allocated }}</b> suggested{% endif %}{% if g.shortfall %}, <span class="text-muted">{{ g.shortfall }} short</span>{% endif %}</td>
           </tr>
         </tfoot>
       </table>
