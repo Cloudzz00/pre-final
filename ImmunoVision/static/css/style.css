@@ -112,9 +112,11 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
   content: "";
   position: absolute;
   inset: 0;
+  /* Darker behind the text column so the headline never sits on the
+     brightest part of the photo (the child's face). */
   background: linear-gradient(100deg,
-    rgba(6,12,30,.72) 0%, rgba(6,12,30,.6) 35%,
-    rgba(12,24,56,.55) 60%, rgba(6,12,30,.82) 100%);
+    rgba(6,12,30,.86) 0%, rgba(6,12,30,.76) 38%,
+    rgba(12,24,56,.52) 62%, rgba(6,12,30,.82) 100%);
   z-index: 0;
 }
 .login-hero {
@@ -122,9 +124,9 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 4vw 6vw;
+  padding: 4vw 3vw 4vw 6vw;
   color: #fff;
-  max-width: 640px;
+  max-width: 760px;
   position: relative;
   z-index: 1;
 }
@@ -153,8 +155,9 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
 .sidebar-header .brand-mark { box-shadow: none; }
 .login-hero .brand-title { font-weight: 700; font-size: 18px; }
 .login-hero .brand-sub { color: #93c5fd; font-size: 13px; }
-.login-hero h1 { font-size: clamp(28px, 3.4vw, 42px); line-height: 1.15; font-weight: 800; margin: 0 0 16px; }
-.login-hero p.lead { color: #cbd5e1; font-size: 16px; line-height: 1.6; max-width: 460px; margin-bottom: 32px; }
+.login-hero h1 { font-size: clamp(30px, 3.2vw, 44px); line-height: 1.12; font-weight: 800; letter-spacing: -.02em;
+  margin: 0 0 18px; max-width: 13em; text-wrap: balance; text-shadow: 0 2px 18px rgba(0,0,0,.35); }
+.login-hero p.lead { color: #dbe4f0; font-size: 16px; line-height: 1.6; max-width: 440px; margin-bottom: 32px; text-wrap: pretty; text-shadow: 0 1px 10px rgba(0,0,0,.35); }
 
 .login-panel-wrap {
   flex: 1;
@@ -182,6 +185,14 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
    their content's natural width by default. Stacks them, and trims the
    hero down to what actually matters on a phone (brand + heading) so the
    sign-in form isn't pushed far down the page. */
+/* Mid widths (small laptops, tablets in landscape): both columns still fit
+   side by side, but with less padding so the headline keeps two lines. */
+@media (min-width: 861px) and (max-width: 1180px) {
+  .login-hero { padding: 40px 32px 40px 48px; }
+  .login-hero .brand { margin-bottom: 28px; }
+  .login-panel-wrap { padding: 32px 40px 32px 16px; }
+  .login-card { padding: 32px; max-width: 400px; }
+}
 @media (max-width: 860px) {
   .login-page { flex-direction: column; overflow-y: auto; min-height: 100vh; height: auto; }
   .login-hero { flex: none; max-width: none; padding: 28px 24px 20px; }
