@@ -738,17 +738,21 @@ def coverage_change(barangay_id=None):
     }
 
 
-_CORE_ANTIGEN_CODES = {code for code, _name in dp.VACCINE_ANTIGENS}
+# Vaccines the RHU keeps in stock: the 7 routine antigens plus Rotavirus,
+# which BHWs administer and record (an optional dose) and so must be able to
+# request and the RHU must be able to stock. Campaign-only vaccines (e.g. MR)
+# are not included.
+_CORE_ANTIGEN_CODES = ({code for code, _name in dp.VACCINE_ANTIGENS}
+                       | {code for code, _name in dp.OPTIONAL_VACCINE_ANTIGENS})
 
 
 def core_antigens():
-    """Antigens in the RHU's formal inventory/requests system - the 7 core
-    vaccines only. Optional vaccines like Rotavirus (VaccineAntigen rows that
-    exist so a VaccinationRecord can reference them, but which a BHW logs
-    only if actually administered) never had stock tracked or requested for
-    them and shouldn't appear as if they need to be - VaccineAntigen.query.all()
-    would otherwise surface them here as permanently "Out of Stock"."""
-    return [a for a in VaccineAntigen.query.all() if a.code in _CORE_ANTIGEN_CODES]
+    """Antigens in the RHU's inventory and request system: the 7 routine
+    vaccines and Rotavirus. Used by Vaccine Inventory, stock status and
+    alerts, the BHW request form, warning levels and the allocation view."""
+    order = [code for code, _ in dp.VACCINE_ANTIGENS + dp.OPTIONAL_VACCINE_ANTIGENS]
+    rows = [a for a in VaccineAntigen.query.all() if a.code in _CORE_ANTIGEN_CODES]
+    return sorted(rows, key=lambda a: order.index(a.code))
 
 
 def stock_levels():
