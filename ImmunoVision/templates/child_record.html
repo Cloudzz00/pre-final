@@ -8,6 +8,9 @@
     <div class="child-meta">{{ child.age_display }} &middot; {{ 'Male' if child.sex == 'M' else 'Female' }} &middot; born {{ child.date_of_birth.strftime('%b %d, %Y') }} &middot; {{ child.barangay.name }}</div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;">
+    {% if followup_url and detail.risk and detail.risk.risk_label == 'At-Risk' %}
+    <a class="btn btn-outline btn-sm" href="{{ followup_url }}">{{ icon('file-text', 14) }} Follow-Up Report</a>
+    {% endif %}
     <form method="post" action="{{ recompute_url }}" style="display:inline;">
       <button class="btn btn-outline btn-sm">{{ icon('refresh', 14) }} Update Assessment</button>
     </form>

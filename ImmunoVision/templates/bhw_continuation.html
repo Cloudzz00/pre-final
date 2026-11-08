@@ -78,7 +78,7 @@
         </td>
         <td>{{ r.missed }} of {{ r.due }} doses</td>
         <td>{{ r.last_visit.strftime('%b %d, %Y') if r.last_visit else '—' }}</td>
-        <td>
+        <td><div style="display:flex;align-items:center;gap:6px;">
           <button type="button"
             class="btn btn-sm btn-{{ 'danger' if r.recommendation == 'Home Visit' else 'outline' }} schedule-visit-btn"
             data-child-id="{{ r.child.id }}"
@@ -91,7 +91,9 @@
               {{ r.recommendation }}
             {% endif %}
           </button>
-        </td>
+          <a class="btn btn-outline btn-sm" href="{{ url_for('bhw.child_followup_report', child_id=r.child.id) }}"
+             title="Follow-Up Report for {{ r.child.display_name }}" aria-label="Follow-Up Report for {{ r.child.display_name }}">{{ icon('file-text', 14) }} Report</a>
+        </div></td>
       </tr>
     {% else %}
       <tr><td colspan="6">

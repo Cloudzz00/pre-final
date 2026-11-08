@@ -3172,6 +3172,7 @@ def child_record(child_id):
         back_url=url_for("bhw.children"),
         edit_url=url_for("bhw.edit_child", child_id=child.id),
         recompute_url=url_for("bhw.recompute_risk", child_id=child.id),
+        followup_url=url_for("bhw.child_followup_report", child_id=child.id),
     ))
 
 
