@@ -28,15 +28,15 @@ from datetime import date, datetime, timedelta
 # and _load_artifact() only. The running prototype therefore needs none of them
 # installed, while the training code stays in the repository for the final defense.
 
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-RAW_DATA_DIR = os.path.join(BASE_DIR, "data", "raw")
-MODEL_PATH = os.path.join(BASE_DIR, "data", "risk_model.joblib")
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))  # app folder
+RAW_DATA_DIR = os.path.join(BASE_DIR, "data", "raw")  # registry CSVs
+MODEL_PATH = os.path.join(BASE_DIR, "data", "risk_model.joblib")  # saved model
 
 # ---------------------------------------------------------------------------
 # Reference data: San Jacinto barangays and the DOH EPI schedule.
 # ---------------------------------------------------------------------------
 
-BARANGAYS = [
+BARANGAYS = [  # 19 barangays
     "Awai", "Bolo", "Capaoay", "Casibong", "Imelda",
     "Guibel", "Labney", "Magsaysay", "Lobong", "Macayug",
     "Bagong Pag-asa", "San Guillermo", "San Jose", "San Juan",
@@ -46,7 +46,7 @@ BARANGAYS = [
 # The 7 vaccine antigens tracked in Vaccine Inventory / Vaccine Requests.
 # "Pentavalent" (DPT-Hib-HepB) replaces the outdated standalone "DPT" name -
 # the modern formulation combines five antigens, not the original three.
-VACCINE_ANTIGENS = [
+VACCINE_ANTIGENS = [  # 7 routine vaccines
     ("BCG", "BCG"),
     ("HEPB", "Hepatitis B"),
     ("PENTA", "Pentavalent"),
@@ -59,7 +59,7 @@ VACCINE_ANTIGENS = [
 # What each antigen protects against. Used to show a health worker the
 # consequence of a missed dose rather than only the dose code. Wording follows
 # the DOH EPI programme description.
-ANTIGEN_PROTECTS = {
+ANTIGEN_PROTECTS = {  # disease names
     "BCG":   "Tuberculosis",
     "HEPB":  "Hepatitis B",
     "PENTA": "Diphtheria, pertussis, tetanus, Hib, hepatitis B",
@@ -70,18 +70,18 @@ ANTIGEN_PROTECTS = {
 }
 
 
-def vaccines_for_missed(missed_codes):
+def vaccines_for_missed(missed_codes):  # missed vaccine names
     """Human-readable vaccine names for the missed dose codes, de-duplicated.
 
     Groups multiple doses of the same vaccine: a child missing PENTA1, PENTA2,
     PENTA3 shows 'Pentavalent' once, not three times."""
-    antigen_of = {code: ant for code, _n, ant, _d, _r in VACCINE_SCHEDULE}
+    antigen_of = {code: ant for code, _n, ant, _d, _r in VACCINE_SCHEDULE}  # dose -> antigen
     name_of = {code: name for code, name, _a, _d, _r in VACCINE_SCHEDULE}
     seen, out = set(), []
     for code in missed_codes:
         ant = antigen_of.get(code, "")
         # Group by antigen so PENTA1/PENTA2/PENTA3 → one entry
-        if ant and ant not in seen:
+        if ant and ant not in seen:  # first of antigen
             seen.add(ant)
             # Use the first dose name as the label, strip the dose number
             label = name_of.get(code, code).rsplit(" ", 2)[0]
@@ -89,10 +89,10 @@ def vaccines_for_missed(missed_codes):
         elif not ant and code not in seen:
             seen.add(code)
             out.append(name_of.get(code, code))
-    return out
+    return out  # names list
 
 
-def diseases_for_missed(missed_codes):
+def diseases_for_missed(missed_codes):  # missed diseases
     """Diseases the missed doses would have protected against, de-duplicated.
 
     A child missing four Pentavalent-series doses is exposed to one set of
@@ -106,11 +106,11 @@ def diseases_for_missed(missed_codes):
             continue
         # De-duplicate on the disease, not the antigen: OPV and IPV both cover
         # polio, so a child missing both is exposed to polio once.
-        label = ANTIGEN_PROTECTS.get(ant, ant)
+        label = ANTIGEN_PROTECTS.get(ant, ant)  # disease label
         if label not in seen:
             seen.add(label)
             out.append(label)
-    return out
+    return out  # diseases list
 
 
 # Per-dose schedule (code, name, antigen_code, dose_number, recommended_age_days).
@@ -119,24 +119,24 @@ def diseases_for_missed(missed_codes):
 # as its column header - that's just the source file's own label and doesn't
 # need to match these codes/names, which use current DOH terminology.
 # BCG, Hepa B-BD, Pentavalent x3, OPV x3, PCV x3, IPV x2, MMR x2.
-VACCINE_SCHEDULE = [
-    ("BCG", "BCG", "BCG", 1, 0),
+VACCINE_SCHEDULE = [  # DOH schedule
+    ("BCG", "BCG", "BCG", 1, 0),  # birth dose
     ("HEPA-BD", "Hepa B-BD", "HEPB", 1, 0),
-    ("PENTA1", "Pentavalent 1st Dose", "PENTA", 1, 42),
+    ("PENTA1", "Pentavalent 1st Dose", "PENTA", 1, 42),  # 6 weeks
     ("OPV1", "OPV 1st Dose", "OPV", 1, 42),
     ("PCV1", "PCV 1st Dose", "PCV", 1, 42),
-    ("PENTA2", "Pentavalent 2nd Dose", "PENTA", 2, 70),
+    ("PENTA2", "Pentavalent 2nd Dose", "PENTA", 2, 70),  # 10 weeks
     ("OPV2", "OPV 2nd Dose", "OPV", 2, 70),
     ("PCV2", "PCV 2nd Dose", "PCV", 2, 70),
-    ("PENTA3", "Pentavalent 3rd Dose", "PENTA", 3, 98),
+    ("PENTA3", "Pentavalent 3rd Dose", "PENTA", 3, 98),  # 14 weeks
     ("OPV3", "OPV 3rd Dose", "OPV", 3, 98),
     ("PCV3", "PCV 3rd Dose", "PCV", 3, 98),
     ("IPV1", "IPV 1st Dose", "IPV", 1, 98),
-    ("IPV2", "IPV 2nd Dose", "IPV", 2, 270),
+    ("IPV2", "IPV 2nd Dose", "IPV", 2, 270),  # 9 months
     ("MMR1", "MMR 1st Dose", "MMR", 1, 270),
-    ("MMR2", "MMR 2nd Dose", "MMR", 2, 365),
+    ("MMR2", "MMR 2nd Dose", "MMR", 2, 365),  # 12 months
 ]
-VACCINE_CODES = [row[0] for row in VACCINE_SCHEDULE]
+VACCINE_CODES = [row[0] for row in VACCINE_SCHEDULE]  # dose codes
 
 # Unlike OPTIONAL_VACCINE_SCHEDULE's catch_up_deadline_days (a dose that
 # becomes actively unsafe to give late, e.g. Rotavirus), this is a core dose
@@ -146,7 +146,7 @@ VACCINE_CODES = [row[0] for row in VACCINE_SCHEDULE]
 # once a child is past their first year. Every other core dose has no entry
 # here and stays catchable at any age, consistent with DOH catch-up
 # schedules running through age 5 for most of the primary series.
-CORE_CATCH_UP_DEADLINES = {"BCG": 365}
+CORE_CATCH_UP_DEADLINES = {"BCG": 365}  # BCG cutoff
 
 # Vaccines a BHW can administer and log for a child even though they aren't
 # part of the RHU's core registry schedule above - recorded only if actually
@@ -155,7 +155,7 @@ CORE_CATCH_UP_DEADLINES = {"BCG": 365}
 # out for good: catch_up_deadline_days is the age past which WHO/DOH no
 # longer recommend giving the dose at all (Rotavirus, due to rising
 # intussusception risk in older infants).
-OPTIONAL_VACCINE_ANTIGENS = [
+OPTIONAL_VACCINE_ANTIGENS = [  # optional vaccine
     ("ROTA", "Rotavirus"),
 ]
 OPTIONAL_VACCINE_SCHEDULE = [
@@ -164,10 +164,10 @@ OPTIONAL_VACCINE_SCHEDULE = [
     ("ROTA2", "Rotavirus 2nd Dose", "ROTA", 2, 70, 240),   # recommended 10wks, series closes ~8mo
 ]
 
-GRACE_PERIOD_DAYS = 30
+GRACE_PERIOD_DAYS = 30  # 30-day grace
 
 # Score at or above which a child is flagged At-Risk by the prototype scorer.
-RISK_THRESHOLD = 0.50
+RISK_THRESHOLD = 0.50  # At-Risk cutoff
 
 # The primary series itself runs 0-365 days (MMR 2nd Dose, the last core
 # dose, is recommended at day 365); past that a child has already either
@@ -178,16 +178,16 @@ RISK_THRESHOLD = 0.50
 # complete registry at any age), and (b) the ML model's training/serving
 # window below, so the model is only ever asked to score children the same
 # age as the ones it learned from.
-CONTINUATION_WINDOW_DAYS = 365
+CONTINUATION_WINDOW_DAYS = 365  # model max age
 
 # Below this, a child cannot yet have any missed dose (GRACE_PERIOD_DAYS is
 # 30), so every row would look identically "clean" - too little signal to
 # train or predict on.
-ML_ASSESSMENT_FLOOR_DAYS = GRACE_PERIOD_DAYS
+ML_ASSESSMENT_FLOOR_DAYS = GRACE_PERIOD_DAYS  # model min age
 
 
 ROLE_ADMIN, ROLE_RHU, ROLE_BHW = "admin", "rhu", "bhw"
-REQUEST_PENDING, REQUEST_APPROVED, REQUEST_REJECTED, REQUEST_FULFILLED = (
+REQUEST_PENDING, REQUEST_APPROVED, REQUEST_REJECTED, REQUEST_FULFILLED = (  # request statuses
     "pending", "approved", "rejected", "fulfilled",
 )
 
@@ -201,43 +201,43 @@ REQUEST_PENDING, REQUEST_APPROVED, REQUEST_REJECTED, REQUEST_FULFILLED = (
 # (e.g. "Guibel (Centro)", "Centro, Guibel", "Guibel Pandes"). This section
 # normalizes all of that into clean Python records.
 
-_DATE_FORMATS = ["%Y-%m-%d", "%m/%d/%y", "%m/%d/%Y"]
-_MISSING_SENTINELS = {"", "null", "none", "move out", "n/a", "na"}
+_DATE_FORMATS = ["%Y-%m-%d", "%m/%d/%y", "%m/%d/%Y"]  # date formats
+_MISSING_SENTINELS = {"", "null", "none", "move out", "n/a", "na"}  # missing values
 _FIRST_DATA_COL = 6  # ID, RegDate, DOB, Name, Sex, Barangay come before the dose columns
-_DOSE_COL_ORDER = [
+_DOSE_COL_ORDER = [  # CSV dose columns
     "BCG", "HEPA-BD", "PENTA1", "PENTA2", "PENTA3", "OPV1", "OPV2", "OPV3",
     "PCV1", "PCV2", "PCV3", "IPV1", "IPV2", "VITAMIN_A", "MNP", "MMR1", "MMR2",
 ]
 
 
-def _clean_date(value):
+def _clean_date(value):  # clean date
     if value is None:
         return None
     value = str(value).strip()
-    if value.lower() in _MISSING_SENTINELS:
+    if value.lower() in _MISSING_SENTINELS:  # NULL -> none
         return None
-    for fmt in _DATE_FORMATS:
+    for fmt in _DATE_FORMATS:  # try each format
         try:
             d = datetime.strptime(value, fmt).date()
             # 2-digit years: assume 2000s
-            if fmt == "%m/%d/%y" and d.year < 2000:
+            if fmt == "%m/%d/%y" and d.year < 2000:  # 2-digit year
                 d = d.replace(year=d.year + 100)
             return d
         except ValueError:
             continue
-    return None
+    return None  # unreadable
 
 
-def _clean_sex(value):
+def _clean_sex(value):  # clean sex
     v = (value or "").strip().lower()
-    if v.startswith("m"):
+    if v.startswith("m"):  # male
         return "M"
-    if v.startswith("f"):
+    if v.startswith("f"):  # female
         return "F"
     return "M"  # default; real data never leaves this blank in practice
 
 
-def _clean_barangay(raw_value, file_scope_barangay):
+def _clean_barangay(raw_value, file_scope_barangay):  # clean barangay
     """The RHU's own per-barangay ledgers occasionally record a
     purok/sitio suffix or a neighboring locality name in the Barangay
     column (e.g. "Guibel (Centro)", "Nambalangan"). Since each raw file
@@ -245,41 +245,41 @@ def _clean_barangay(raw_value, file_scope_barangay):
     the file's own barangay -- the raw value is preserved in the
     address field for traceability rather than silently discarded.
     """
-    return file_scope_barangay
+    return file_scope_barangay  # file barangay
 
 
-def _clean_name(raw_value, fallback_id, barangay):
+def _clean_name(raw_value, fallback_id, barangay):  # clean name
     v = (raw_value or "").strip()
-    if not v or v.upper() == "NULL":
+    if not v or v.upper() == "NULL":  # missing name
         return f"Unnamed Child #{fallback_id} ({barangay})"
     # Registry format is "Last, First Middle" -> reformat to "First Middle Last"
-    if "," in v:
+    if "," in v:  # Last, First
         last, _, first = v.partition(",")
         v = f"{first.strip()} {last.strip()}".strip()
-    return v.title()
+    return v.title()  # title case
 
 
-def load_registry_csv(path, barangay_name):
+def load_registry_csv(path, barangay_name):  # read one CSV
     """Parses one RHU registry export (2-row header, 23 columns) into a
     list of cleaned child dicts: {full_name, sex, date_of_birth,
     barangay, address, date_registered, doses: {code: date|None},
     number_of_visits, moved_out}.
     """
     skipped_bad_dates = 0
-    with open(path, "r", encoding="utf-8-sig", newline="") as f:
+    with open(path, "r", encoding="utf-8-sig", newline="") as f:  # open file
         rows = list(csv.reader(f))
 
     records = []
     next_seq = 1
     for row in rows[2:]:  # skip the 2 header rows
-        if not row or not any(c.strip() for c in row):
+        if not row or not any(c.strip() for c in row):  # blank row
             continue  # blank trailer row
         row = row + [""] * (max(0, _FIRST_DATA_COL + len(_DOSE_COL_ORDER) + 1 - len(row)))
 
         raw_id = row[0].strip()
-        reg_date = _clean_date(row[1])
-        dob = _clean_date(row[2])
-        if dob is None:
+        reg_date = _clean_date(row[1])  # registration date
+        dob = _clean_date(row[2])  # birth date
+        if dob is None:  # no DOB
             continue  # date of birth is the one field we cannot proceed without
 
         # Data-quality rule: the registry contains at least one record whose date
@@ -287,44 +287,44 @@ def load_registry_csv(path, barangay_name):
         # a data-entry error at source. A child cannot be registered before being
         # born, so the implausible date of birth is discarded rather than carried
         # into the analytics, where it would skew age and coverage calculations.
-        if dob > date.today() or (reg_date is not None and dob > reg_date):
+        if dob > date.today() or (reg_date is not None and dob > reg_date):  # bad DOB
             skipped_bad_dates += 1
             continue
-        name = _clean_name(row[3], raw_id or next_seq, barangay_name)
-        sex = _clean_sex(row[4])
+        name = _clean_name(row[3], raw_id or next_seq, barangay_name)  # name
+        sex = _clean_sex(row[4])  # sex
         raw_barangay = row[5].strip()
-        barangay = _clean_barangay(raw_barangay, barangay_name)
+        barangay = _clean_barangay(raw_barangay, barangay_name)  # barangay
 
         doses = {}
         moved_out = False
-        for i, code in enumerate(_DOSE_COL_ORDER):
+        for i, code in enumerate(_DOSE_COL_ORDER):  # each dose
             raw_val = row[_FIRST_DATA_COL + i] if _FIRST_DATA_COL + i < len(row) else ""
-            if str(raw_val).strip().upper() == "MOVE OUT":
+            if str(raw_val).strip().upper() == "MOVE OUT":  # moved out
                 moved_out = True
-            dose_date = _clean_date(raw_val)
+            dose_date = _clean_date(raw_val)  # dose date
             # Same data-quality rule as the date-of-birth check above: some
             # registries use the dose column to pencil in the next scheduled
             # visit for a dose not yet given, rather than leaving it blank.
             # A dose cannot have been administered in the future, so that
             # value is discarded (treated as not yet given) rather than
             # counted as a completed dose.
-            if dose_date is not None and dose_date > date.today():
+            if dose_date is not None and dose_date > date.today():  # future dose
                 dose_date = None
             doses[code] = dose_date
 
-        visits_raw = row[_FIRST_DATA_COL + len(_DOSE_COL_ORDER)] if len(row) > _FIRST_DATA_COL + len(_DOSE_COL_ORDER) else ""
+        visits_raw = row[_FIRST_DATA_COL + len(_DOSE_COL_ORDER)] if len(row) > _FIRST_DATA_COL + len(_DOSE_COL_ORDER) else ""  # visit count
         try:
             number_of_visits = int(str(visits_raw).strip())
         except (ValueError, TypeError):
             number_of_visits = sum(1 for v in doses.values() if v is not None)
 
-        if reg_date is None:
+        if reg_date is None:  # fill reg date
             reg_date = min([d for d in [dob] + list(doses.values()) if d], default=dob)
 
-        seq = int(raw_id) if raw_id.isdigit() else next_seq
+        seq = int(raw_id) if raw_id.isdigit() else next_seq  # child number
         next_seq = max(next_seq, seq) + 1
 
-        records.append({
+        records.append({  # cleaned child
             "source_id": seq,
             "full_name": name,
             "sex": sex,
@@ -341,53 +341,53 @@ def load_registry_csv(path, barangay_name):
     if skipped_bad_dates:
         print(f"  {path.name if hasattr(path, 'name') else path}: skipped "
               f"{skipped_bad_dates} record(s) with an implausible date of birth")
-    return records
+    return records  # children list
 
 
-def load_and_merge_real_registries(raw_dir=RAW_DATA_DIR):
+def load_and_merge_real_registries(raw_dir=RAW_DATA_DIR):  # read all CSVs
     """Loads every *.csv under data/raw/, inferring each file's barangay
     from its filename (Data_SJ_<Barangay>...), and returns one merged list
     of cleaned child records across all real, RHU-provided registries.
     """
     merged = []
-    for path in sorted(glob.glob(os.path.join(raw_dir, "*.csv"))):
+    for path in sorted(glob.glob(os.path.join(raw_dir, "*.csv"))):  # each file
         base = os.path.splitext(os.path.basename(path))[0]
         # Underscores stand in for spaces, so the whole tail is the barangay:
         # "Data_SJ_San_Guillermo" -> "San Guillermo". Matching on letters alone
         # would stop at the first underscore and resolve "San_Guillermo" to the
         # wrong barangay.
-        m = re.search(r"Data_SJ_+(.+)$", base)
+        m = re.search(r"Data_SJ_+(.+)$", base)  # name from file
         barangay_key = (m.group(1) if m else base).replace("_", " ").strip()
 
         def _norm(v):
             return re.sub(r"[^a-z]", "", v.lower())
 
-        barangay_name = next(
+        barangay_name = next(  # match barangay
             (b for b in BARANGAYS if _norm(b) == _norm(barangay_key)),
             next((b for b in BARANGAYS if _norm(b).startswith(_norm(barangay_key))), barangay_key),
         )
-        merged.extend(load_registry_csv(path, barangay_name))
+        merged.extend(load_registry_csv(path, barangay_name))  # add children
     # Children with no name in the registry get a generated name in place of
     # the "Unnamed Child #n (Barangay)" placeholder - the same name the live
     # database gives them (see generated_child_names()).
-    names = generated_child_names(
+    names = generated_child_names(  # fill names
         [(c["full_name"], c["sex"]) for c in merged if is_placeholder_name(c["full_name"])],
         [c["full_name"] for c in merged if not is_placeholder_name(c["full_name"])],
     )
     for c in merged:
         if c["full_name"] in names:
             c["full_name"] = names[c["full_name"]]
-    return merged
+    return merged  # all children
 
 
 PLACEHOLDER_NAME_PREFIX = "Unnamed Child #"
 
 
-def is_placeholder_name(name):
+def is_placeholder_name(name):  # placeholder?
     return (name or "").startswith(PLACEHOLDER_NAME_PREFIX)
 
 
-def generated_child_names(placeholders, taken_names):
+def generated_child_names(placeholders, taken_names):  # generate names
     """Generated names for children whose registry name was blank.
 
     placeholders is a list of (placeholder name, sex) pairs, e.g.
@@ -399,13 +399,13 @@ def generated_child_names(placeholders, taken_names):
     import hashlib
     used = {(n or "").strip().lower() for n in taken_names}
     out = {}
-    for key, sex in sorted(placeholders):
+    for key, sex in sorted(placeholders):  # each unnamed
         firsts = FIRST_NAMES_F if sex == "F" else FIRST_NAMES_M
         attempt = 0
         while True:
-            h = hashlib.sha256(f"{key}|{attempt}".encode()).digest()
+            h = hashlib.sha256(f"{key}|{attempt}".encode()).digest()  # stable hash
             name = f"{firsts[h[0] % len(firsts)]} {LAST_NAMES[h[1] % len(LAST_NAMES)]}"
-            if name.lower() not in used:
+            if name.lower() not in used:  # unique name
                 break
             attempt += 1
         used.add(name.lower())
@@ -417,7 +417,7 @@ def generated_child_names(placeholders, taken_names):
 # Feature engineering (Explore) -- shared by training and inference.
 # ---------------------------------------------------------------------------
 
-FEATURE_COLUMNS = [
+FEATURE_COLUMNS = [  # 12 features
     "sex_male", "age_days", "registration_delay_days", "barangay_risk_rate",
     "doses_due", "doses_completed", "doses_delayed", "doses_missed",
     "completion_rate", "avg_delay_days", "max_delay_days", "days_since_last_dose",
@@ -427,7 +427,7 @@ FEATURE_COLUMNS = [
 # trained. Direction says which way the feature pushes the prediction; the note
 # explains why. Shown in the interface so the feature set can be read without
 # the source.
-FEATURE_MODEL_ROLE = {
+FEATURE_MODEL_ROLE = {  # feature roles
     "weighted_doses_missed": ("Raises risk",
         "Direct evidence of drop-off. Expected to carry the most weight in any fitted model."),
     "completion_rate": ("Lowers risk",
@@ -476,7 +476,7 @@ FEATURE_MODEL_ROLE = {
 #
 # Three bands rather than seven precise numbers: the evidence supports an
 # ordering, not two-decimal precision.
-ANTIGEN_SEVERITY = {
+ANTIGEN_SEVERITY = {  # vaccine weights
     "MMR":   1.00,   # measles, threshold ~95%
     "PENTA": 1.00,   # pentavalent, carries pertussis at ~92-94%
     "OPV":   0.85,   # polio, threshold ~80-86%
@@ -486,18 +486,18 @@ ANTIGEN_SEVERITY = {
     "PCV":  0.70,   # pneumococcal disease; individual protection
 }
 
-SEVERITY_BANDS = [
+SEVERITY_BANDS = [  # weight bands
     (1.00, "Highest", "Measles and pertussis need about 95% coverage to stop transmission"),
     (0.85, "High", "Polio needs about 80 to 86% coverage"),
     (0.70, "Standard", "Protects the individual child rather than blocking transmission"),
 ]
 
 
-def severity_of(antigen_code):
+def severity_of(antigen_code):  # vaccine weight
     return ANTIGEN_SEVERITY.get(antigen_code, 0.70)
 
 
-def weighted_missed(missed_codes):
+def weighted_missed(missed_codes):  # weighted misses
     """Missed doses counted by consequence rather than as a plain tally.
 
     Three missed PCV doses and three missed MMR doses are not the same thing,
@@ -506,7 +506,7 @@ def weighted_missed(missed_codes):
     return sum(severity_of(antigen_of.get(c, "")) for c in missed_codes)
 
 
-FEATURE_LABELS = {
+FEATURE_LABELS = {  # feature labels
     "sex_male": "Sex (Male)",
     "age_days": "Child's Age",
     "registration_delay_days": "Delay in RHU Registration After Birth",
@@ -523,53 +523,53 @@ FEATURE_LABELS = {
 }
 
 
-def compute_features(date_of_birth, date_registered, sex, dose_records, assessment_date, barangay_risk_rate):
+def compute_features(date_of_birth, date_registered, sex, dose_records, assessment_date, barangay_risk_rate):  # make 12 features
     """dose_records: list of {recommended_age_days, date_administered}."""
-    age_days = (assessment_date - date_of_birth).days
-    registration_delay = max(0, (date_registered - date_of_birth).days)
+    age_days = (assessment_date - date_of_birth).days  # age
+    registration_delay = max(0, (date_registered - date_of_birth).days)  # reg delay
 
-    due = [r for r in dose_records if r["recommended_age_days"] <= age_days
+    due = [r for r in dose_records if r["recommended_age_days"] <= age_days  # doses due
            and (r.get("catch_up_deadline_days") is None or age_days <= r["catch_up_deadline_days"])]
     completed, delayed, missed, delays = [], [], [], []
     last_dose_day = None
 
-    for r in due:
+    for r in due:  # each due dose
         administered = r.get("date_administered")
-        if administered is None:
-            if age_days - r["recommended_age_days"] > GRACE_PERIOD_DAYS:
-                missed.append(r)
+        if administered is None:  # not given
+            if age_days - r["recommended_age_days"] > GRACE_PERIOD_DAYS:  # past grace
+                missed.append(r)  # missed
             continue
-        admin_offset = (administered - date_of_birth).days
-        if administered > assessment_date:
+        admin_offset = (administered - date_of_birth).days  # given at age
+        if administered > assessment_date:  # after date
             continue
-        delay = admin_offset - r["recommended_age_days"]
-        delays.append(max(0, delay))
+        delay = admin_offset - r["recommended_age_days"]  # days late
+        delays.append(max(0, delay))  # delay
         # A late dose is still received: it counts toward completion and is
         # separately recorded as delayed. Excluding it from `completed` made
         # completion_rate punish children who finished the schedule late.
-        completed.append(r)
-        if delay > GRACE_PERIOD_DAYS:
+        completed.append(r)  # completed
+        if delay > GRACE_PERIOD_DAYS:  # late dose
             delayed.append(r)
-        if last_dose_day is None or admin_offset > last_dose_day:
+        if last_dose_day is None or admin_offset > last_dose_day:  # last visit
             last_dose_day = admin_offset
 
-    doses_due, doses_completed, doses_delayed, doses_missed = len(due), len(completed), len(delayed), len(missed)
+    doses_due, doses_completed, doses_delayed, doses_missed = len(due), len(completed), len(delayed), len(missed)  # counts
     # Missed doses counted by consequence: a missed MMR weighs more than a
     # missed PCV, because measles needs far higher coverage to stay contained.
-    weighted_missed_doses = weighted_missed([r["code"] for r in missed if r.get("code")])
-    completion_rate = (doses_completed / doses_due) if doses_due else 1.0
-    avg_delay = (sum(delays) / len(delays)) if delays else 0.0
-    max_delay = max(delays) if delays else 0.0
+    weighted_missed_doses = weighted_missed([r["code"] for r in missed if r.get("code")])  # weighted missed
+    completion_rate = (doses_completed / doses_due) if doses_due else 1.0  # completion rate
+    avg_delay = (sum(delays) / len(delays)) if delays else 0.0  # avg delay
+    max_delay = max(delays) if delays else 0.0  # max delay
     # Only meaningful while the child still has doses outstanding. A child who
     # completed the schedule has no reason to return, so a long gap is expected
     # rather than a warning sign - counting it flagged finished children.
-    outstanding = doses_due - len(completed)
+    outstanding = doses_due - len(completed)  # doses left
     if outstanding <= 0:
-        days_since_last = 0.0
+        days_since_last = 0.0  # all done
     else:
-        days_since_last = (age_days - last_dose_day) if last_dose_day is not None else age_days
+        days_since_last = (age_days - last_dose_day) if last_dose_day is not None else age_days  # days since visit
 
-    return {
+    return {  # feature values
         "sex_male": 1 if sex == "M" else 0,
         "age_days": age_days,
         "registration_delay_days": registration_delay,
@@ -586,23 +586,23 @@ def compute_features(date_of_birth, date_registered, sex, dose_records, assessme
     }
 
 
-def final_outcome_label(date_of_birth, dose_records, window_days=365):
-    due = [r for r in dose_records if r["recommended_age_days"] <= window_days]
+def final_outcome_label(date_of_birth, dose_records, window_days=365):  # training label
+    due = [r for r in dose_records if r["recommended_age_days"] <= window_days]  # due by 12m
     if not due:
-        return "Not At-Risk"
+        return "Not At-Risk"  # nothing due
     completed = 0
-    for r in due:
+    for r in due:  # each dose
         admin = r.get("date_administered")
         if admin is None:
             continue
-        if (admin - date_of_birth).days - r["recommended_age_days"] <= GRACE_PERIOD_DAYS:
+        if (admin - date_of_birth).days - r["recommended_age_days"] <= GRACE_PERIOD_DAYS:  # on time
             completed += 1
-    completion_rate = completed / len(due)
-    missed = sum(1 for r in due if r.get("date_administered") is None)
-    return "At-Risk" if (completion_rate < 0.8 or missed >= 2) else "Not At-Risk"
+    completion_rate = completed / len(due)  # on-time rate
+    missed = sum(1 for r in due if r.get("date_administered") is None)  # never given
+    return "At-Risk" if (completion_rate < 0.8 or missed >= 2) else "Not At-Risk"  # 80% / 2 missed
 
 
-def _dose_records_for(doses_dict):
+def _dose_records_for(doses_dict):  # doses vs schedule
     return [
         {"code": code, "recommended_age_days": rec_days, "date_administered": doses_dict.get(code),
          "catch_up_deadline_days": CORE_CATCH_UP_DEADLINES.get(code)}
@@ -631,37 +631,37 @@ LAST_NAMES = ["Reyes", "Santos", "Cruz", "Bautista", "Garcia", "Mendoza", "Torre
               "Tolentino", "Agustin", "Marquez", "Soriano", "Lazaro", "Alvarado", "Jimenez",
               "Cabrera", "Valdez", "Panganiban", "Villareal", "Dizon", "Umali"]
 
-_rng_seed = random.Random(42)
-BARANGAY_REMOTENESS = {b: round(_rng_seed.uniform(0.05, 0.35), 2) for b in BARANGAYS}
+_rng_seed = random.Random(42)  # fixed seed
+BARANGAY_REMOTENESS = {b: round(_rng_seed.uniform(0.05, 0.35), 2) for b in BARANGAYS}  # remoteness
 
 # Baseline at-risk rate per barangay, derived from BARANGAY_REMOTENESS. Used as
 # a feature input; the trained model will instead learn this from history.
-BARANGAY_BASE_RISK = {b: round(0.10 + BARANGAY_REMOTENESS.get(b, 0.2) * 0.45, 3)
+BARANGAY_BASE_RISK = {b: round(0.10 + BARANGAY_REMOTENESS.get(b, 0.2) * 0.45, 3)  # barangay risk
                       for b in BARANGAYS}
 
 
-def _simulate_dose_history(dob, propensity, rng):
+def _simulate_dose_history(dob, propensity, rng):  # simulate doses
     records = []
-    for code, name, antigen, dose_no, rec_days in VACCINE_SCHEDULE:
+    for code, name, antigen, dose_no, rec_days in VACCINE_SCHEDULE:  # each dose
         roll = rng.random()
-        if roll < propensity * 0.22:
+        if roll < propensity * 0.22:  # skip dose
             administered = None
         else:
-            delay = max(0, int(rng.gauss(mu=propensity * 16, sigma=7)))
-            administered = dob + timedelta(days=rec_days + delay)
-            if administered > date.today():
+            delay = max(0, int(rng.gauss(mu=propensity * 16, sigma=7)))  # random delay
+            administered = dob + timedelta(days=rec_days + delay)  # dose date
+            if administered > date.today():  # not yet
                 administered = None
         records.append({"code": code, "recommended_age_days": rec_days, "date_administered": administered})
-    return records
+    return records  # dose history
 
 
-def _propensity_for(barangay, rng):
-    remoteness = BARANGAY_REMOTENESS.get(barangay, 0.2)
-    household = rng.uniform(0.0, 0.35)
-    return max(0.02, min(0.9, remoteness * 0.55 + household * 0.55 + rng.uniform(-0.04, 0.04)))
+def _propensity_for(barangay, rng):  # dropout tendency
+    remoteness = BARANGAY_REMOTENESS.get(barangay, 0.2)  # remoteness
+    household = rng.uniform(0.0, 0.35)  # household
+    return max(0.02, min(0.9, remoteness * 0.55 + household * 0.55 + rng.uniform(-0.04, 0.04)))  # combined
 
 
-def generate_synthetic_children(barangays, n_per_barangay=(6, 14), seed=99,
+def generate_synthetic_children(barangays, n_per_barangay=(6, 14), seed=99,  # demo children
                                  dob_start=None, dob_end=None):
     """dob_start/dob_end: optional inclusive date-of-birth bounds. Left at
     their default, every child is under a year old, which is fine for
@@ -669,7 +669,7 @@ def generate_synthetic_children(barangays, n_per_barangay=(6, 14), seed=99,
     filter with only one year of data. Pass a wider range (e.g. 2023-01-01
     to today) to spread a barangay's population across several years, the
     same way a real multi-year registry does."""
-    rng = random.Random(seed)
+    rng = random.Random(seed)  # fixed seed
     children = []
     for barangay in barangays:
         count = rng.randint(*n_per_barangay)
@@ -699,61 +699,61 @@ def generate_synthetic_children(barangays, n_per_barangay=(6, 14), seed=99,
     return children
 
 
-def generate_training_dataset(n_children=3000, seed=7, real_children=None):
+def generate_training_dataset(n_children=3000, seed=7, real_children=None):  # training rows
     """Builds the labeled feature dataset for model training: early-warning
     features (snapshot at a random in-progress age) -> final 12-month outcome.
     Combines synthetic children with any real registry children supplied
     (data augmentation - the real sample alone is too small to train on
     reliably, per literature on small clinical datasets).
     """
-    rng = random.Random(seed)
+    rng = random.Random(seed)  # fixed seed
     rows = []
 
-    def _add_row(dob, date_registered, sex, doses_dict, barangay):
+    def _add_row(dob, date_registered, sex, doses_dict, barangay):  # one row
         dose_records = _dose_records_for(doses_dict)
-        label = final_outcome_label(dob, dose_records, window_days=365)
+        label = final_outcome_label(dob, dose_records, window_days=365)  # label
         # Sampled across the same window predict_for_child() serves at
         # (ML_ASSESSMENT_FLOOR_DAYS..CONTINUATION_WINDOW_DAYS), so the model
         # never has to extrapolate past what it was trained on.
-        assessment_age = rng.randint(ML_ASSESSMENT_FLOOR_DAYS, CONTINUATION_WINDOW_DAYS)
+        assessment_age = rng.randint(ML_ASSESSMENT_FLOOR_DAYS, CONTINUATION_WINDOW_DAYS)  # random age
         assessment_date = min(date.today(), dob + timedelta(days=assessment_age))
-        feats = compute_features(dob, date_registered, sex, dose_records, assessment_date, barangay_risk_rate=None)
+        feats = compute_features(dob, date_registered, sex, dose_records, assessment_date, barangay_risk_rate=None)  # features
         feats["barangay"] = barangay
         feats["label"] = label
-        rows.append(feats)
+        rows.append(feats)  # add row
 
-    for _ in range(n_children):
+    for _ in range(n_children):  # 3,000 synthetic
         barangay = rng.choice(BARANGAYS)
         sex = rng.choice(["M", "F"])
         dob = date(2025, 1, 1) - timedelta(days=rng.randint(0, 365 * 2))
-        propensity = _propensity_for(barangay, rng)
-        reg_delay = int(max(0, rng.gauss(mu=propensity * 20, sigma=5)))
+        propensity = _propensity_for(barangay, rng)  # tendency
+        reg_delay = int(max(0, rng.gauss(mu=propensity * 20, sigma=5)))  # reg delay
         date_registered = dob + timedelta(days=reg_delay)
-        history = _simulate_dose_history(dob, propensity, rng)
-        _add_row(dob, date_registered, sex, {r["code"]: r["date_administered"] for r in history}, barangay)
+        history = _simulate_dose_history(dob, propensity, rng)  # doses
+        _add_row(dob, date_registered, sex, {r["code"]: r["date_administered"] for r in history}, barangay)  # add synthetic
 
-    for c in (real_children or []):
-        _add_row(c["date_of_birth"], c["date_registered"], c["sex"], c["doses"], c["barangay"])
+    for c in (real_children or []):  # 1,689 real
+        _add_row(c["date_of_birth"], c["date_registered"], c["sex"], c["doses"], c["barangay"])  # add real
 
-    barangay_counts = defaultdict(lambda: [0, 0])
+    barangay_counts = defaultdict(lambda: [0, 0])  # barangay counts
     for r in rows:
         barangay_counts[r["barangay"]][1] += 1
         if r["label"] == "At-Risk":
             barangay_counts[r["barangay"]][0] += 1
-    barangay_risk_rate = {b: (c[0] / c[1] if c[1] else 0.15) for b, c in barangay_counts.items()}
+    barangay_risk_rate = {b: (c[0] / c[1] if c[1] else 0.15) for b, c in barangay_counts.items()}  # barangay risk
     for b in BARANGAYS:
         barangay_risk_rate.setdefault(b, 0.15)
     for r in rows:
-        r["barangay_risk_rate"] = barangay_risk_rate[r["barangay"]]
+        r["barangay_risk_rate"] = barangay_risk_rate[r["barangay"]]  # set feature
 
-    return rows, barangay_risk_rate
+    return rows, barangay_risk_rate  # rows
 
 
 # ---------------------------------------------------------------------------
 # Model (train) and iNterpret (predict + explain).
 # ---------------------------------------------------------------------------
 
-def train_and_save_model(n_synthetic=3000, seed=7, use_real_data=True):
+def train_and_save_model(n_synthetic=3000, seed=7, use_real_data=True):  # train + save
     import joblib
     from sklearn.ensemble import RandomForestClassifier
     from sklearn.linear_model import LogisticRegression
@@ -762,80 +762,80 @@ def train_and_save_model(n_synthetic=3000, seed=7, use_real_data=True):
     from sklearn.preprocessing import StandardScaler
     from xgboost import XGBClassifier
 
-    real_children = load_and_merge_real_registries() if use_real_data else []
+    real_children = load_and_merge_real_registries() if use_real_data else []  # real data
     if real_children:
         print(f"Loaded {len(real_children)} real children from data/raw/*.csv for training augmentation.")
 
-    rows, barangay_risk_rate = generate_training_dataset(n_synthetic, seed, real_children)
+    rows, barangay_risk_rate = generate_training_dataset(n_synthetic, seed, real_children)  # build rows
     import numpy as np  # lazy: training only
-    X = np.array([[r[c] for c in FEATURE_COLUMNS] for r in rows], dtype=float)
-    y = np.array([1 if r["label"] == "At-Risk" else 0 for r in rows], dtype=int)
+    X = np.array([[r[c] for c in FEATURE_COLUMNS] for r in rows], dtype=float)  # X features
+    y = np.array([1 if r["label"] == "At-Risk" else 0 for r in rows], dtype=int)  # y labels
     print(f"Training dataset: {len(y)} rows ({len(real_children)} real + {n_synthetic} synthetic), "
           f"{y.sum()} At-Risk ({100 * y.mean():.1f}%)")
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=seed, stratify=y)
-    scaler = StandardScaler().fit(X_train)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=seed, stratify=y)  # 80/20 split
+    scaler = StandardScaler().fit(X_train)  # scaler
     X_train_s, X_test_s = scaler.transform(X_train), scaler.transform(X_test)
 
-    def _eval(name, model, Xte):
-        proba = model.predict_proba(Xte)[:, 1]
-        pred = (proba >= 0.5).astype(int)
-        m = {"accuracy": accuracy_score(y_test, pred), "precision": precision_score(y_test, pred, zero_division=0),
+    def _eval(name, model, Xte):  # score a model
+        proba = model.predict_proba(Xte)[:, 1]  # probability
+        pred = (proba >= 0.5).astype(int)  # 0.50 cutoff
+        m = {"accuracy": accuracy_score(y_test, pred), "precision": precision_score(y_test, pred, zero_division=0),  # metrics
              "recall": recall_score(y_test, pred, zero_division=0), "f1": f1_score(y_test, pred, zero_division=0),
              "roc_auc": roc_auc_score(y_test, proba)}
         print(f"  {name:22s} " + " ".join(f"{k}={v:.3f}" for k, v in m.items()))
         return m
 
-    candidates = {}
-    lr = LogisticRegression(max_iter=1000, class_weight="balanced").fit(X_train_s, y_train)
+    candidates = {}  # candidates
+    lr = LogisticRegression(max_iter=1000, class_weight="balanced").fit(X_train_s, y_train)  # Logistic Regression
     candidates["LogisticRegression"] = (lr, _eval("LogisticRegression", lr, X_test_s))
 
-    rf = RandomForestClassifier(n_estimators=300, max_depth=8, min_samples_leaf=5,
+    rf = RandomForestClassifier(n_estimators=300, max_depth=8, min_samples_leaf=5,  # Random Forest
                                  class_weight="balanced", random_state=seed).fit(X_train, y_train)
     candidates["RandomForest"] = (rf, _eval("RandomForest", rf, X_test))
 
-    pos_weight = (len(y_train) - y_train.sum()) / max(1, y_train.sum())
-    xgb = XGBClassifier(n_estimators=300, max_depth=4, learning_rate=0.08, subsample=0.9,
+    pos_weight = (len(y_train) - y_train.sum()) / max(1, y_train.sum())  # class balance
+    xgb = XGBClassifier(n_estimators=300, max_depth=4, learning_rate=0.08, subsample=0.9,  # XGBoost
                          colsample_bytree=0.9, scale_pos_weight=pos_weight, eval_metric="logloss",
                          random_state=seed).fit(X_train, y_train)
     candidates["XGBoost"] = (xgb, _eval("XGBoost", xgb, X_test))
 
-    best_name = max(candidates, key=lambda k: (candidates[k][1]["recall"], candidates[k][1]["roc_auc"]))
-    best_model, best_metrics = candidates[best_name]
+    best_name = max(candidates, key=lambda k: (candidates[k][1]["recall"], candidates[k][1]["roc_auc"]))  # best recall
+    best_model, best_metrics = candidates[best_name]  # winner
     all_metrics = {name: metrics for name, (model, metrics) in candidates.items()}
     print(f"Selected best model -> {best_name}")
 
-    needs_scaler = best_name == "LogisticRegression"
-    cv_scores = cross_val_score(best_model, X_train_s if needs_scaler else X_train, y_train, cv=5, scoring="recall")
+    needs_scaler = best_name == "LogisticRegression"  # LR only
+    cv_scores = cross_val_score(best_model, X_train_s if needs_scaler else X_train, y_train, cv=5, scoring="recall")  # 5-fold CV
     print(f"  5-fold CV recall: mean={cv_scores.mean():.3f} std={cv_scores.std():.3f}")
 
-    feature_importance = (
+    feature_importance = (  # importances
         dict(zip(FEATURE_COLUMNS, best_model.feature_importances_.tolist()))
         if hasattr(best_model, "feature_importances_") else None
     )
 
     os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
-    artifact = {
+    artifact = {  # model file
         "model": best_model, "model_name": best_name, "model_version": "v2-real+synthetic",
         "scaler": scaler if needs_scaler else None, "needs_scaler": needs_scaler,
         "feature_columns": FEATURE_COLUMNS, "barangay_risk_rate": barangay_risk_rate,
         "metrics": best_metrics, "all_metrics": all_metrics, "feature_importance": feature_importance,
         "real_data_children": len(real_children),
     }
-    joblib.dump(artifact, MODEL_PATH)
+    joblib.dump(artifact, MODEL_PATH)  # save
     print(f"Saved model -> {MODEL_PATH}")
-    return artifact
+    return artifact  # artifact
 
 
-_artifact_cache = None
+_artifact_cache = None  # loaded once
 
 
-def model_is_trained():
+def model_is_trained():  # model exists?
     """True once a model artifact has been trained and saved to disk."""
     return os.path.exists(MODEL_PATH)
 
 
-def model_info():
+def model_info():  # model details
     """What the UI should say about the prediction engine.
 
     In the pre-final prototype no model has been trained, so this reports the
@@ -858,23 +858,23 @@ def model_info():
     }
 
 
-def _load_artifact():
+def _load_artifact():  # load model
     """Only reachable once a model has been trained (final defense)."""
     global _artifact_cache
-    if _artifact_cache is None:
+    if _artifact_cache is None:  # first use
         import joblib  # lazy: not needed by the prototype
-        _artifact_cache = joblib.load(MODEL_PATH)
+        _artifact_cache = joblib.load(MODEL_PATH)  # read file
     return _artifact_cache
 
 
-_REFERENCE_NOT_AT_RISK = {
+_REFERENCE_NOT_AT_RISK = {  # normal values
     "doses_missed": 0.2, "doses_delayed": 0.5, "avg_delay_days": 8.0, "max_delay_days": 15.0,
     "completion_rate": 0.95, "registration_delay_days": 5.0, "days_since_last_dose": 30.0,
     "barangay_risk_rate": 0.15,
 }
 
 
-def _describe(key, feats):
+def _describe(key, feats):  # reason text
     if key == "weighted_doses_missed":
         return f"Missed doses weighted by vaccine importance: {feats['weighted_doses_missed']:.1f}"
     if key == "doses_missed":
@@ -896,16 +896,16 @@ def _describe(key, feats):
     return ""
 
 
-def _explain(feats, artifact, top_n=3):
-    importance = artifact.get("feature_importance") or {}
+def _explain(feats, artifact, top_n=3):  # model reasons
+    importance = artifact.get("feature_importance") or {}  # importances
     scored = []
-    for key, ref in _REFERENCE_NOT_AT_RISK.items():
+    for key, ref in _REFERENCE_NOT_AT_RISK.items():  # each feature
         val = feats.get(key, 0)
-        deviation = max(0.0, (ref - val) if key == "completion_rate" else (val - ref))
-        scored.append((key, deviation * (importance.get(key, 0.1) + 0.05)))
-    scored.sort(key=lambda x: x[1], reverse=True)
-    factors = [{"factor": FEATURE_LABELS.get(k, k), "detail": _describe(k, feats)} for k, s in scored[:top_n] if s > 0]
-    return factors or [{"factor": "On-schedule vaccination history", "detail": "No significant risk indicators detected."}]
+        deviation = max(0.0, (ref - val) if key == "completion_rate" else (val - ref))  # how abnormal
+        scored.append((key, deviation * (importance.get(key, 0.1) + 0.05)))  # weighted
+    scored.sort(key=lambda x: x[1], reverse=True)  # biggest first
+    factors = [{"factor": FEATURE_LABELS.get(k, k), "detail": _describe(k, feats)} for k, s in scored[:top_n] if s > 0]  # top 3
+    return factors or [{"factor": "On-schedule vaccination history", "detail": "No significant risk indicators detected."}]  # none found
 
 
 # ---------------------------------------------------------------------------
@@ -923,22 +923,22 @@ def _explain(feats, artifact, top_n=3):
 # reported for it.
 # ---------------------------------------------------------------------------
 
-SCORER_NAME = "Rule-Based Scorer"
+SCORER_NAME = "Rule-Based Scorer"  # fallback name
 SCORER_VERSION = "rules-v3-weighted"
 
 # Each rule contributes to a 0..1 risk score. Weights sum to 1.0.
-SCORING_RULES = {
+SCORING_RULES = {  # rule weights
     "weighted_doses_missed":             0.34,  # strongest single signal of drop-off
-    "completion_rate":          0.24,
-    "days_since_last_dose":     0.16,
-    "avg_delay_days":           0.12,
-    "doses_delayed":            0.08,
-    "registration_delay_days":  0.06,
+    "completion_rate":          0.24,  # low completion
+    "days_since_last_dose":     0.16,  # since last visit
+    "avg_delay_days":           0.12,  # avg delay
+    "doses_delayed":            0.08,  # late doses
+    "registration_delay_days":  0.06,  # late registration
 }
 
 # Value at which a rule is considered fully "triggered" (contributes its whole
 # weight). Below this the contribution scales linearly.
-RULE_SATURATION = {
+RULE_SATURATION = {  # full at
     "weighted_doses_missed": 3.0,
     "days_since_last_dose": 180.0,
     "avg_delay_days": 45.0,
@@ -947,54 +947,54 @@ RULE_SATURATION = {
 }
 
 
-def _rule_contributions(feats):
+def _rule_contributions(feats):  # rule parts
     """{rule: (contribution, share_of_score)} for one child."""
     out = {}
-    for key, weight in SCORING_RULES.items():
+    for key, weight in SCORING_RULES.items():  # each rule
         if key == "completion_rate":
             # Inverted: a LOW completion rate raises risk.
-            intensity = 1.0 - float(feats.get("completion_rate", 1.0))
+            intensity = 1.0 - float(feats.get("completion_rate", 1.0))  # inverted
         else:
             cap = RULE_SATURATION[key]
-            intensity = min(1.0, float(feats.get(key, 0)) / cap) if cap else 0.0
-        out[key] = max(0.0, min(1.0, intensity)) * weight
+            intensity = min(1.0, float(feats.get(key, 0)) / cap) if cap else 0.0  # scale 0-1
+        out[key] = max(0.0, min(1.0, intensity)) * weight  # times weight
     return out
 
 
-def score_child(feats):
+def score_child(feats):  # rule score
     """Risk score in 0..1 from the weighted rules above."""
-    return round(min(1.0, sum(_rule_contributions(feats).values())), 4)
+    return round(min(1.0, sum(_rule_contributions(feats).values())), 4)  # sum parts
 
 
-def _explain_rules(feats, top_n=3):
+def _explain_rules(feats, top_n=3):  # rule reasons
     """The rules that contributed most to this child's score."""
-    contribs = sorted(_rule_contributions(feats).items(), key=lambda kv: kv[1], reverse=True)
+    contribs = sorted(_rule_contributions(feats).items(), key=lambda kv: kv[1], reverse=True)  # biggest first
     factors = [
         {"factor": FEATURE_LABELS.get(k, k), "detail": _describe(k, feats)}
         for k, c in contribs[:top_n] if c > 0.01
     ]
-    return factors or [{"factor": "On-schedule vaccination history",
+    return factors or [{"factor": "On-schedule vaccination history",  # none found
                         "detail": "No significant risk indicators detected."}]
 
 
-def _predict_with_model(feats):
+def _predict_with_model(feats):  # model score
     """Score one child with the trained classifier. Returns None (never
     raises) if the artifact can't be loaded or scored, so callers always have
     the rule-based scorer to fall back on."""
     try:
-        artifact = _load_artifact()
+        artifact = _load_artifact()  # load model
         import numpy as np  # lazy: only needed on this path
-        x = np.array([[feats[c] for c in artifact["feature_columns"]]], dtype=float)
-        if artifact.get("needs_scaler") and artifact.get("scaler") is not None:
+        x = np.array([[feats[c] for c in artifact["feature_columns"]]], dtype=float)  # feature row
+        if artifact.get("needs_scaler") and artifact.get("scaler") is not None:  # scale (LR)
             x = artifact["scaler"].transform(x)
-        score = round(float(artifact["model"].predict_proba(x)[0, 1]), 4)
+        score = round(float(artifact["model"].predict_proba(x)[0, 1]), 4)  # probability
         return score, artifact
-    except Exception as exc:
+    except Exception as exc:  # fallback
         print(f"WARNING: ML scoring failed ({exc}); falling back to rule-based scorer.")
         return None
 
 
-def predict_for_child(date_of_birth, date_registered, sex, doses_dict, barangay_name):
+def predict_for_child(date_of_birth, date_registered, sex, doses_dict, barangay_name):  # score a child
     """Public scoring entrypoint used by app.py and seed.py.
 
     doses_dict maps VACCINE_CODES -> date|None for one child.
@@ -1006,36 +1006,36 @@ def predict_for_child(date_of_birth, date_registered, sex, doses_dict, barangay_
     model trained yet, or the child has already aged past the primary
     series) this falls back to the transparent rule-based scorer, so a
     child is never scored on inputs nothing in training ever resembled."""
-    dose_records = _dose_records_for(doses_dict)
-    age_days = (date.today() - date_of_birth).days
-    feats = compute_features(
+    dose_records = _dose_records_for(doses_dict)  # match schedule
+    age_days = (date.today() - date_of_birth).days  # age
+    feats = compute_features(  # 12 features
         date_of_birth, date_registered, sex, dose_records, date.today(),
         barangay_risk_rate=BARANGAY_BASE_RISK.get(barangay_name, 0.15),
     )
 
-    if model_is_trained() and ML_ASSESSMENT_FLOOR_DAYS <= age_days <= CONTINUATION_WINDOW_DAYS:
-        ml_result = _predict_with_model(feats)
+    if model_is_trained() and ML_ASSESSMENT_FLOOR_DAYS <= age_days <= CONTINUATION_WINDOW_DAYS:  # 30-365 days?
+        ml_result = _predict_with_model(feats)  # use model
         if ml_result is not None:
             score, artifact = ml_result
             return {
-                "label": "At-Risk" if score >= RISK_THRESHOLD else "Not At-Risk",
+                "label": "At-Risk" if score >= RISK_THRESHOLD else "Not At-Risk",  # label
                 "probability": score,
                 "model_version": f"{artifact.get('model_name', 'ml')}-{artifact.get('model_version', '')}",
-                "top_factors": _explain(feats, artifact),
+                "top_factors": _explain(feats, artifact),  # reasons
                 "features": feats,
             }
 
-    score = score_child(feats)
+    score = score_child(feats)  # rule-based
     return {
-        "label": "At-Risk" if score >= RISK_THRESHOLD else "Not At-Risk",
+        "label": "At-Risk" if score >= RISK_THRESHOLD else "Not At-Risk",  # label
         "probability": score,
         "model_version": SCORER_VERSION,
-        "top_factors": _explain_rules(feats),
+        "top_factors": _explain_rules(feats),  # reasons
         "features": feats,
     }
 
 
-def score_children_as_of(children, assessment_date):
+def score_children_as_of(children, assessment_date):  # past-date scores
     """Risk for many children as they stood on `assessment_date`, for the
     dashboards' period filter.
 
@@ -1047,28 +1047,28 @@ def score_children_as_of(children, assessment_date):
     rule-based scorer for everyone else. Model-eligible children are scored
     in one batch. Returns {key: probability}."""
     out, ml_keys, ml_rows = {}, [], []
-    use_model = model_is_trained()
-    for key, dob, registered, sex, doses_dict, barangay_name in children:
-        feats = compute_features(
+    use_model = model_is_trained()  # model exists?
+    for key, dob, registered, sex, doses_dict, barangay_name in children:  # each child
+        feats = compute_features(  # features
             dob, registered, sex, _dose_records_for(doses_dict), assessment_date,
             barangay_risk_rate=BARANGAY_BASE_RISK.get(barangay_name, 0.15),
         )
         age_days = (assessment_date - dob).days
-        if use_model and ML_ASSESSMENT_FLOOR_DAYS <= age_days <= CONTINUATION_WINDOW_DAYS:
+        if use_model and ML_ASSESSMENT_FLOOR_DAYS <= age_days <= CONTINUATION_WINDOW_DAYS:  # model window
             ml_keys.append(key)
             ml_rows.append(feats)
         else:
-            out[key] = score_child(feats)
-    if ml_rows:
+            out[key] = score_child(feats)  # rule score
+    if ml_rows:  # batch model
         try:
             artifact = _load_artifact()
             import numpy as np  # lazy: only needed on this path
             x = np.array([[f[c] for c in artifact["feature_columns"]] for f in ml_rows], dtype=float)
             if artifact.get("needs_scaler") and artifact.get("scaler") is not None:
                 x = artifact["scaler"].transform(x)
-            for key, p in zip(ml_keys, artifact["model"].predict_proba(x)[:, 1]):
+            for key, p in zip(ml_keys, artifact["model"].predict_proba(x)[:, 1]):  # probabilities
                 out[key] = round(float(p), 4)
-        except Exception as exc:
+        except Exception as exc:  # fallback
             print(f"WARNING: ML scoring failed ({exc}); falling back to rule-based scorer.")
             for key, feats in zip(ml_keys, ml_rows):
                 out[key] = score_child(feats)
@@ -1093,10 +1093,10 @@ def score_children_as_of(children, assessment_date):
 # No allocation exceeds what a barangay requested: a barangay should not receive
 # more than it asked for and can store.
 
-PRIORITY_RANK = {"Urgent": 0, "High": 1, "Normal": 2}
+PRIORITY_RANK = {"Urgent": 0, "High": 1, "Normal": 2}  # priority order
 
 
-def _largest_remainder(weights, available):
+def _largest_remainder(weights, available):  # fair rounding
     """Split `available` whole vials across weights without losing a vial.
 
     Plain rounding of proportional shares either overshoots or leaves vials
@@ -1115,43 +1115,43 @@ def _largest_remainder(weights, available):
     return out
 
 
-def allocate_stock(requests, available, method="priority", coverage_by_bgy=None):
+def allocate_stock(requests, available, method="priority", coverage_by_bgy=None):  # split stock
     """Suggested allocation of `available` vials across pending requests.
 
     requests: [{"id", "barangay", "requested", "priority"}]
     Returns a row per request with the suggested quantity and what it leaves
     short, plus whether the requests can be met in full."""
-    total_requested = sum(r["requested"] for r in requests)
+    total_requested = sum(r["requested"] for r in requests)  # total asked
     alloc = {r["id"]: 0 for r in requests}
 
-    if total_requested <= available:
+    if total_requested <= available:  # enough stock
         # No shortfall: everyone receives what they asked for.
         alloc = {r["id"]: r["requested"] for r in requests}
-    elif method == "proportional":
+    elif method == "proportional":  # proportional
         weights = {r["id"]: r["requested"] for r in requests}
         alloc = _largest_remainder(weights, available)
-    elif method == "coverage":
+    elif method == "coverage":  # lowest coverage
         cov = coverage_by_bgy or {}
         # Lowest coverage served first, in full where stock allows.
         left = available
-        for r in sorted(requests, key=lambda r: cov.get(r["barangay"], 100)):
+        for r in sorted(requests, key=lambda r: cov.get(r["barangay"], 100)):  # lowest first
             take = min(r["requested"], left)
             alloc[r["id"]] = take
             left -= take
     else:  # priority
         left = available
-        for r in sorted(requests, key=lambda r: (PRIORITY_RANK.get(r["priority"], 9),
+        for r in sorted(requests, key=lambda r: (PRIORITY_RANK.get(r["priority"], 9),  # urgent first
                                                  -r["requested"])):
             take = min(r["requested"], left)
             alloc[r["id"]] = take
             left -= take
 
-    rows = []
+    rows = []  # result rows
     for r in requests:
-        given = min(alloc.get(r["id"], 0), r["requested"])
+        given = min(alloc.get(r["id"], 0), r["requested"])  # allocated
         rows.append({**r, "allocated": given, "short": r["requested"] - given,
                      "share": round(given / r["requested"] * 100) if r["requested"] else 0})
-    return {
+    return {  # summary
         "rows": rows,
         "available": available,
         "requested": total_requested,
@@ -1184,17 +1184,17 @@ COHORT_MIN_ROWS = 20        # a year below this is registry start-up, not a coho
 COHORT_HIGH_MARGIN = 0.15   # upper bound of the range, as a share
 
 
-def cohort_estimate(births_by_year, today_year):
+def cohort_estimate(births_by_year, today_year):  # birth estimate
     """Low and high estimate of annual births, with the years it is based on.
 
     Only complete years with a credible number of records are used. The current
     year is excluded because it is partial."""
-    usable = {y: n for y, n in births_by_year.items()
+    usable = {y: n for y, n in births_by_year.items()  # full years
               if y < today_year and n >= COHORT_MIN_ROWS}
     if not usable:
         return None
-    years = sorted(usable)[-COHORT_BASE_YEARS:]
-    mean = sum(usable[y] for y in years) / len(years)
+    years = sorted(usable)[-COHORT_BASE_YEARS:]  # last 3
+    mean = sum(usable[y] for y in years) / len(years)  # average
     return {
         "low": round(mean),
         "high": round(mean * (1 + COHORT_HIGH_MARGIN)),
@@ -1203,7 +1203,7 @@ def cohort_estimate(births_by_year, today_year):
     }
 
 
-def doses_due_in_year(date_of_birth, year):
+def doses_due_in_year(date_of_birth, year):  # due that year
     """Which dose codes fall due for this child during the given calendar year."""
     out = []
     for code, _name, _ant, _dose, rec_days in VACCINE_SCHEDULE:
@@ -1213,7 +1213,7 @@ def doses_due_in_year(date_of_birth, year):
     return out
 
 
-def forecast_vaccine_demand(children_dobs, births_by_year, today=None,
+def forecast_vaccine_demand(children_dobs, births_by_year, today=None,  # dose forecast
                             years=FORECAST_YEARS):
     """Projected doses needed per antigen, per year.
 
@@ -1222,15 +1222,15 @@ def forecast_vaccine_demand(children_dobs, births_by_year, today=None,
     so it is clear which part is measured and which is estimated."""
     today = today or date.today()
     antigen_of = {code: ant for code, _n, ant, _d, _r in VACCINE_SCHEDULE}
-    doses_per_antigen = Counter(ant for _c, _n, ant, _d, _r in VACCINE_SCHEDULE)
-    cohort = cohort_estimate(births_by_year, today.year)
+    doses_per_antigen = Counter(ant for _c, _n, ant, _d, _r in VACCINE_SCHEDULE)  # doses per child
+    cohort = cohort_estimate(births_by_year, today.year)  # births
 
     out = []
-    for offset in range(1, years + 1):
+    for offset in range(1, years + 1):  # each year
         y = today.year + offset
 
         # Known: doses the existing children become due for in year y.
-        known = Counter()
+        known = Counter()  # known demand
         for dob in children_dobs:
             for code in doses_due_in_year(dob, y):
                 known[antigen_of[code]] += 1
@@ -1240,9 +1240,9 @@ def forecast_vaccine_demand(children_dobs, births_by_year, today=None,
         # will not reach its 12-month dose until the following year, so roughly
         # the first-year doses land in the birth year. Held simple and stated.
         rows = []
-        for antigen_code, antigen_doses in doses_per_antigen.items():
+        for antigen_code, antigen_doses in doses_per_antigen.items():  # each vaccine
             k = known.get(antigen_code, 0)
-            p_low = round(cohort["low"] * antigen_doses) if cohort else 0
+            p_low = round(cohort["low"] * antigen_doses) if cohort else 0  # projected
             p_high = round(cohort["high"] * antigen_doses) if cohort else 0
             rows.append({
                 "antigen": antigen_code,
@@ -1250,7 +1250,7 @@ def forecast_vaccine_demand(children_dobs, births_by_year, today=None,
                 "known": k,
                 "projected_low": p_low,
                 "projected_high": p_high,
-                "total_low": k + p_low,
+                "total_low": k + p_low,  # total
                 "total_high": k + p_high,
             })
         rows.sort(key=lambda r: -r["total_high"])
@@ -1264,21 +1264,21 @@ def forecast_vaccine_demand(children_dobs, births_by_year, today=None,
     return {"cohort": cohort, "years": out}
 
 
-def risk_tier(probability):
-    if probability >= 0.70:
+def risk_tier(probability):  # risk tier
+    if probability >= 0.70:  # high
         return "High Risk"
-    if probability >= 0.50:
+    if probability >= 0.50:  # medium
         return "Medium Risk"
-    return "Low Risk"
+    return "Low Risk"  # low
 
 
-def risk_tier_color(tier):
+def risk_tier_color(tier):  # tier color
     return {"High Risk": "red", "Medium Risk": "amber", "Low Risk": "green"}.get(tier, "green")
 
 
-def serialize_factors(factors):
+def serialize_factors(factors):  # to text
     return json.dumps(factors)
 
 
-def deserialize_factors(text):
+def deserialize_factors(text):  # from text
     return json.loads(text) if text else []
