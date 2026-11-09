@@ -70,28 +70,6 @@ ANTIGEN_PROTECTS = {  # disease names
 }
 
 
-def vaccines_for_missed(missed_codes):  # missed vaccine names
-    """Human-readable vaccine names for the missed dose codes, de-duplicated.
-
-    Groups multiple doses of the same vaccine: a child missing PENTA1, PENTA2,
-    PENTA3 shows 'Pentavalent' once, not three times."""
-    antigen_of = {code: ant for code, _n, ant, _d, _r in VACCINE_SCHEDULE}  # dose -> antigen
-    name_of = {code: name for code, name, _a, _d, _r in VACCINE_SCHEDULE}
-    seen, out = set(), []
-    for code in missed_codes:
-        ant = antigen_of.get(code, "")
-        # Group by antigen so PENTA1/PENTA2/PENTA3 → one entry
-        if ant and ant not in seen:  # first of antigen
-            seen.add(ant)
-            # Use the first dose name as the label, strip the dose number
-            label = name_of.get(code, code).rsplit(" ", 2)[0]
-            out.append(label)
-        elif not ant and code not in seen:
-            seen.add(code)
-            out.append(name_of.get(code, code))
-    return out  # names list
-
-
 def diseases_for_missed(missed_codes):  # missed diseases
     """Diseases the missed doses would have protected against, de-duplicated.
 
