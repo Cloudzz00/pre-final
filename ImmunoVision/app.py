@@ -984,22 +984,6 @@ def risk_distribution_for(children, risk=None):  # risk tiers
     }
 
 
-def top_risk_factors(barangay_id=None, limit=6):  # top reasons
-    tally = Counter()
-    risk = _latest_risk_by_child()
-    for c in _children_query(barangay_id).all():
-        latest = risk.get(c.id)
-        if latest and latest.risk_label == "At-Risk":  # at-risk only
-            factors = dp.deserialize_factors(latest.top_factors)
-            if factors:
-                tally[factors[0]["factor"]] += 1  # first reason
-    ranked = tally.most_common(limit)
-    if not ranked:
-        return []
-    max_v = ranked[0][1]
-    return [{"label": label, "count": count, "pct": round(count / max_v * 100)} for label, count in ranked]
-
-
 def at_risk_table(barangay_id=None, limit=None, max_age_days=None):  # predictor list
     """max_age_days scopes this to the Continuation Predictor's "early
     warning during the active primary series" framing (the series itself
