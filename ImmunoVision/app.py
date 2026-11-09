@@ -91,35 +91,35 @@ def create_app():
 # Activity-log categories. Derived from the action text so no schema change is
 # needed; the keyword lists live here rather than in the template so the log
 # page and its filter always agree.
-LOG_CATEGORIES = (
-    ("Login",   ("Logged in", "Logged out")),
-    ("Admin",   ("Created user", "Enabled user", "Disabled user", "Reassigned")),
-    ("Record",  ("Registered child", "Updated child", "Re-assessed risk", " date for ", "Removed",
+LOG_CATEGORIES = (  # log categories
+    ("Login",   ("Logged in", "Logged out")),  # login
+    ("Admin",   ("Created user", "Enabled user", "Disabled user", "Reassigned")),  # admin
+    ("Record",  ("Registered child", "Updated child", "Re-assessed risk", " date for ", "Removed",  # records
                  "Recorded")),
-    ("Vaccine", ("vaccine stock", "vaccine request", "Approved", "Rejected", "Distributed", "Submitted")),
-    ("Report",  ("Exported",)),
+    ("Vaccine", ("vaccine stock", "vaccine request", "Approved", "Rejected", "Distributed", "Submitted")),  # vaccines
+    ("Report",  ("Exported",)),  # reports
 )
 
 
-def log_category(action):
-    for name, keywords in LOG_CATEGORIES:
-        if any(k.lower() in action.lower() for k in keywords):
+def log_category(action):  # pick category
+    for name, keywords in LOG_CATEGORIES:  # each category
+        if any(k.lower() in action.lower() for k in keywords):  # keyword match
             return name
-    return "Other"
+    return "Other"  # no match
 
 
-PH_TZ = timezone(timedelta(hours=8), "PHT")
+PH_TZ = timezone(timedelta(hours=8), "PHT")  # PH time
 
 
-def to_local(value):
+def to_local(value):  # UTC -> PH
     """A stored timestamp (naive UTC, from datetime.utcnow) as Philippine
     time, for display and for "which day was this" comparisons."""
     if value is None:
         return None
-    return value.replace(tzinfo=timezone.utc).astimezone(PH_TZ).replace(tzinfo=None)
+    return value.replace(tzinfo=timezone.utc).astimezone(PH_TZ).replace(tzinfo=None)  # convert
 
 
-def child_label(child):
+def child_label(child):  # child + barangay
     """Child name for the audit log, with the barangay appended only when the
     name does not already carry it (anonymised registry names look like
     "Unnamed Child #252 (Macayug)")."""
@@ -128,13 +128,13 @@ def child_label(child):
     return name if (not bgy or f"({bgy})" in name) else f"{name} ({bgy})"
 
 
-def log_activity(action):
-    entry = ActivityLog(user_id=current_user.id if current_user.is_authenticated else None, action=action)
-    db.session.add(entry)
-    db.session.commit()
+def log_activity(action):  # write log
+    entry = ActivityLog(user_id=current_user.id if current_user.is_authenticated else None, action=action)  # who + what
+    db.session.add(entry)  # add
+    db.session.commit()  # save
 
 
-def role_required(*roles):
+def role_required(*roles):  # role check
     from functools import wraps
 
     def decorator(view_func):
@@ -203,58 +203,58 @@ def _children_query(barangay_id=None):
 # flask.g, so it is discarded at the end of every request and never serves
 # stale data across page loads.
 
-def _cache(key, builder):
-    if not has_request_context():
+def _cache(key, builder):  # page cache
+    if not has_request_context():  # outside a page
         return builder()
-    store = getattr(g, "_iv_cache", None)
+    store = getattr(g, "_iv_cache", None)  # page storage
     if store is None:
         store = g._iv_cache = {}
-    if key not in store:
-        store[key] = builder()
-    return store[key]
+    if key not in store:  # first time
+        store[key] = builder()  # load once
+    return store[key]  # reuse
 
 
-def _vaccine_types_by_id():
-    return _cache("vaccine_types", lambda: {vt.id: vt for vt in VaccineType.query.all()})
+def _vaccine_types_by_id():  # vaccine types
+    return _cache("vaccine_types", lambda: {vt.id: vt for vt in VaccineType.query.all()})  # by id
 
 
-def _records_by_child():
+def _records_by_child():  # doses by child
     def build():
         out = defaultdict(list)
-        for record in VaccinationRecord.query.all():
-            out[record.child_id].append(record)
+        for record in VaccinationRecord.query.all():  # all records
+            out[record.child_id].append(record)  # group by child
         return out
-    return _cache("records", build)
+    return _cache("records", build)  # cached
 
 
-def _latest_risk_by_child():
+def _latest_risk_by_child():  # newest risk
     """Newest RiskAssessment per child (matches risk_assessments.first(),
     which orders by computed_at descending)."""
     def build():
         out = {}
-        for ra in RiskAssessment.query.order_by(
+        for ra in RiskAssessment.query.order_by(  # oldest first
             RiskAssessment.computed_at.asc(), RiskAssessment.id.asc()
         ).all():
             out[ra.child_id] = ra  # later rows overwrite earlier -> newest wins
         return out
-    return _cache("risk", build)
+    return _cache("risk", build)  # cached
 
 
-def _latest_risk(child):
+def _latest_risk(child):  # one child's risk
     return _latest_risk_by_child().get(child.id)
 
 
-class _RiskAsOf:
+class _RiskAsOf:  # past risk
     """Stands in for a RiskAssessment row when risk is worked out for a past
     date: same risk_label / risk_probability attributes the callers read."""
     __slots__ = ("risk_label", "risk_probability")
 
     def __init__(self, probability):
         self.risk_probability = probability
-        self.risk_label = "At-Risk" if probability >= dp.RISK_THRESHOLD else "Not At-Risk"
+        self.risk_label = "At-Risk" if probability >= dp.RISK_THRESHOLD else "Not At-Risk"  # 0.50 cutoff
 
 
-def risk_as_of(as_of):
+def risk_as_of(as_of):  # risk on a date
     """{child_id: risk} for the dashboards' period filter.
 
     No period -> each child's latest stored assessment (live figures).
@@ -262,29 +262,29 @@ def risk_as_of(as_of):
     date (doses after it ignored, age measured at it), so the risk cards
     describe the same moment as the coverage figures beside them. Nothing
     is written to the database."""
-    if as_of is None:
-        return _latest_risk_by_child()
+    if as_of is None:  # today
+        return _latest_risk_by_child()  # saved scores
 
     def build():
         vt_code = {vt.id: vt.code for vt in _vaccine_types_by_id().values()}
         names = {b.id: b.name for b in _cache("all_barangays", lambda: Barangay.query.all())}
         records = _records_by_child()
         items = []
-        for c in _cache("children:None", lambda: _children_query(None).all()):
-            if c.date_of_birth > as_of:
+        for c in _cache("children:None", lambda: _children_query(None).all()):  # each child
+            if c.date_of_birth > as_of:  # not born yet
                 continue
             doses = {}
-            for rec in records.get(c.id, ()):
+            for rec in records.get(c.id, ()):  # doses
                 code = vt_code.get(rec.vaccine_type_id)
                 if code and (rec.campaign_id is None or code not in doses):
                     doses[code] = rec.date_administered
             items.append((c.id, c.date_of_birth, c.date_registered or c.date_of_birth, c.sex,
                           doses, names.get(c.barangay_id, "")))
-        return {cid: _RiskAsOf(p) for cid, p in dp.score_children_as_of(items, as_of).items()}
-    return _cache(f"risk_as_of:{as_of.isoformat()}", build)
+        return {cid: _RiskAsOf(p) for cid, p in dp.score_children_as_of(items, as_of).items()}  # rescore
+    return _cache(f"risk_as_of:{as_of.isoformat()}", build)  # cached
 
 
-def _doses_given(child_id):
+def _doses_given(child_id):  # child's doses
     """{vaccine_type_id: date_administered or None} for one child."""
     def build():
         out = defaultdict(dict)
@@ -292,10 +292,10 @@ def _doses_given(child_id):
             for record in records:
                 out[cid][record.vaccine_type_id] = record.date_administered
         return out
-    return _cache("doses", build).get(child_id, {})
+    return _cache("doses", build).get(child_id, {})  # cached
 
 
-def _dose_matrix(children, vt_lookup):
+def _dose_matrix(children, vt_lookup):  # dose grid
     """{child_id: {schedule_code: date or None}} for the Child Records table.
 
     The template previously ran one query per child per vaccine (15 doses x
@@ -311,39 +311,39 @@ def _dose_matrix(children, vt_lookup):
     return matrix
 
 
-def _risk_labels(children):
+def _risk_labels(children):  # risk labels
     """{child_id: risk_label or None} for list templates."""
     risk = _latest_risk_by_child()
     return {c.id: (risk[c.id].risk_label if c.id in risk else None) for c in children}
 
 
-def _still_catchable(vt, age):
+def _still_catchable(vt, age):  # catch-up check
     """True unless this dose has its own catch-up deadline (BCG, Rotavirus)
     and the child is past it - at which point it drops out of due/missed
     entirely rather than sitting as permanently "overdue"."""
-    return vt.catch_up_deadline_days is None or age <= vt.catch_up_deadline_days
+    return vt.catch_up_deadline_days is None or age <= vt.catch_up_deadline_days  # still allowed
 
 
-def _due_and_missed(child, with_codes=False):
+def _due_and_missed(child, with_codes=False):  # due + missed
     """Doses the child is old enough to have received, and how many are unfilled.
 
     With with_codes, also returns the dose codes that are unfilled, so the
     diseases those doses protect against can be named."""
     vt_by_id = _vaccine_types_by_id()
-    age = child.age_in_days
+    age = child.age_in_days  # age
     due = missed = 0
     codes = []
-    for record in _records_by_child().get(child.id, ()):
+    for record in _records_by_child().get(child.id, ()):  # each dose
         vt = vt_by_id.get(record.vaccine_type_id)
-        if vt is not None and not vt.is_optional and vt.recommended_age_days <= age and _still_catchable(vt, age):
-            due += 1
-            if record.date_administered is None:
-                missed += 1
+        if vt is not None and not vt.is_optional and vt.recommended_age_days <= age and _still_catchable(vt, age):  # due now
+            due += 1  # due
+            if record.date_administered is None:  # not given
+                missed += 1  # missed
                 codes.append(vt.code)
     return (due, missed, codes) if with_codes else (due, missed)
 
 
-def _due_codes(child):
+def _due_codes(child):  # due codes
     """(due_codes, missed_codes) for one child - every core dose whose
     recommended age has passed, split into given vs missing. Used to weigh
     severity against what this specific child could possibly be missing,
@@ -360,70 +360,70 @@ def _due_codes(child):
     return due_codes, missed_codes
 
 
-def _is_fully_immunized(child):
-    due, missed = _due_and_missed(child)
-    return True if due == 0 else ((due - missed) / due >= 0.9)
+def _is_fully_immunized(child):  # 90% rule (today)
+    due, missed = _due_and_missed(child)  # count
+    return True if due == 0 else ((due - missed) / due >= 0.9)  # 90% check
 
 
-def _target_coverage(fully_immunized, target_population):
+def _target_coverage(fully_immunized, target_population):  # target coverage
     """Coverage against the DOH/PSA projected target population, as opposed
     to coverage against actual registered children. Only meaningful once an
     admin has entered a target for that barangay; None otherwise so the
     template can show "not set" rather than a misleading 0%."""
     if not target_population or target_population <= 0:
         return None
-    return round(fully_immunized / target_population * 100, 1)
+    return round(fully_immunized / target_population * 100, 1)  # vs target
 
 
-def dashboard_stats(barangay_id=None, max_age_days=None):
-    children = _children_query(barangay_id).all()
+def dashboard_stats(barangay_id=None, max_age_days=None):  # stat cards
+    children = _children_query(barangay_id).all()  # children
     if max_age_days is not None:
         children = [c for c in children if c.age_in_days <= max_age_days]
-    total = len(children)
-    fully = sum(1 for c in children if _is_fully_immunized(c))
+    total = len(children)  # total
+    fully = sum(1 for c in children if _is_fully_immunized(c))  # fully immunized
     risk = _latest_risk_by_child()
-    at_risk = sum(1 for c in children
+    at_risk = sum(1 for c in children  # at-risk
                   if (ra := risk.get(c.id)) and ra.risk_label == "At-Risk")
     return {
         "total_children": total, "fully_immunized": fully, "at_risk": at_risk,
-        "coverage_rate": round((fully / total) * 100, 1) if total else 0.0,
+        "coverage_rate": round((fully / total) * 100, 1) if total else 0.0,  # coverage %
     }
 
 
-def _risk_tier_counts(children, risk):
+def _risk_tier_counts(children, risk):  # tier counts
     """High/Medium/Low tier counts for a list of children, same tiering
     risk_distribution() uses, so a barangay row and the donut chart never
     disagree on how a child is banded."""
     counts = Counter()
     for c in children:
         latest = risk.get(c.id)
-        counts[dp.risk_tier(latest.risk_probability) if latest else "Low Risk"] += 1
+        counts[dp.risk_tier(latest.risk_probability) if latest else "Low Risk"] += 1  # high/med/low
     return {"high": counts["High Risk"], "medium": counts["Medium Risk"], "low": counts["Low Risk"]}
 
 
-def coverage_by_barangay():
+def coverage_by_barangay():  # per barangay
     by_barangay = defaultdict(list)
-    for c in Child.query.all():
+    for c in Child.query.all():  # all children
         by_barangay[c.barangay_id].append(c)
-    risk = _latest_risk_by_child()
+    risk = _latest_risk_by_child()  # risk
     rows = []
-    for b in Barangay.query.order_by(Barangay.name).all():
+    for b in Barangay.query.order_by(Barangay.name).all():  # each barangay
         children = by_barangay.get(b.id, [])
         total = len(children)
-        fully = sum(1 for c in children if _is_fully_immunized(c))
-        at_risk = sum(1 for c in children
+        fully = sum(1 for c in children if _is_fully_immunized(c))  # fully immunized
+        at_risk = sum(1 for c in children  # at-risk
                       if (ra := risk.get(c.id)) and ra.risk_label == "At-Risk")
         rows.append({"barangay": b.name, "barangay_id": b.id, "children": total,
                       "fully_immunized": fully, "at_risk": at_risk,
-                      "coverage": round((fully / total) * 100, 1) if total else 0.0,
+                      "coverage": round((fully / total) * 100, 1) if total else 0.0,  # coverage %
                       "target_population": b.target_population,
                       "target_coverage": _target_coverage(fully, b.target_population),
                       "tiers": _risk_tier_counts(children, risk)})
-    rows.sort(key=lambda r: r["coverage"], reverse=True)
+    rows.sort(key=lambda r: r["coverage"], reverse=True)  # highest first
     return rows
 
 
-def campaign_reach(campaign):
+def campaign_reach(campaign):  # campaign reach
     """Eligible-vs-received counts per barangay for one campaign.
 
     Eligibility is evaluated against the campaign's own active window (did
@@ -455,7 +455,7 @@ def campaign_reach(campaign):
     return rows, totals
 
 
-def active_campaigns_summary(barangay_id=None):
+def active_campaigns_summary(barangay_id=None):  # active campaigns
     """One reach total per campaign that's inside its active window right
     now, for the dashboard panel - the full per-barangay breakdown stays on
     the campaign's own detail page rather than being duplicated here.
@@ -485,7 +485,7 @@ def active_campaigns_summary(barangay_id=None):
     return out
 
 
-def eligible_children_for_campaign(campaign, barangay_id=None):
+def eligible_children_for_campaign(campaign, barangay_id=None):  # campaign kids
     """Children eligible for this campaign right now, by today's age and
     barangay - the same test eligible_campaigns_for_child() applies from the
     child's side, so a row here is exactly a child whose Edit Child form
@@ -503,33 +503,33 @@ def eligible_children_for_campaign(campaign, barangay_id=None):
     return kids
 
 
-def coverage_by_vaccine(barangay_id=None):
-    children = _children_query(barangay_id).all()
+def coverage_by_vaccine(barangay_id=None):  # per dose
+    children = _children_query(barangay_id).all()  # children
     vt_by_code = {vt.code: vt for vt in _vaccine_types_by_id().values()}
     # (child_id, vaccine_type_id) -> record, built once from the cached records
     given_on = {}
-    for child_id, records in _records_by_child().items():
+    for child_id, records in _records_by_child().items():  # dose dates
         for record in records:
             given_on[(child_id, record.vaccine_type_id)] = record.date_administered
 
     rows = []
-    for code, name, antigen_code, dose_no, rec_days in dp.VACCINE_SCHEDULE:
+    for code, name, antigen_code, dose_no, rec_days in dp.VACCINE_SCHEDULE:  # each dose
         vt = vt_by_code.get(code)
         if not vt:
             continue
-        eligible = [c for c in children if c.age_in_days >= rec_days]
+        eligible = [c for c in children if c.age_in_days >= rec_days]  # old enough
         if not eligible:
             rows.append({"vaccine": name, "pct": 0})
             continue
-        given = sum(1 for c in eligible if given_on.get((c.id, vt.id)) is not None)
-        rows.append({"vaccine": name, "pct": round((given / len(eligible)) * 100, 1)})
+        given = sum(1 for c in eligible if given_on.get((c.id, vt.id)) is not None)  # received
+        rows.append({"vaccine": name, "pct": round((given / len(eligible)) * 100, 1)})  # dose %
     return rows
 
 
 # Colour per antigen for the coverage-by-vaccine chart. Deliberately avoids
 # green/amber/red: those carry coverage-status meaning everywhere else in the
 # system, and a red bar here would read as "failing" when it only means "IPV".
-ANTIGEN_COLOURS = {
+ANTIGEN_COLOURS = {  # chart colors
     "BCG":   "#2563eb",
     "HEPB":  "#0ea5e9",
     "PENTA": "#0d9488",
@@ -540,7 +540,7 @@ ANTIGEN_COLOURS = {
 }
 
 
-def dose_age_label(days):
+def dose_age_label(days):  # age label
     """Short age label for a dose, e.g. 'birth', '6wk', '9mo'.
 
     Ages follow the DOH Expanded Program on Immunization schedule. Shown on the
@@ -553,7 +553,7 @@ def dose_age_label(days):
     return f"{round(days / 30.44)}mo"
 
 
-def schedule_labels(rows):
+def schedule_labels(rows):  # chart labels
     """Chart labels with the due age appended: 'OPV 1st Dose (6wk)'."""
     ages = {name: days for _c, name, _a, _d, days in dp.VACCINE_SCHEDULE}
     out = []
@@ -746,32 +746,32 @@ _CORE_ANTIGEN_CODES = ({code for code, _name in dp.VACCINE_ANTIGENS}
                        | {code for code, _name in dp.OPTIONAL_VACCINE_ANTIGENS})
 
 
-def core_antigens():
+def core_antigens():  # tracked vaccines
     """Antigens in the RHU's inventory and request system: the 7 routine
     vaccines and Rotavirus. Used by Vaccine Inventory, stock status and
     alerts, the BHW request form, warning levels and the allocation view."""
     order = [code for code, _ in dp.VACCINE_ANTIGENS + dp.OPTIONAL_VACCINE_ANTIGENS]
-    rows = [a for a in VaccineAntigen.query.all() if a.code in _CORE_ANTIGEN_CODES]
-    return sorted(rows, key=lambda a: order.index(a.code))
+    rows = [a for a in VaccineAntigen.query.all() if a.code in _CORE_ANTIGEN_CODES]  # 8 vaccines
+    return sorted(rows, key=lambda a: order.index(a.code))  # schedule order
 
 
-def stock_levels():
+def stock_levels():  # stock status
     """Stock position per antigen. Extracted from the inventory route so the
     dashboard panel and the Vaccine Inventory page apply identical thresholds
     and can never disagree about what counts as Low or Critical."""
     rows = []
-    for a in core_antigens():
-        batches = InventoryBatch.query.filter_by(antigen_id=a.id, is_archived=False).all()
-        total = sum(b.quantity_on_hand for b in batches)
-        reorder = min([b.reorder_level for b in batches], default=50)
-        expiring = sum(1 for b in batches if b.is_expiring_soon)
-        if total <= 0:
+    for a in core_antigens():  # each vaccine
+        batches = InventoryBatch.query.filter_by(antigen_id=a.id, is_archived=False).all()  # active batches
+        total = sum(b.quantity_on_hand for b in batches)  # total vials
+        reorder = min([b.reorder_level for b in batches], default=50)  # reorder level
+        expiring = sum(1 for b in batches if b.is_expiring_soon)  # expiring
+        if total <= 0:  # none
             status, color = "Out of Stock", "red"
-        elif total <= reorder * 0.5:
+        elif total <= reorder * 0.5:  # half or less
             status, color = "Critical", "red"
-        elif total <= reorder:
+        elif total <= reorder:  # below reorder
             status, color = "Low", "amber"
-        else:
+        else:  # enough
             status, color = "Enough", "green"
         rows.append({"antigen": a, "total": total, "reorder": reorder, "status": status,
                      "color": color, "expiring": expiring, "batches": batches,
@@ -779,42 +779,42 @@ def stock_levels():
     return rows
 
 
-def stock_alerts(limit=5):
+def stock_alerts(limit=5):  # low-stock panel
     """Antigens at or below their reorder level, lowest first.
 
     The Critical Alerts strip only fires at exactly zero, so a vaccine down to
     its last few vials was invisible until it had already run out."""
-    rows = [r for r in stock_levels() if r["status"] != "Enough"]
-    rows.sort(key=lambda r: (r["total"], r["antigen"].name))
+    rows = [r for r in stock_levels() if r["status"] != "Enough"]  # not enough
+    rows.sort(key=lambda r: (r["total"], r["antigen"].name))  # lowest first
     return rows[:limit]
 
 
 # A year needs at least this many registered children before its coverage rate
 # is meaningful enough to plot.
-TREND_MIN_COHORT = 20
+TREND_MIN_COHORT = 20  # min 20 children
 
 
-def yearly_trend(barangay_id=None):
+def yearly_trend(barangay_id=None):  # yearly trend
     """Coverage at the end of each year, computed from actual dose dates:
     coverage as at 31 December of each year the data covers, using the same
     point-in-time calculation as the Reports page. The last point is capped
     at today."""
     today = date.today()
     out = []
-    for y in sorted(data_years()):
-        end = min(date(y, 12, 31), today)
-        fig = report_figures(barangay_id, end)
+    for y in sorted(data_years()):  # each year
+        end = min(date(y, 12, 31), today)  # Dec 31
+        fig = report_figures(barangay_id, end)  # year figures
         # A year with only a handful of children registered yields a rate that
         # is noise, not a finding: 2019 held one child, so its 0% made the
         # series look like a rise from nothing. Those years are omitted rather
         # than plotted.
-        if fig["total_children"] >= TREND_MIN_COHORT:
+        if fig["total_children"] >= TREND_MIN_COHORT:  # big enough
             label = str(y) + (" (to date)" if end == today and y == today.year else "")
-            out.append((label, fig["coverage_rate"], fig["total_children"]))
+            out.append((label, fig["coverage_rate"], fig["total_children"]))  # point
     return out
 
 
-def monthly_cohort_trend(barangay_id, year, risk=None):
+def monthly_cohort_trend(barangay_id, year, risk=None):  # monthly trend
     """Coverage at the end of each month of `year` for the children born in
     that year - the dashboards' trend chart when a single birth year is
     selected. Same calculation as the stat cards (report_figures() with the
@@ -822,36 +822,36 @@ def monthly_cohort_trend(barangay_id, year, risk=None):
     equals the card. Months after today are left out; a month with no
     children yet is plotted as a gap (None)."""
     today = date.today()
-    born_from = date(year, 1, 1)
+    born_from = date(year, 1, 1)  # birth year
     out = []
-    for m in range(1, 13):
+    for m in range(1, 13):  # each month
         first = date(year, m, 1)
-        if first > today:
+        if first > today:  # future
             break
-        end = min((date(year + 1, 1, 1) if m == 12 else date(year, m + 1, 1)) - timedelta(days=1), today)
-        fig = report_figures(barangay_id, end, born_from, risk if risk is not None else {})
+        end = min((date(year + 1, 1, 1) if m == 12 else date(year, m + 1, 1)) - timedelta(days=1), today)  # month end
+        fig = report_figures(barangay_id, end, born_from, risk if risk is not None else {})  # month figures
         n = fig["total_children"]
-        out.append((first.strftime("%b") + (" (to date)" if end == today else ""),
+        out.append((first.strftime("%b") + (" (to date)" if end == today else ""),  # point
                     fig["coverage_rate"] if n else None, n))
     return out
 
 
-def trend_for(barangay_id, period):
+def trend_for(barangay_id, period):  # pick trend
     """The dashboards' trend chart: monthly for a single selected birth year,
     annual (all children, every year) otherwise."""
-    if period.get("month_active"):
+    if period.get("month_active"):  # one year?
         year = int(period["year_from"])
-        trend = monthly_cohort_trend(barangay_id, year)
+        trend = monthly_cohort_trend(barangay_id, year)  # monthly
         month = int(period["month"]) if period.get("month") else 0
         return {"trend": trend, "trend_monthly": True, "trend_year": year,
                 "trend_highlight": month - 1 if 0 < month <= len(trend) else -1,
                 "trend_min": TREND_MIN_COHORT,
                 "trend_faded": any(n and n < TREND_MIN_COHORT for _l, _v, n in trend)}
-    return {"trend": yearly_trend(barangay_id), "trend_monthly": False, "trend_year": None,
+    return {"trend": yearly_trend(barangay_id), "trend_monthly": False, "trend_year": None,  # yearly
             "trend_highlight": -1, "trend_min": TREND_MIN_COHORT, "trend_faded": False}
 
 
-def monthly_doses_administered(barangay_id=None, months=12, as_of=None):
+def monthly_doses_administered(barangay_id=None, months=12, as_of=None):  # doses per month
     """Real count of vaccine doses actually administered per calendar month,
     for the `months` months ending at as_of (oldest first; defaults to the
     12 months up to today).
@@ -876,7 +876,7 @@ def monthly_doses_administered(barangay_id=None, months=12, as_of=None):
     window.reverse()
     start = date(window[0][0], window[0][1], 1)
 
-    q = db.session.query(VaccinationRecord.date_administered).join(
+    q = db.session.query(VaccinationRecord.date_administered).join(  # dated doses
         Child, VaccinationRecord.child_id == Child.id
     ).filter(
         VaccinationRecord.date_administered.isnot(None),
@@ -887,19 +887,19 @@ def monthly_doses_administered(barangay_id=None, months=12, as_of=None):
         q = q.filter(Child.barangay_id == barangay_id)
 
     counts = Counter()
-    for (d,) in q.all():
+    for (d,) in q.all():  # count
         counts[(d.year, d.month)] += 1
     return [(date(y, m, 1).strftime("%b %Y"), counts.get((y, m), 0)) for y, m in window]
 
 
-def risk_distribution(barangay_id=None, max_age_days=None):
+def risk_distribution(barangay_id=None, max_age_days=None):  # risk mix
     counts = Counter()
     risk = _latest_risk_by_child()
     for c in _children_query(barangay_id).all():
         if max_age_days is not None and c.age_in_days > max_age_days:
             continue
         latest = risk.get(c.id)
-        counts[dp.risk_tier(latest.risk_probability) if latest else "Low Risk"] += 1
+        counts[dp.risk_tier(latest.risk_probability) if latest else "Low Risk"] += 1  # tier
     total = sum(counts.values()) or 1
     return {
         "high_pct": round(counts["High Risk"] / total * 100, 1), "high_count": counts["High Risk"],
@@ -913,69 +913,69 @@ def risk_distribution(barangay_id=None, max_age_days=None):
 # immunization status is genuinely useful there. Both reuse the per-request
 # caches, so filtering costs no extra queries.
 
-RISK_LEVELS = [("", "Risk Level: All"), ("At-Risk", "At-Risk only"), ("Not At-Risk", "Not At-Risk only")]
-STATUS_LEVELS = [("", "Status: All"), ("complete", "Fully immunized"), ("incomplete", "Incomplete")]
+RISK_LEVELS = [("", "Risk Level: All"), ("At-Risk", "At-Risk only"), ("Not At-Risk", "Not At-Risk only")]  # risk filter
+STATUS_LEVELS = [("", "Status: All"), ("complete", "Fully immunized"), ("incomplete", "Incomplete")]  # status filter
 
 
-def immunized_as_of(child, as_of=None):
+def immunized_as_of(child, as_of=None):  # 90% rule
     """Fully immunized as at a date. Doses recorded after `as_of` count as not
     yet given. Shared with report_figures() so the dashboard and the Reports
     page never disagree about the same month."""
-    if as_of is None:
-        return _is_fully_immunized(child)
+    if as_of is None:  # today
+        return _is_fully_immunized(child)  # live check
     vt_by_id = _vaccine_types_by_id()
-    age = (as_of - child.date_of_birth).days
+    age = (as_of - child.date_of_birth).days  # age then
     due = given = 0
-    for rec in _records_by_child().get(child.id, ()):
+    for rec in _records_by_child().get(child.id, ()):  # each dose
         vtype = vt_by_id.get(rec.vaccine_type_id)
         # Same rule as report_figures(): optional doses and doses past their
         # catch-up age are not counted as due.
-        if (vtype is not None and not vtype.is_optional and vtype.recommended_age_days <= age
+        if (vtype is not None and not vtype.is_optional and vtype.recommended_age_days <= age  # due then
                 and _still_catchable(vtype, age)):
-            due += 1
-            if rec.date_administered is not None and rec.date_administered <= as_of:
-                given += 1
-    return True if due == 0 else (given / due >= 0.9)
+            due += 1  # due
+            if rec.date_administered is not None and rec.date_administered <= as_of:  # given by then
+                given += 1  # given
+    return True if due == 0 else (given / due >= 0.9)  # 90% check
 
 
-def filtered_children(barangay_id=None, risk_level="", status="", as_of=None, born_from=None,
+def filtered_children(barangay_id=None, risk_level="", status="", as_of=None, born_from=None,  # pick children
                       risk=None):
-    risk = risk if risk is not None else _latest_risk_by_child()
-    kids = _children_query(barangay_id).all()
+    risk = risk if risk is not None else _latest_risk_by_child()  # risk
+    kids = _children_query(barangay_id).all()  # barangay
     if as_of is not None:
         # A child not yet born at the reporting date is not in scope.
-        kids = [c for c in kids if c.date_of_birth <= as_of]
+        kids = [c for c in kids if c.date_of_birth <= as_of]  # born by then
     if born_from is not None:
-        kids = [c for c in kids if c.date_of_birth >= born_from]
-    if risk_level in ("At-Risk", "Not At-Risk"):
+        kids = [c for c in kids if c.date_of_birth >= born_from]  # birth-year range
+    if risk_level in ("At-Risk", "Not At-Risk"):  # risk filter
         kids = [c for c in kids if (ra := risk.get(c.id)) and ra.risk_label == risk_level]
-    if status == "complete":
+    if status == "complete":  # fully only
         kids = [c for c in kids if immunized_as_of(c, as_of)]
-    elif status == "incomplete":
+    elif status == "incomplete":  # incomplete only
         kids = [c for c in kids if not immunized_as_of(c, as_of)]
     return kids
 
 
-def stats_for(children, as_of=None, risk=None):
+def stats_for(children, as_of=None, risk=None):  # count stats
     """Same shape as dashboard_stats(), over an explicit child list.
 
     at_risk uses `risk` when given (the dashboards pass risk_as_of() for a
     selected period), otherwise each child's latest stored assessment."""
     risk = risk if risk is not None else _latest_risk_by_child()
-    total = len(children)
-    fully = sum(1 for c in children if immunized_as_of(c, as_of))
-    at_risk = sum(1 for c in children
+    total = len(children)  # total
+    fully = sum(1 for c in children if immunized_as_of(c, as_of))  # fully immunized
+    at_risk = sum(1 for c in children  # at-risk
                   if (ra := risk.get(c.id)) and ra.risk_label == "At-Risk")
     return {"total_children": total, "fully_immunized": fully, "at_risk": at_risk,
-            "coverage_rate": round(fully / total * 100, 1) if total else 0.0}
+            "coverage_rate": round(fully / total * 100, 1) if total else 0.0}  # coverage %
 
 
-def risk_distribution_for(children, risk=None):
+def risk_distribution_for(children, risk=None):  # risk tiers
     counts = Counter()
     risk = risk if risk is not None else _latest_risk_by_child()
     for c in children:
         latest = risk.get(c.id)
-        counts[dp.risk_tier(latest.risk_probability) if latest else "Low Risk"] += 1
+        counts[dp.risk_tier(latest.risk_probability) if latest else "Low Risk"] += 1  # tier
     total = sum(counts.values()) or 1
     return {
         "high_pct": round(counts["High Risk"] / total * 100, 1), "high_count": counts["High Risk"],
@@ -984,15 +984,15 @@ def risk_distribution_for(children, risk=None):
     }
 
 
-def top_risk_factors(barangay_id=None, limit=6):
+def top_risk_factors(barangay_id=None, limit=6):  # top reasons
     tally = Counter()
     risk = _latest_risk_by_child()
     for c in _children_query(barangay_id).all():
         latest = risk.get(c.id)
-        if latest and latest.risk_label == "At-Risk":
+        if latest and latest.risk_label == "At-Risk":  # at-risk only
             factors = dp.deserialize_factors(latest.top_factors)
             if factors:
-                tally[factors[0]["factor"]] += 1
+                tally[factors[0]["factor"]] += 1  # first reason
     ranked = tally.most_common(limit)
     if not ranked:
         return []
@@ -1000,7 +1000,7 @@ def top_risk_factors(barangay_id=None, limit=6):
     return [{"label": label, "count": count, "pct": round(count / max_v * 100)} for label, count in ranked]
 
 
-def at_risk_table(barangay_id=None, limit=None, max_age_days=None):
+def at_risk_table(barangay_id=None, limit=None, max_age_days=None):  # predictor list
     """max_age_days scopes this to the Continuation Predictor's "early
     warning during the active primary series" framing (the series itself
     runs 0-365 days; the reverted ML model was trained the same way, on
@@ -1010,23 +1010,23 @@ def at_risk_table(barangay_id=None, limit=None, max_age_days=None):
     rows = []
     risk = _latest_risk_by_child()
     records = _records_by_child()
-    for c in _children_query(barangay_id).all():
-        if max_age_days is not None and c.age_in_days > max_age_days:
+    for c in _children_query(barangay_id).all():  # each child
+        if max_age_days is not None and c.age_in_days > max_age_days:  # age limit
             continue
         latest = risk.get(c.id)
-        if not latest or latest.risk_label != "At-Risk":
+        if not latest or latest.risk_label != "At-Risk":  # at-risk only
             continue
-        due, missed, missed_codes = _due_and_missed(c, with_codes=True)
+        due, missed, missed_codes = _due_and_missed(c, with_codes=True)  # due + missed
         given_dates = [r.date_administered for r in records.get(c.id, ()) if r.date_administered]
-        last_visit = max(given_dates) if given_dates else None
-        tier = dp.risk_tier(latest.risk_probability)
+        last_visit = max(given_dates) if given_dates else None  # last visit
+        tier = dp.risk_tier(latest.risk_probability)  # tier
         rows.append({"child": c, "risk_score": round(latest.risk_probability * 100), "tier": tier,
                      "color": dp.risk_tier_color(tier), "missed": missed, "due": due, "last_visit": last_visit,
                      # What the missed doses would have protected against, so the
                      # consequence is visible rather than only the dose count.
                      "unprotected": dp.diseases_for_missed(missed_codes),
-                     "recommendation": "Home Visit" if tier == "High Risk" else "Schedule Visit"})
-    rows.sort(key=lambda r: r["risk_score"], reverse=True)
+                     "recommendation": "Home Visit" if tier == "High Risk" else "Schedule Visit"})  # visit type
+    rows.sort(key=lambda r: r["risk_score"], reverse=True)  # highest first
     return rows[:limit] if limit else rows
 
 
@@ -1043,20 +1043,20 @@ def at_risk_table(barangay_id=None, limit=None, max_age_days=None):
 # model, trained or rule-based blend, is needed for that - it's one number.
 # ---------------------------------------------------------------------------
 
-def vaccine_risk_tier(pct):
-    if pct >= 60:
+def vaccine_risk_tier(pct):  # gap tier
+    if pct >= 60:  # urgent
         return "Visit Urgently", "red"
-    if pct >= 25:
+    if pct >= 25:  # soon
         return "Visit Soon", "amber"
-    return "On Track", "green"
+    return "On Track", "green"  # on track
 
 
-def _child_vaccine_severity(c, antigen_of, records, vt_lookup):
-    due_codes, missed_codes = _due_codes(c)
-    max_severity = dp.weighted_missed(due_codes)
-    severity = dp.weighted_missed(missed_codes)
-    pct = round(severity / max_severity * 100) if max_severity else 0
-    tier, color = vaccine_risk_tier(pct)
+def _child_vaccine_severity(c, antigen_of, records, vt_lookup):  # gap score
+    due_codes, missed_codes = _due_codes(c)  # due + missed
+    max_severity = dp.weighted_missed(due_codes)  # max weight
+    severity = dp.weighted_missed(missed_codes)  # missed weight
+    pct = round(severity / max_severity * 100) if max_severity else 0  # % missing
+    tier, color = vaccine_risk_tier(pct)  # tier
     given_dates = [r.date_administered for r in records.get(c.id, ()) if r.date_administered]
     return {"child": c, "risk_score": pct, "tier": tier, "color": color,
             "missed": len(missed_codes), "due": len(due_codes),
@@ -1071,7 +1071,7 @@ def _child_vaccine_severity(c, antigen_of, records, vt_lookup):
             "recommendation": "Home Visit" if tier == "Visit Urgently" else "Schedule Visit"}
 
 
-def vaccine_risk_distribution(barangay_id=None):
+def vaccine_risk_distribution(barangay_id=None):  # gap mix
     antigen_of = {code: ant for code, _n, ant, _d, _r in dp.VACCINE_SCHEDULE}
     records = _records_by_child()
     vt_lookup = {vt.code: vt for vt in VaccineType.query.all()}
@@ -1087,7 +1087,7 @@ def vaccine_risk_distribution(barangay_id=None):
     }
 
 
-def vaccine_risk_table(barangay_id=None, vaccine_code=None, limit=None):
+def vaccine_risk_table(barangay_id=None, vaccine_code=None, limit=None):  # gaps list
     """vaccine_code filters to children missing that antigen specifically
     (e.g. "MMR" shows only children missing an MMR dose), rather than every
     child who needs a visit for any reason.
@@ -1103,18 +1103,18 @@ def vaccine_risk_table(barangay_id=None, vaccine_code=None, limit=None):
     records = _records_by_child()
     vt_lookup = {vt.code: vt for vt in VaccineType.query.all()}
     rows = []
-    for c in _children_query(barangay_id).all():
+    for c in _children_query(barangay_id).all():  # each child
         row = _child_vaccine_severity(c, antigen_of, records, vt_lookup)
-        if row["tier"] == "On Track":
+        if row["tier"] == "On Track":  # skip on track
             continue
-        if vaccine_code and vaccine_code not in row["missed_antigens"]:
+        if vaccine_code and vaccine_code not in row["missed_antigens"]:  # vaccine filter
             continue
         rows.append(row)
-    rows.sort(key=lambda r: r["risk_score"], reverse=True)
+    rows.sort(key=lambda r: r["risk_score"], reverse=True)  # worst first
     return rows[:limit] if limit else rows
 
 
-def child_detail(child):
+def child_detail(child):  # child schedule
     """Everything the read-only child record page shows.
 
     The only way to inspect one child was the edit form - ~24 date inputs that
@@ -1230,7 +1230,7 @@ def data_years():
     return list(range(date.today().year, first - 1, -1))
 
 
-def resolve_range(start_year, end_year, month=""):
+def resolve_range(start_year, end_year, month=""):  # birth-year filter
     """Turn the dashboards' From year / To year / Month selections into a
     birth-cohort window and a reporting date.
 
@@ -1258,59 +1258,59 @@ def resolve_range(start_year, end_year, month=""):
             return None
         return y if y in years else None
 
-    y1, y2 = year_or_none(start_year), year_or_none(end_year)
+    y1, y2 = year_or_none(start_year), year_or_none(end_year)  # years
     if y1 is None and y2 is None:
         return None, None, None, False, False
-    if y1 is not None and y2 is not None and y1 > y2:
+    if y1 is not None and y2 is not None and y1 > y2:  # swap order
         y1, y2 = y2, y1
     try:
         m = int(month) if month else 0
     except (TypeError, ValueError):
         m = 0
-    month_active = y1 is not None and y1 == y2
+    month_active = y1 is not None and y1 == y2  # same year?
     if not (month_active and 1 <= m <= 12):
         m = 0
 
-    born_from = date(y1, 1, 1) if y1 is not None else None
+    born_from = date(y1, 1, 1) if y1 is not None else None  # born from
     if y2 is None:
-        as_of, label = today, f"{y1} to date"
-    elif m:
+        as_of, label = today, f"{y1} to date"  # to date
+    elif m:  # month end
         end = date(y2 + 1, 1, 1) if m == 12 else date(y2, m + 1, 1)
         as_of, label = end - timedelta(days=1), f"{MONTH_NAMES[m - 1]} {y2}"
     else:
-        as_of = date(y2, 12, 31)
+        as_of = date(y2, 12, 31)  # Dec 31
         label = (f"{y2}" if y1 == y2 else f"{y1}–{y2}" if y1 is not None else f"Up to {y2}")
 
-    clamped = as_of > today
+    clamped = as_of > today  # future
     if clamped:
         as_of, label = today, f"{label} (to date)"
-    return born_from, as_of, label, clamped, month_active
+    return born_from, as_of, label, clamped, month_active  # result
 
 
-def _dashboard_period():
+def _dashboard_period():  # read filter
     """Reads and resolves the dashboard period filter from the query string."""
     start, end, month = (request.args.get(k, "") for k in ("from", "to", "month"))
-    born_from, as_of, label, clamped, month_active = resolve_range(start, end, month)
+    born_from, as_of, label, clamped, month_active = resolve_range(start, end, month)  # resolve
     return {"born_from": born_from, "as_of": as_of, "period_label": label,
             "period_clamped": clamped, "month_active": month_active,
             "year_from": start, "year_to": end, "month": month if month_active else "",
             "months": MONTH_NAMES, "years": data_years()}
 
 
-def period_end(period):
+def period_end(period):  # month end
     """Last day of a 'YYYY-MM' period, never later than today."""
     today = date.today()
     if not period:
         return today
     try:
         y, m = (int(x) for x in period.split("-"))
-        nxt = date(y + 1, 1, 1) if m == 12 else date(y, m + 1, 1)
-        return min(nxt - timedelta(days=1), today)
+        nxt = date(y + 1, 1, 1) if m == 12 else date(y, m + 1, 1)  # next month
+        return min(nxt - timedelta(days=1), today)  # last day
     except (ValueError, TypeError):
         return today
 
 
-def report_date_options():
+def report_date_options():  # dropdown options
     """Choices for the Reports page's single "Report as of" selector:
     the last 12 months, then whole years (the current one runs to today)."""
     this_year = date.today().year
@@ -1319,78 +1319,78 @@ def report_date_options():
                       for y in data_years()]}
 
 
-def resolve_report_date(args):
+def resolve_report_date(args):  # report date
     """(as_of date, selected key) from the Reports query string.
 
     as_of="" -> today; "YYYY-MM" -> end of that month; "YYYY" -> 31 Dec of
     that year (today for the current year). Older links that used the
     separate period= / year= parameters still work."""
-    key = args.get("as_of")
+    key = args.get("as_of")  # as of
     if key is None:  # older links
         key = args.get("year") or args.get("period") or ""
     key = (key or "").strip()
     today = date.today()
-    if len(key) == 4 and key.isdigit() and int(key) in data_years():
-        return min(date(int(key), 12, 31), today), key
-    if key in {v for v, _ in month_options()}:
-        return period_end(key), key
-    return today, ""
+    if len(key) == 4 and key.isdigit() and int(key) in data_years():  # a year
+        return min(date(int(key), 12, 31), today), key  # Dec 31
+    if key in {v for v, _ in month_options()}:  # a month
+        return period_end(key), key  # month end
+    return today, ""  # today
 
 
-def report_figures(barangay_id=None, as_of=None, born_from=None, risk=None):
+def report_figures(barangay_id=None, as_of=None, born_from=None, risk=None):  # report numbers
     """Coverage figures for one barangay (or all) as of a date.
 
     Doses recorded after `as_of` count as not-yet-given, and children born
     after it are excluded, so selecting an earlier period reports the
     situation as it stood then rather than today's totals."""
-    as_of = as_of or date.today()
-    vt_by_id = _vaccine_types_by_id()
-    records = _records_by_child()
-    risk = risk if risk is not None else _latest_risk_by_child()
+    as_of = as_of or date.today()  # date
+    vt_by_id = _vaccine_types_by_id()  # vaccine types
+    records = _records_by_child()  # doses
+    risk = risk if risk is not None else _latest_risk_by_child()  # risk
     # Neither the barangay list nor the (pre-as_of-filter) children list
     # depends on `as_of`, but yearly_trend() calls this once per year of
     # data (~17 calls for a single dashboard render) - caching both per
     # request turns 17 redundant full-table queries into 1.
-    all_barangays = _cache("all_barangays", lambda: Barangay.query.all())
+    all_barangays = _cache("all_barangays", lambda: Barangay.query.all())  # barangays
     names = {b.id: b.name for b in all_barangays}
     targets = {b.id: b.target_population for b in all_barangays}
 
-    all_children = _cache(f"children:{barangay_id}", lambda: _children_query(barangay_id).all())
-    children = [c for c in all_children
+    all_children = _cache(f"children:{barangay_id}", lambda: _children_query(barangay_id).all())  # children
+    children = [c for c in all_children  # born by then
                 if c.date_of_birth <= as_of and (born_from is None or c.date_of_birth >= born_from)]
 
-    def immunized(child):
-        age = (as_of - child.date_of_birth).days
+    def immunized(child):  # 90% rule
+        age = (as_of - child.date_of_birth).days  # age then
         due = given = 0
-        for rec in records.get(child.id, ()):
+        for rec in records.get(child.id, ()):  # each dose
             vtype = vt_by_id.get(rec.vaccine_type_id)
-            if (vtype is not None and not vtype.is_optional and vtype.recommended_age_days <= age
+            if (vtype is not None and not vtype.is_optional and vtype.recommended_age_days <= age  # due then
                     and _still_catchable(vtype, age)):
-                due += 1
-                if rec.date_administered is not None and rec.date_administered <= as_of:
+                due += 1  # due
+                if rec.date_administered is not None and rec.date_administered <= as_of:  # given by then
                     given += 1
-        return True if due == 0 else (given / due >= 0.9)
+        return True if due == 0 else (given / due >= 0.9)  # 90% check
 
-    grouped = defaultdict(list)
+    grouped = defaultdict(list)  # by barangay
     for c in children:
         grouped[c.barangay_id].append(c)
 
     rows = []
-    for bid, kids in grouped.items():
-        fully = sum(1 for c in kids if immunized(c))
-        at_risk = sum(1 for c in kids if (ra := risk.get(c.id)) and ra.risk_label == "At-Risk")
+    for bid, kids in grouped.items():  # each barangay
+        fully = sum(1 for c in kids if immunized(c))  # fully immunized
+        at_risk = sum(1 for c in kids if (ra := risk.get(c.id)) and ra.risk_label == "At-Risk")  # at-risk
         target_pop = targets.get(bid)
         rows.append({"barangay": names.get(bid, "—"), "barangay_id": bid, "children": len(kids),
                      "fully_immunized": fully, "at_risk": at_risk,
-                     "coverage": round(fully / len(kids) * 100, 1) if kids else 0.0,
+                     "coverage": round(fully / len(kids) * 100, 1) if kids else 0.0,  # coverage %
                      "target_population": target_pop,
                      "target_coverage": _target_coverage(fully, target_pop),
                      "tiers": _risk_tier_counts(kids, risk)})
-    rows.sort(key=lambda r: r["coverage"], reverse=True)
+    rows.sort(key=lambda r: r["coverage"], reverse=True)  # highest first
 
-    total = len(children)
-    fully_total = sum(r["fully_immunized"] for r in rows)
-    at_risk_total = sum(r["at_risk"] for r in rows)
+    total = len(children)  # total
+    fully_total = sum(r["fully_immunized"] for r in rows)  # fully total
+    at_risk_total = sum(r["at_risk"] for r in rows)  # at-risk total
     # Only counts barangays with a target actually entered -- summing in a
     # 0 for the rest would understate the real target population and make
     # the aggregate rate look better than it should.
@@ -1400,7 +1400,7 @@ def report_figures(barangay_id=None, as_of=None, born_from=None, risk=None):
         "total_children": total,
         "fully_immunized": fully_total,
         "at_risk": at_risk_total,
-        "coverage_rate": round(fully_total / total * 100, 1) if total else 0.0,
+        "coverage_rate": round(fully_total / total * 100, 1) if total else 0.0,  # coverage %
         "target_population_total": target_population_total,
         "target_coverage_rate": _target_coverage(
             sum(r["fully_immunized"] for r in target_rows), target_population_total),
@@ -1410,7 +1410,7 @@ def report_figures(barangay_id=None, as_of=None, born_from=None, risk=None):
     }
 
 
-def report_by_vaccine(barangay_id=None, as_of=None, born_from=None):
+def report_by_vaccine(barangay_id=None, as_of=None, born_from=None):  # per-dose report
     """Completion rate per scheduled dose as of a date, for the BHW report
     chart. Mirrors report_figures(): doses recorded after `as_of` count as
     not yet given, and children born after it are excluded."""
@@ -1500,14 +1500,14 @@ def map_markers(mode="heatmap"):
 # Request/System categories).
 # ---------------------------------------------------------------------------
 
-def get_notifications(role, barangay_id=None):
+def get_notifications(role, barangay_id=None):  # alerts
     notes = []
-    for antigen in core_antigens():
-        total = (db.session.query(func.coalesce(func.sum(InventoryBatch.quantity_on_hand), 0))
+    for antigen in core_antigens():  # each vaccine
+        total = (db.session.query(func.coalesce(func.sum(InventoryBatch.quantity_on_hand), 0))  # stock total
                  .filter(InventoryBatch.antigen_id == antigen.id, InventoryBatch.is_archived.is_(False)).scalar())
         reorder = (db.session.query(func.min(InventoryBatch.reorder_level))
                    .filter(InventoryBatch.antigen_id == antigen.id, InventoryBatch.is_archived.is_(False)).scalar()) or 50
-        if total <= 0:
+        if total <= 0:  # out of stock
             notes.append({"category": "Stock", "severity": "critical", "icon": "package", "icon_bg": "bg-red",
                           "title": f"{antigen.name} Out of Stock",
                           "body": f"{antigen.name} is completely depleted. Submit a restock request immediately.",
@@ -1723,20 +1723,20 @@ def _before_birth_message(names):
             + ", ".join(names) + ". Nothing was saved.")
 
 
-def _dose_date_error(dob, dated_doses):
+def _dose_date_error(dob, dated_doses):  # dose date check
     """Error message for dose dates that cannot be right - before the child
     was born, or after today (a dose is only recorded once given) - or None.
     Checked on the server for every form that records a dose, so it holds
     even if the browser's date limits are bypassed."""
-    bad = _doses_before_birth(dob, dated_doses)
+    bad = _doses_before_birth(dob, dated_doses)  # before birth
     if bad:
         return _before_birth_message(bad)
     today = date.today()
-    future = [name for name, given in dated_doses if given is not None and given > today]
+    future = [name for name, given in dated_doses if given is not None and given > today]  # future
     if future:
         return ("A dose cannot be dated after today. Please check: "
                 + ", ".join(future) + ". Nothing was saved.")
-    return None
+    return None  # ok
 
 
 NAME_PUNCTUATION = set(" .'-")
@@ -1847,12 +1847,12 @@ def eligible_campaigns_for_child(child):
     return [c for c in candidates if c.age_eligible(age) and c.barangay_eligible(child.barangay_id)]
 
 
-def _create_child(form, barangay_locked):
+def _create_child(form, barangay_locked):  # new child
     barangay_id = barangay_locked or int(form.get("barangay_id"))
-    dob = datetime.strptime(form.get("date_of_birth"), "%Y-%m-%d").date()
+    dob = datetime.strptime(form.get("date_of_birth"), "%Y-%m-%d").date()  # birth date
     date_registered = (datetime.strptime(form.get("date_registered"), "%Y-%m-%d").date()
                         if form.get("date_registered") else date.today())
-    child = Child(
+    child = Child(  # child row
         full_name=form.get("full_name"), sex=form.get("sex"),
         date_of_birth=dob,
         barangay_id=barangay_id, address=form.get("address"), guardian_name=form.get("guardian_name"),
@@ -1864,32 +1864,32 @@ def _create_child(form, barangay_locked):
         mnp_given=bool(form.get("mnp_given")),
         source="manual", created_by_id=current_user.id,
     )
-    db.session.add(child)
+    db.session.add(child)  # add
     db.session.flush()
 
     doses_dict = {}
-    for code, name, antigen_code, dose_no, rec_days in dp.VACCINE_SCHEDULE:
+    for code, name, antigen_code, dose_no, rec_days in dp.VACCINE_SCHEDULE:  # each dose
         vt = VaccineType.query.filter_by(code=code).first()
-        administered = _ticked_date(form, f"dose_{code}_given", f"dose_{code}", date_registered)
+        administered = _ticked_date(form, f"dose_{code}_given", f"dose_{code}", date_registered)  # ticked dose
         doses_dict[code] = administered
-        db.session.add(VaccinationRecord(
+        db.session.add(VaccinationRecord(  # dose row
             child_id=child.id, vaccine_type_id=vt.id, date_administered=administered,
             status="completed" if administered else "pending", administered_by_id=current_user.id,
         ))
-    db.session.commit()
+    db.session.commit()  # save
 
     barangay_name = db.session.get(Barangay, barangay_id).name
-    result = dp.predict_for_child(child.date_of_birth, child.date_registered, child.sex, doses_dict, barangay_name)
-    db.session.add(RiskAssessment(
+    result = dp.predict_for_child(child.date_of_birth, child.date_registered, child.sex, doses_dict, barangay_name)  # predict risk
+    db.session.add(RiskAssessment(  # save risk
         child_id=child.id, risk_label=result["label"], risk_probability=result["probability"],
         model_version=result["model_version"], top_factors=dp.serialize_factors(result["top_factors"]),
     ))
     db.session.commit()
-    log_activity(f"Registered child {child_label(child)}")
-    return child
+    log_activity(f"Registered child {child_label(child)}")  # log
+    return child  # done
 
 
-def _update_child(child, form):
+def _update_child(child, form):  # edit child
     """Updates an existing child's basic info and any dose dates submitted
     on the Edit Child form, then recomputes their risk assessment so
     newly-recorded doses are reflected immediately."""
@@ -1912,28 +1912,28 @@ def _update_child(child, form):
     existing_by_vt_id = {rec.vaccine_type_id: rec for rec in child.vaccination_records if rec.campaign_id is None}
     past_window_warnings = []
     date_changes = []
-    for code in _KNOWN_DOSE_CODES:
+    for code in _KNOWN_DOSE_CODES:  # each dose
         vt = vt_by_code.get(code)
         if vt is None:
             continue
         date_str = form.get(f"dose_{code}")
-        administered = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else None
+        administered = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else None  # new date
         rec = existing_by_vt_id.get(vt.id)
         if rec is None:
             rec = VaccinationRecord(child_id=child.id, vaccine_type_id=vt.id)
             db.session.add(rec)
-        if rec.date_administered is not None and rec.date_administered != administered:
+        if rec.date_administered is not None and rec.date_administered != administered:  # date changed
             date_changes.append((vt.name, rec.date_administered, administered))
-        rec.date_administered = administered
+        rec.date_administered = administered  # set date
         rec.status = "completed" if administered else "pending"
         # Optional doses like Rotavirus stop being given past a real age
         # cutoff (rising intussusception risk in older infants), unlike the
         # core schedule which stays catchable indefinitely. A record past
         # that age is still saved as-given - it may be a real dose logged
         # late - but the BHW is warned rather than told nothing.
-        if administered and vt.is_optional and vt.catch_up_deadline_days is not None:
+        if administered and vt.is_optional and vt.catch_up_deadline_days is not None:  # optional dose
             age_at_dose = (administered - child.date_of_birth).days
-            if age_at_dose > vt.catch_up_deadline_days:
+            if age_at_dose > vt.catch_up_deadline_days:  # too old
                 past_window_warnings.append(vt.name)
 
     # Campaign doses: a separate field per campaign (dose_campaign_<id>), not
@@ -1942,7 +1942,7 @@ def _update_child(child, form):
     # reused here. Only ever written for campaigns this child currently
     # qualifies for, and never touches risk scoring (see
     # eligible_campaigns_for_child()'s docstring).
-    for campaign in eligible_campaigns_for_child(child):
+    for campaign in eligible_campaigns_for_child(child):  # campaign doses
         date_str = form.get(f"dose_campaign_{campaign.id}")
         administered = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else None
         rec = child.vaccination_records.filter_by(campaign_id=campaign.id).first()
@@ -1955,45 +1955,45 @@ def _update_child(child, form):
             date_changes.append((campaign.name, rec.date_administered, administered))
         rec.date_administered = administered
         rec.status = "completed" if administered else "pending"
-    db.session.commit()
+    db.session.commit()  # save
 
-    result = _recompute_risk(child)
-    log_activity(f"Updated child record {child_label(child)}")
-    _log_dose_date_changes(child, date_changes)
+    result = _recompute_risk(child)  # re-predict
+    log_activity(f"Updated child record {child_label(child)}")  # log
+    _log_dose_date_changes(child, date_changes)  # log changes
     result["past_window_warnings"] = past_window_warnings
     return result
 
 
-def _recompute_risk(child):
+def _recompute_risk(child):  # re-predict
     vt_by_id = {vt.id: vt for vt in VaccineType.query.all()}
     doses_dict = {vt.code: None for vt in vt_by_id.values()}
-    for rec in child.vaccination_records:
+    for rec in child.vaccination_records:  # child's doses
         vt = vt_by_id.get(rec.vaccine_type_id)
         if vt:
             doses_dict[vt.code] = rec.date_administered
-    result = dp.predict_for_child(child.date_of_birth, child.date_registered, child.sex, doses_dict, child.barangay.name)
-    db.session.add(RiskAssessment(
+    result = dp.predict_for_child(child.date_of_birth, child.date_registered, child.sex, doses_dict, child.barangay.name)  # predict
+    db.session.add(RiskAssessment(  # save risk
         child_id=child.id, risk_label=result["label"], risk_probability=result["probability"],
         model_version=result["model_version"], top_factors=dp.serialize_factors(result["top_factors"]),
     ))
-    db.session.commit()
+    db.session.commit()  # commit
     return result
 
 
-def _log_dose_date_changes(child, changes):
+def _log_dose_date_changes(child, changes):  # log date edits
     """One activity-log entry per changed or removed dose date, so an edit to
     an already-recorded dose is always traceable to who made it and when.
     changes: [(dose name, old date, new date|None)]. First-time recordings are
     not listed here; they are logged by the save itself."""
-    for name, old, new in changes:
-        if new is None:
+    for name, old, new in changes:  # each change
+        if new is None:  # removed
             log_activity(f"Removed {name} (was {old.isoformat()}) for {child_label(child)}")
-        else:
+        else:  # changed
             log_activity(f"Changed {name} date for {child_label(child)} from "
                          f"{old.isoformat()} to {new.isoformat()}")
 
 
-def _write_dose(child, vt, rec, administered):
+def _write_dose(child, vt, rec, administered):  # save one dose
     """Writes one dose onto a VaccinationRecord (creating it if it doesn't
     exist yet), same per-dose logic _update_child applies when saving the
     full Edit Child form. Returns the vaccine's name as a warning if an
@@ -2004,7 +2004,7 @@ def _write_dose(child, vt, rec, administered):
     previous = rec.date_administered
     rec.date_administered = administered
     rec.status = "completed" if administered else "pending"
-    if previous is not None and previous != administered:
+    if previous is not None and previous != administered:  # date changed
         _log_dose_date_changes(child, [(vt.name, previous, administered)])
     if administered and vt.is_optional and vt.catch_up_deadline_days is not None:
         age_at_dose = (administered - child.date_of_birth).days
@@ -2645,9 +2645,9 @@ def municipality_map():
 
 
 @rhu_bp.route("/inventory", methods=["GET", "POST"])
-def inventory():
-    if request.method == "POST":
-        batch = InventoryBatch(
+def inventory():  # inventory page
+    if request.method == "POST":  # add batch
+        batch = InventoryBatch(  # new batch
             antigen_id=int(request.form.get("antigen_id")), batch_number=request.form.get("batch_number"),
             quantity_on_hand=int(request.form.get("quantity")), storage_location=request.form.get("storage_location"),
             expiry_date=(datetime.strptime(request.form.get("expiry_date"), "%Y-%m-%d").date()
@@ -2655,13 +2655,13 @@ def inventory():
             reorder_level=50, added_at=datetime.utcnow(),
         )
         db.session.add(batch)
-        db.session.commit()
-        log_activity(f"Added vaccine stock: {batch.antigen.name} +{batch.quantity_on_hand} vials")
+        db.session.commit()  # save
+        log_activity(f"Added vaccine stock: {batch.antigen.name} +{batch.quantity_on_hand} vials")  # log
         flash("Stock added successfully.", "success")
         return redirect(url_for("rhu.inventory"))
 
-    rows = stock_levels()
-    stats = {"total_types": len(rows), "out_of_stock": sum(1 for r in rows if r["status"] == "Out of Stock"),
+    rows = stock_levels()  # stock status
+    stats = {"total_types": len(rows), "out_of_stock": sum(1 for r in rows if r["status"] == "Out of Stock"),  # summary cards
              "low_critical": sum(1 for r in rows if r["status"] in ("Low", "Critical")),
              "expiring_soon": sum(r["expiring"] for r in rows)}
     return render_template("rhu_inventory.html", **_rhu_ctx(
@@ -2670,7 +2670,7 @@ def inventory():
 
 
 @rhu_bp.route("/requests")
-def requests():
+def requests():  # requests page
     """Pending requests are grouped by vaccine with a suggested split of
     available stock - urgent/high-priority requests filled first, then
     whatever's left shared proportionally - since stock is rationed per
@@ -2678,135 +2678,135 @@ def requests():
     row's quantity before approving it, so rationing stock is still the
     RHU's decision, not the system's. All Requests stays a flat history."""
     tab = request.args.get("tab", "pending")
-    stats = {"pending": VaccineRequest.query.filter_by(status="pending").count(),
+    stats = {"pending": VaccineRequest.query.filter_by(status="pending").count(),  # tab counts
              "approved": VaccineRequest.query.filter_by(status="approved").count(),
              "distributed": VaccineRequest.query.filter_by(status="fulfilled").count(),
              "rejected": VaccineRequest.query.filter_by(status="rejected").count()}
 
     groups = None
     reqs = None
-    if tab == "pending":
-        coverage = {r["barangay"]: r["coverage"] for r in coverage_by_barangay()}
-        pending = (VaccineRequest.query.filter_by(status="pending")
+    if tab == "pending":  # pending tab
+        coverage = {r["barangay"]: r["coverage"] for r in coverage_by_barangay()}  # coverage
+        pending = (VaccineRequest.query.filter_by(status="pending")  # pending
                    .order_by(VaccineRequest.requested_at.asc()).all())
 
         # Grouped by antigen: stock is held per vaccine, so each is rationed
         # separately.
         by_antigen = defaultdict(list)
-        for r in pending:
+        for r in pending:  # by vaccine
             by_antigen[r.antigen_id].append(r)
 
         groups = []
-        for antigen_id, antigen_reqs in by_antigen.items():
+        for antigen_id, antigen_reqs in by_antigen.items():  # each vaccine
             antigen = antigen_reqs[0].antigen
             rows = [{"id": r.id, "code": r.request_code, "barangay": r.barangay.name,
                      "requested_at": r.requested_at, "requested": r.quantity_requested,
                      "priority": r.priority, "coverage": coverage.get(r.barangay.name)}
                     for r in antigen_reqs]
-            result = dp.allocate_stock(rows, usable_stock(antigen_id), "priority", coverage)
+            result = dp.allocate_stock(rows, usable_stock(antigen_id), "priority", coverage)  # suggest split
             # Vaccines outside the RHU's 7 stocked antigens (e.g. an older
             # Rotavirus request) can never be distributed from inventory.
             groups.append({"antigen": antigen, "tracked": antigen.code in _CORE_ANTIGEN_CODES, **result})
         # Short vaccines first: those are the decisions that need making.
-        groups.sort(key=lambda g: (g["can_meet_all"], -g["shortfall"]))
+        groups.sort(key=lambda g: (g["can_meet_all"], -g["shortfall"]))  # shortest first
     else:
-        reqs = VaccineRequest.query.order_by(VaccineRequest.requested_at.desc()).all()
+        reqs = VaccineRequest.query.order_by(VaccineRequest.requested_at.desc()).all()  # all requests
 
     return render_template("rhu_requests.html", **_rhu_ctx(
         "requests", page_title="Vaccine Requests", groups=groups, reqs=reqs, stats=stats, tab=tab,
     ))
 
 
-def _usable_batches(antigen_id):
+def _usable_batches(antigen_id):  # usable batches
     """Batches that can actually be given out: not empty, archived or
     expired, soonest expiry first. Shared by the allocation suggestion and
     by distribution, so a suggestion never counts vials distribution would
     refuse."""
     return (InventoryBatch.query
-            .filter(InventoryBatch.antigen_id == antigen_id, InventoryBatch.is_archived.is_(False),
+            .filter(InventoryBatch.antigen_id == antigen_id, InventoryBatch.is_archived.is_(False),  # not empty/expired
                     InventoryBatch.quantity_on_hand > 0, InventoryBatch.expiry_date >= date.today())
-            .order_by(InventoryBatch.expiry_date, InventoryBatch.id).all())
+            .order_by(InventoryBatch.expiry_date, InventoryBatch.id).all())  # soonest expiry
 
 
-def usable_stock(antigen_id):
+def usable_stock(antigen_id):  # usable total
     return sum(b.quantity_on_hand for b in _usable_batches(antigen_id))
 
 
-def _deduct_stock(antigen_id, qty):
+def _deduct_stock(antigen_id, qty):  # deduct stock
     """Takes `qty` doses from usable stock, first-expiry-first-out across
     batches (skipping empty, archived and expired ones). Returns True if
     there was enough; otherwise changes nothing and returns False."""
-    batches = _usable_batches(antigen_id)
-    if sum(b.quantity_on_hand for b in batches) < qty:
+    batches = _usable_batches(antigen_id)  # usable batches
+    if sum(b.quantity_on_hand for b in batches) < qty:  # not enough
         return False
-    remaining = qty
-    for b in batches:
-        take = min(b.quantity_on_hand, remaining)
-        b.quantity_on_hand -= take
+    remaining = qty  # to take
+    for b in batches:  # soonest first
+        take = min(b.quantity_on_hand, remaining)  # take
+        b.quantity_on_hand -= take  # deduct
         remaining -= take
-        if not remaining:
+        if not remaining:  # done
             break
     return True
 
 
 @rhu_bp.route("/requests/<int:req_id>/<action>", methods=["POST"])
-def request_action(req_id, action):
+def request_action(req_id, action):  # approve/reject/distribute
     vr = db.session.get(VaccineRequest, req_id) or abort(404)
     # Each step only from the status before it, so a request cannot be
     # approved twice, distributed without approval, or distributed twice
     # (which would deduct the stock twice).
-    allowed_from = {"approve": "pending", "reject": "pending", "distribute": "approved"}
+    allowed_from = {"approve": "pending", "reject": "pending", "distribute": "approved"}  # allowed status
     if action not in allowed_from:
         abort(404)
-    if vr.status != allowed_from[action]:
+    if vr.status != allowed_from[action]:  # wrong status
         flash(f"Request {vr.request_code} is {vr.status}; it cannot be {action}d.", "error")
         return redirect(request.referrer or url_for("rhu.requests"))
-    if action == "approve":
+    if action == "approve":  # approve
         # Defaults to the full amount (the plain Approve button on the
         # Requests list never sends a quantity); the Stock Allocation page
         # sends its suggested or RHU-adjusted quantity instead, so stock can
         # actually be rationed rather than only approved in full or refused.
-        qty_raw = (request.form.get("quantity") or "").strip()
+        qty_raw = (request.form.get("quantity") or "").strip()  # quantity
         if not qty_raw:
             qty = vr.quantity_requested       # plain Approve: the full amount
-        elif qty_raw.isdigit() and 0 < int(qty_raw) <= vr.quantity_requested:
+        elif qty_raw.isdigit() and 0 < int(qty_raw) <= vr.quantity_requested:  # 1..requested
             qty = int(qty_raw)
         else:
             # A typed 0, a value above the request, or text is a mistake to
             # report - never silently approve the full request instead.
             flash(f"Enter a quantity from 1 to {vr.quantity_requested} to approve {vr.request_code}.", "error")
             return redirect(request.referrer or url_for("rhu.requests"))
-        vr.status, vr.quantity_approved = "approved", qty
+        vr.status, vr.quantity_approved = "approved", qty  # approved
         vr.reviewed_by_id, vr.reviewed_at = current_user.id, datetime.utcnow()
         suffix = f" ({qty} of {vr.quantity_requested} requested)" if qty < vr.quantity_requested else ""
-        log_activity(f"Approved vaccine request {vr.request_code}{suffix}")
-    elif action == "reject":
+        log_activity(f"Approved vaccine request {vr.request_code}{suffix}")  # log
+    elif action == "reject":  # reject
         vr.status, vr.reviewed_by_id, vr.reviewed_at = "rejected", current_user.id, datetime.utcnow()
-        log_activity(f"Rejected vaccine request {vr.request_code}")
-    elif action == "distribute":
-        qty = vr.quantity_approved or vr.quantity_requested
-        if not _deduct_stock(vr.antigen_id, qty):
+        log_activity(f"Rejected vaccine request {vr.request_code}")  # log
+    elif action == "distribute":  # distribute
+        qty = vr.quantity_approved or vr.quantity_requested  # amount
+        if not _deduct_stock(vr.antigen_id, qty):  # deduct
             flash(f"Not enough usable {vr.antigen.name} stock to distribute {qty} for {vr.request_code}. "
                   "Add stock in Vaccine Inventory first; the request stays approved.", "error")
             return redirect(request.referrer or url_for("rhu.requests"))
-        vr.status, vr.distributed_at = "fulfilled", datetime.utcnow()
-        log_activity(f"Distributed vaccine request {vr.request_code}")
-    db.session.commit()
+        vr.status, vr.distributed_at = "fulfilled", datetime.utcnow()  # fulfilled
+        log_activity(f"Distributed vaccine request {vr.request_code}")  # log
+    db.session.commit()  # save
     flash(f"Request {vr.request_code} {action}d.", "success")
     return redirect(request.referrer or url_for("rhu.requests"))
 
 
 @rhu_bp.route("/forecast")
-def forecast():
+def forecast():  # forecast page
     """Projected vaccine demand for the coming years.
 
     Two components, kept separate on screen because only one is a forecast:
     doses children already in the registry will become due for, and doses for a
     projected birth cohort. RHU only, since ordering stock is their decision."""
     children = _children_query(None).all()
-    dobs = [c.date_of_birth for c in children if c.date_of_birth]
-    births_by_year = Counter(d.year for d in dobs)
-    data = dp.forecast_vaccine_demand(dobs, births_by_year)
+    dobs = [c.date_of_birth for c in children if c.date_of_birth]  # birth dates
+    births_by_year = Counter(d.year for d in dobs)  # births per year
+    data = dp.forecast_vaccine_demand(dobs, births_by_year)  # forecast
 
     # The forecast covers the barangays that have registry records, not the
     # whole municipality, until every barangay has been exported.
@@ -2824,24 +2824,24 @@ def forecast():
 
 
 @rhu_bp.route("/reports")
-def reports():
+def reports():  # reports page
     barangay_id = request.args.get("barangay_id", type=int)
     report_type = request.args.get("type", "coverage")
-    as_of, report_key = resolve_report_date(request.args)
-    fig = report_figures(barangay_id, as_of)
+    as_of, report_key = resolve_report_date(request.args)  # report date
+    fig = report_figures(barangay_id, as_of)  # numbers
     barangays = Barangay.query.order_by(Barangay.name).all()
     barangay_obj = next((b for b in barangays if b.id == barangay_id), None)
 
     extra = {}
-    if report_type == "atrisk":
+    if report_type == "atrisk":  # at-risk report
         extra["at_risk_rows"] = at_risk_table(barangay_id, limit=50)
-    elif report_type == "inventory":
+    elif report_type == "inventory":  # inventory report
         extra["inventory_rows"] = stock_levels()
-    elif report_type == "barangay":
+    elif report_type == "barangay":  # barangay report
         extra["barangay_obj"] = barangay_obj
         if barangay_obj:
             extra["barangay_target_coverage"] = _target_coverage(fig["fully_immunized"], barangay_obj.target_population)
-    elif report_type == "monthly":
+    elif report_type == "monthly":  # trend report
         extra["trend"] = yearly_trend(barangay_id)
         extra["doses_by_month"] = monthly_doses_administered(barangay_id, as_of=as_of)
 
@@ -2855,11 +2855,11 @@ def reports():
 
 
 @rhu_bp.route("/reports/export.csv")
-def export_report_csv():
+def export_report_csv():  # CSV export
     """Downloads the on-screen report as CSV (opens directly in Excel)."""
     barangay_id = request.args.get("barangay_id", type=int)
-    as_of, _key = resolve_report_date(request.args)
-    fig = report_figures(barangay_id, as_of)
+    as_of, _key = resolve_report_date(request.args)  # report date
+    fig = report_figures(barangay_id, as_of)  # numbers
     scope = next((b.name for b in Barangay.query.filter_by(id=barangay_id)), "All Barangays")
 
     buf = io.StringIO()
@@ -3287,21 +3287,21 @@ def continuation():
 
 
 @bhw_bp.route("/requests", methods=["GET", "POST"])
-def requests():
+def requests():  # BHW requests
     bid = current_user.barangay_id
-    if request.method == "POST":
+    if request.method == "POST":  # submit
         last = VaccineRequest.query.order_by(VaccineRequest.id.desc()).first()
-        code = f"REQ-{datetime.now().year}-{(last.id if last else 0) + 1:03d}"
-        vr = VaccineRequest(request_code=code, barangay_id=bid, requested_by_id=current_user.id,
+        code = f"REQ-{datetime.now().year}-{(last.id if last else 0) + 1:03d}"  # request code
+        vr = VaccineRequest(request_code=code, barangay_id=bid, requested_by_id=current_user.id,  # new request
                             antigen_id=int(request.form.get("antigen_id")),
                             quantity_requested=int(request.form.get("quantity")),
                             priority=request.form.get("priority", "Normal"), notes=request.form.get("notes"))
         db.session.add(vr)
-        db.session.commit()
-        log_activity(f"Submitted vaccine request {code} ({vr.antigen.name}, {vr.quantity_requested} vials)")
+        db.session.commit()  # save
+        log_activity(f"Submitted vaccine request {code} ({vr.antigen.name}, {vr.quantity_requested} vials)")  # log
         flash(f"Request {code} submitted to RHU.", "success")
         return redirect(url_for("bhw.requests"))
-    reqs = VaccineRequest.query.filter_by(barangay_id=bid).order_by(VaccineRequest.requested_at.desc()).all()
+    reqs = VaccineRequest.query.filter_by(barangay_id=bid).order_by(VaccineRequest.requested_at.desc()).all()  # own requests
     stats = {"pending": sum(1 for r in reqs if r.status == "pending"),
              "approved": sum(1 for r in reqs if r.status == "approved"),
              "distributed": sum(1 for r in reqs if r.status == "fulfilled"),
@@ -3859,18 +3859,18 @@ def _superadmin_guard():
 
 
 @superadmin_bp.route("/logs")
-def logs():
+def logs():  # activity log page
     """Audit trail across every role's account - this role's sole reason to
     exist. Filterable by category and by user account, and the two combine -
     ?user=7&type=Record is "what this person did to child records"."""
-    type_filter = request.args.get("type", "All")
-    user_id = request.args.get("user", type=int)
+    type_filter = request.args.get("type", "All")  # category filter
+    user_id = request.args.get("user", type=int)  # user filter
     per_page = 50
 
-    q = ActivityLog.query
+    q = ActivityLog.query  # all logs
     selected_user = db.session.get(User, user_id) if user_id else None
     if selected_user:
-        q = q.filter(ActivityLog.user_id == selected_user.id)
+        q = q.filter(ActivityLog.user_id == selected_user.id)  # one user
     else:
         user_id = None  # unknown id: fall back to showing everything
 
@@ -3879,13 +3879,13 @@ def logs():
     # filtered result is paged. There used to be a silent 400/200-row cutoff
     # here with no way to see anything older; this now shows everything,
     # just a page at a time.
-    rows = q.order_by(ActivityLog.created_at.desc()).all()
-    entries = [{"log": r, "category": log_category(r.action)} for r in rows]
+    rows = q.order_by(ActivityLog.created_at.desc()).all()  # newest first
+    entries = [{"log": r, "category": log_category(r.action)} for r in rows]  # add category
     if type_filter != "All":
-        entries = [e for e in entries if e["category"] == type_filter]
+        entries = [e for e in entries if e["category"] == type_filter]  # category filter
 
     total_entries = len(entries)
-    total_pages = max(1, -(-total_entries // per_page))
+    total_pages = max(1, -(-total_entries // per_page))  # pages
     page = min(max(1, request.args.get("page", 1, type=int)), total_pages)
     row_offset = (page - 1) * per_page
     page_entries = entries[row_offset:row_offset + per_page]
