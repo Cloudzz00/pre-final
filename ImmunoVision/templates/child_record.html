@@ -4,11 +4,11 @@
 
 <div class="page-head child-record-head">
   <div>
+    <a href="{{ url_for(('bhw' if current_user.role == 'bhw' else 'rhu') ~ '.children') }}" style="display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:500;color:var(--text-muted);text-decoration:none;margin-bottom:8px;">{{ icon('chevron-left', 14) }} Back to Child Records</a>
     <h2 style="margin-top:0;margin-bottom:3px;">{{ child.display_name }}</h2>
     <div class="child-meta">{{ child.age_display }} &middot; {{ 'Male' if child.sex == 'M' else 'Female' }} &middot; born {{ child.date_of_birth.strftime('%b %d, %Y') }} &middot; {{ child.barangay.name }}</div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-    <a class="btn btn-outline btn-sm" href="{{ url_for(('bhw' if current_user.role == 'bhw' else 'rhu') ~ '.children') }}">{{ icon('chevron-left', 14) }} Back to Child Records</a>
     {% if followup_url and detail.risk and detail.risk.risk_label == 'At-Risk' %}
     <a class="btn btn-outline btn-sm" href="{{ followup_url }}">{{ icon('file-text', 14) }} Follow-Up Report</a>
     {% endif %}
