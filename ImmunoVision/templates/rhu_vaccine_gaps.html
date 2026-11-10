@@ -15,44 +15,6 @@
     </div>
   </div>
 
-{# The panel asked for per-vaccine weighting: a missed MMR does not equal a
-   missed PCV. The weights and their basis are shown rather than buried. #}
-<div class="card card-pad" style="margin-bottom:18px;">
-  <div class="card-title">Vaccine Weighting</div>
-  <div class="card-sub">A missed dose counts by consequence, not as a plain tally</div>
-  <div class="table-wrap auto-height" style="margin-top:14px;">
-    <table class="data-table compact">
-      <thead><tr><th>Vaccine</th><th>Weight</th><th>Band</th><th>Basis</th></tr></thead>
-      <tbody>
-        {% for code, w in severity|dictsort(by='value', reverse=true) %}
-        <tr>
-          <td><b>{{ antigen_names.get(code, code) }}</b></td>
-          <td><b>{{ '%.2f'|format(w) }}</b></td>
-          <td>
-            {% for bw, label, _why in severity_bands %}{% if bw == w %}
-            <span class="badge badge-{{ 'red' if bw >= 1.0 else ('amber' if bw >= 0.85 else 'gray') }}">{{ label }}</span>
-            {% endif %}{% endfor %}
-          </td>
-          <td>
-            <span class="text-muted" style="font-size:12.5px;white-space:normal;">
-              {% for bw, _l, why in severity_bands %}{% if bw == w %}{{ why }}{% endif %}{% endfor %}
-            </span>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  <p class="text-muted" style="font-size:12.5px;margin:14px 0 0;line-height:1.7;">
-    Weights follow the herd immunity threshold for the disease each vaccine
-    prevents: measles needs about 95% coverage and pertussis 92 to 94%, while
-    polio needs 80 to 86%. BCG, the hepatitis B birth dose and PCV protect the
-    individual child rather than blocking transmission, so they share a single
-    lower band. Three bands rather than seven precise figures, because the
-    evidence supports an ordering and not two-decimal precision.
-  </p>
-</div>
-
 <div class="section-head" id="atrisk">
   <div>
     <h3>Children Who Need a Visit</h3>
