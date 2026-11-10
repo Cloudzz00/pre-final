@@ -694,7 +694,7 @@ def generate_training_dataset(n_children=3000, seed=7, real_children=None):  # t
         # (ML_ASSESSMENT_FLOOR_DAYS..CONTINUATION_WINDOW_DAYS), so the model
         # never has to extrapolate past what it was trained on.
         assessment_age = rng.randint(ML_ASSESSMENT_FLOOR_DAYS, CONTINUATION_WINDOW_DAYS)  # random age
-        assessment_date = min(date.today(), dob + timedelta(days=assessment_age))
+        assessment_date = min(date(2026, 11, 8), dob + timedelta(days=assessment_age))
         feats = compute_features(dob, date_registered, sex, dose_records, assessment_date, barangay_risk_rate=None)  # features
         feats["barangay"] = barangay
         feats["label"] = label
