@@ -956,6 +956,20 @@ def filtered_children(barangay_id=None, risk_level="", status="", as_of=None, bo
     return kids
 
 
+def _filter_child_list(kids, risk_level="", status=""):  # list filters
+    """Risk and status filters for the Child Records pages. "High Risk" means a
+    risk score of 70% or higher, the same rule as the dashboard's High Risk card."""
+    if risk_level == "High Risk":
+        kids = [c for c in kids if (ra := _latest_risk(c)) and dp.risk_tier(ra.risk_probability) == "High Risk"]
+    elif risk_level:
+        kids = [c for c in kids if (ra := _latest_risk(c)) and ra.risk_label == risk_level]
+    if status == "complete":
+        kids = [c for c in kids if immunized_as_of(c)]
+    elif status == "incomplete":
+        kids = [c for c in kids if not immunized_as_of(c)]
+    return kids
+
+
 def stats_for(children, as_of=None, risk=None):  # count stats
     """Same shape as dashboard_stats(), over an explicit child list.
 
@@ -2438,6 +2452,7 @@ def children():
         return redirect(url_for("rhu.children", new_child=new_child.id))
     barangay_id = request.args.get("barangay_id", type=int)
     risk_level = request.args.get("risk_level", "")
+    status = request.args.get("status", "")
     search = request.args.get("q", "").strip()
     selected_year = request.args.get("year", "")
     age_group = request.args.get("age_group", "all")
@@ -2466,8 +2481,7 @@ def children():
         kids = [c for c in kids if twelve_month_birthday(c.date_of_birth) >= today]
     elif age_group == "older":
         kids = [c for c in kids if twelve_month_birthday(c.date_of_birth) < today]
-    if risk_level:
-        kids = [c for c in kids if (ra := _latest_risk(c)) and ra.risk_label == risk_level]
+    kids = _filter_child_list(kids, risk_level, status)
     vt_lookup = {vt.code: vt for vt in VaccineType.query.all()}
     registration_years = sorted({str(y[0]) for y in db.session.query(
         func.strftime('%Y', Child.date_registered)).filter(
@@ -2486,7 +2500,7 @@ def children():
         "children", page_title="Child Records", children=kids,
         barangays=Barangay.query.order_by(Barangay.name).all(), vaccine_schedule=dp.VACCINE_SCHEDULE,
         vt_lookup=vt_lookup, antigens=core_antigens(), selected_barangay=barangay_id,
-        selected_risk=risk_level, search=search, selected_year=selected_year, age_group=age_group,
+        selected_risk=risk_level, selected_status=status, search=search, selected_year=selected_year, age_group=age_group,
         registration_years=registration_years,
         dose_matrix=_dose_matrix(kids, vt_lookup), risk_labels=_risk_labels(kids),
         due_now_child=due_now_child, due_now_doses=due_now_doses,
@@ -3031,6 +3045,7 @@ def children():
         flash("Child registered successfully.", "success")
         return redirect(url_for("bhw.children", new_child=new_child.id))
     risk_level = request.args.get("risk_level", "")
+    status = request.args.get("status", "")
     search = request.args.get("q", "").strip()
     selected_year = request.args.get("year", "")
     selected_sort = request.args.get("sort", "newest")
@@ -3081,12 +3096,11 @@ def children():
         if candidate and candidate.barangay_id == bid:
             due_now_child = candidate
             due_now_doses = [d for d in child_detail(candidate)["schedule"] if d["status"] in ("due", "overdue")]
-    if risk_level:
-        kids = [c for c in kids if (ra := _latest_risk(c)) and ra.risk_label == risk_level]
+    kids = _filter_child_list(kids, risk_level, status)
     vt_lookup = {vt.code: vt for vt in VaccineType.query.all()}
     return render_template("bhw_children.html", **_bhw_ctx(
         "children", page_title="Child Records", children=kids, barangays=None,
-        vaccine_schedule=dp.VACCINE_SCHEDULE, vt_lookup=vt_lookup, selected_risk=risk_level, search=search,
+        vaccine_schedule=dp.VACCINE_SCHEDULE, vt_lookup=vt_lookup, selected_risk=risk_level, selected_status=status, search=search,
         selected_year=selected_year, selected_sort=selected_sort, age_group=age_group, registration_years=registration_years,
         dose_matrix=_dose_matrix(kids, vt_lookup), risk_labels=_risk_labels(kids),
         due_now_child=due_now_child, due_now_doses=due_now_doses,
