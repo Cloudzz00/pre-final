@@ -34,30 +34,30 @@
 {{ small_group_note(stats.total_children) }}
 
 <div class="stat-grid">
-  <div class="stat-card">
+  <a class="stat-card stat-link" href="{{ url_for('rhu.children', barangay_id=selected_barangay.id if selected_barangay else None) }}" title="View all child records">
     <div class="stat-icon bg-blue">{{ icon('users', 21) }}</div>
     <div class="stat-value">{{ stats.total_children }}</div>
     <div class="stat-label">Total Children</div>
     <div class="stat-caption">{% if selected_barangay %}{{ selected_barangay.name }}{% else %}All 19 barangays{% endif %}</div>
-  </div>
-  <div class="stat-card">
+  </a>
+  <a class="stat-card stat-link" href="{{ url_for('rhu.children', barangay_id=selected_barangay.id if selected_barangay else None, status='complete') }}" title="View fully immunized children">
     <div class="stat-icon bg-green">{{ icon('check-circle', 21) }}</div>
     <div class="stat-value">{{ stats.fully_immunized }}</div>
     <div class="stat-label">Fully Immunized</div>
     <div class="stat-caption">{{ stats.coverage_rate }}% of enrolled</div>
-  </div>
-  <div class="stat-card">
+  </a>
+  <a class="stat-card stat-link" href="{{ url_for('rhu.children', barangay_id=selected_barangay.id if selected_barangay else None, risk_level='At-Risk') }}" title="View at-risk children">
     <div class="stat-icon bg-orange">{{ icon('alert-triangle', 21) }}</div>
     <div class="stat-value">{{ stats.at_risk }}</div>
     <div class="stat-label">At-Risk Children</div>
     <div class="stat-caption">need follow-up</div>
-  </div>
-  <div class="stat-card">
+  </a>
+  <a class="stat-card stat-link" href="{{ url_for('rhu.children', barangay_id=selected_barangay.id if selected_barangay else None, risk_level='High Risk') }}" title="View high-risk children">
     <div class="stat-icon bg-red">{{ icon('alert-octagon', 21) }}</div>
     <div class="stat-value">{{ risk_dist.high_count }}</div>
     <div class="stat-label">High Risk</div>
     <div class="stat-caption">Risk score 70% or higher</div>
-  </div>
+  </a>
 </div>
 
 {# Two panels that summarise their dedicated pages rather than duplicating

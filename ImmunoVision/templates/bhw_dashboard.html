@@ -27,10 +27,10 @@
 {{ small_group_note(stats.total_children) }}
 
 <div class="stat-grid">
-  <div class="stat-card"><div class="stat-icon bg-blue">{{ icon('users', 21) }}</div><div class="stat-value">{{ stats.total_children }}</div><div class="stat-label">Total Registered Children</div><div class="stat-caption">All children in your barangay</div></div>
-  <div class="stat-card"><div class="stat-icon bg-orange">{{ icon('alert-triangle', 21) }}</div><div class="stat-value">{{ stats.at_risk }}</div><div class="stat-label">At-Risk Children</div><div class="stat-caption">Need closer monitoring</div></div>
-  <div class="stat-card"><div class="stat-icon bg-green">{{ icon('check-circle', 21) }}</div><div class="stat-value">{{ stats.fully_immunized }}</div><div class="stat-label">Fully Immunized</div><div class="stat-caption">Up to date on all doses</div></div>
-  <div class="stat-card"><div class="stat-icon bg-teal">{{ icon('activity', 21) }}</div><div class="stat-value">{{ stats.coverage_rate }}%</div><div class="stat-label">Coverage Rate</div><div class="stat-caption">Target: 95%</div></div>
+  <a class="stat-card stat-link" href="{{ url_for('bhw.children') }}" title="View all child records"><div class="stat-icon bg-blue">{{ icon('users', 21) }}</div><div class="stat-value">{{ stats.total_children }}</div><div class="stat-label">Total Registered Children</div><div class="stat-caption">All children in your barangay</div></a>
+  <a class="stat-card stat-link" href="{{ url_for('bhw.children', risk_level='At-Risk') }}" title="View at-risk children"><div class="stat-icon bg-orange">{{ icon('alert-triangle', 21) }}</div><div class="stat-value">{{ stats.at_risk }}</div><div class="stat-label">At-Risk Children</div><div class="stat-caption">Need closer monitoring</div></a>
+  <a class="stat-card stat-link" href="{{ url_for('bhw.children', status='complete') }}" title="View fully immunized children"><div class="stat-icon bg-green">{{ icon('check-circle', 21) }}</div><div class="stat-value">{{ stats.fully_immunized }}</div><div class="stat-label">Fully Immunized</div><div class="stat-caption">Up to date on all doses</div></a>
+  <a class="stat-card stat-link" href="{{ url_for('bhw.reports') }}" title="View coverage reports"><div class="stat-icon bg-teal">{{ icon('activity', 21) }}</div><div class="stat-value">{{ stats.coverage_rate }}%</div><div class="stat-label">Coverage Rate</div><div class="stat-caption">Target: 95%</div></a>
 </div>
 
 {% if active_campaigns %}

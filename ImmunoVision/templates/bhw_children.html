@@ -39,6 +39,16 @@
       <option value="">All Risk Levels</option>
       <option value="At-Risk" {% if selected_risk=='At-Risk' %}selected{% endif %}>At-Risk</option>
       <option value="Not At-Risk" {% if selected_risk=='Not At-Risk' %}selected{% endif %}>Not At-Risk</option>
+      <option value="High Risk" {% if selected_risk=='High Risk' %}selected{% endif %}>High Risk (70%+)</option>
+    </select>
+    <span class="filter-chevron">{{ icon('chevron-left', 12, 2.5) }}</span>
+  </div>
+  <div class="filter-select">
+    <span class="filter-select-icon">{{ icon('check-circle', 15) }}</span>
+    <select name="status" class="select-sm" onchange="this.form.submit()" aria-label="Immunization status">
+      <option value="">All Statuses</option>
+      <option value="complete" {% if selected_status=='complete' %}selected{% endif %}>Fully Immunized</option>
+      <option value="incomplete" {% if selected_status=='incomplete' %}selected{% endif %}>Incomplete</option>
     </select>
     <span class="filter-chevron">{{ icon('chevron-left', 12, 2.5) }}</span>
   </div>
@@ -54,7 +64,7 @@
     <span class="filter-chevron">{{ icon('chevron-left', 12, 2.5) }}</span>
   </div>
 
-  {% if search or selected_risk or selected_year or age_group != 'all' or selected_sort != 'newest' %}<a class="btn btn-outline btn-sm" href="{{ url_for(request.endpoint) }}">{{ icon('x', 14) }} Clear filters</a>{% endif %}
+  {% if selected_status or search or selected_risk or selected_year or age_group != 'all' or selected_sort != 'newest' %}<a class="btn btn-outline btn-sm" href="{{ url_for(request.endpoint) }}">{{ icon('x', 14) }} Clear filters</a>{% endif %}
 
 </form>
 
