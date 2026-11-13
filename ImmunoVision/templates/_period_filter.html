@@ -4,14 +4,14 @@
 <span class="range-group" role="group" aria-label="Birth year range">
   <span class="range-word">Children born</span>
   <select class="form-control select-sm" name="from" onchange="this.form.submit()" aria-label="Born from year">
-    <option value="">Earliest</option>
+    <option value="">Start</option>
     {% for y in years|reverse %}
     <option value="{{ y }}" {% if year_from == y|string %}selected{% endif %}>{{ y }}</option>
     {% endfor %}
   </select>
   <span class="range-word">to</span>
   <select class="form-control select-sm" name="to" onchange="this.form.submit()" aria-label="Born to year">
-    <option value="">Latest</option>
+    <option value="">End</option>
     {% for y in years %}
     <option value="{{ y }}" {% if year_to == y|string %}selected{% endif %}>{{ y }}</option>
     {% endfor %}
