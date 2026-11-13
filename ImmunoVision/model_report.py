@@ -106,7 +106,7 @@ def main():
 
     X = np.array([[r[c] for c in dp.FEATURE_COLUMNS] for r in rows], dtype=float)
     y = np.array([1 if r["label"] == "At-Risk" else 0 for r in rows], dtype=int)
-    X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.2, random_state=SEED, stratify=y)
+    X_tr, X_te, y_tr, y_te, s_tr, s_te = train_test_split(X, y, np.array([0] * n_syn + [1] * n_real), test_size=0.2, random_state=SEED, stratify=y)
     scaler = StandardScaler().fit(X_tr)
 
     def evaluate(model, Xa, ya):
@@ -165,6 +165,22 @@ def main():
                     f"  Threshold: probability ≥ {dp.RISK_THRESHOLD:.2f} = At-Risk. "
                     "Selection rule: highest testing recall, ties broken by ROC-AUC."))
 
+    def by_source(ys, src):
+        out = []
+        for label, mask in (("Real", src == 1), ("Synthetic", src == 0), ("Combined", np.ones(len(src), bool))):
+            out.append([label, f"{mask.sum():,}", f"{ys[mask].sum():,}", f"{(ys[mask] == 0).sum():,}"])
+        return out
+
+    print("\n  Real and synthetic children in each set")
+    print(table(["Set / Source", "Records", "At-Risk", "Not At-Risk"],
+                [["Training (80%)", "", "", ""]] + [["  " + r[0]] + r[1:] for r in by_source(y_tr, s_tr)]
+                + [None, ["Testing (20%)", "", "", ""]] + [["  " + r[0]] + r[1:] for r in by_source(y_te, s_te)]
+                + [None, ["All rows", "", "", ""]]
+                + [["  " + r[0]] + r[1:] for r in by_source(y, np.array([0] * n_syn + [1] * n_real))],
+                style=style))
+    print(style.dim("  Real and synthetic rows are mixed first, then split once; stratify keeps the At-Risk share "
+                    "the same in both sets."))
+
     # 2. Testing ---------------------------------------------------------------
     print(section("2. Testing Set Performance (held out, n = {:,})".format(len(y_te)), style))
     rows_t = [[n + (" (selected)" if n == selected else "")] + [f3(results[n]["test"][m]) for m in METRICS]
@@ -178,6 +194,21 @@ def main():
         [f"Actual Not At-Risk ({tn + fp})", f"{tn} (TN)", f"{fp} (FP)"],
         [f"Actual At-Risk ({fn + tp})", f"{fn} (FN)", f"{tp} (TP)"],
     ], aligns=["l", "c", "c"], style=style))
+
+    sel = results[selected]["test"]["proba"]
+    src_rows = []
+    for label, mask in (("Real children only", s_te == 1), ("Synthetic children only", s_te == 0),
+                        ("Combined (all testing)", np.ones(len(s_te), bool))):
+        yt, pt = y_te[mask], sel[mask]
+        d = (pt >= dp.RISK_THRESHOLD).astype(int)
+        tn_, fp_, fn_, tp_ = confusion_matrix(yt, d, labels=[0, 1]).ravel()
+        src_rows.append([label, f"{mask.sum():,}", f3(accuracy_score(yt, d)), f3(precision_score(yt, d, zero_division=0)),
+                         f3(recall_score(yt, d, zero_division=0)), f3(tn_ / (tn_ + fp_) if (tn_ + fp_) else 0.0),
+                         f3(roc_auc_score(yt, pt)), f"{tp_}/{tp_ + fn_}", f"{tn_}/{tn_ + fp_}"])
+    print(f"\n  Testing performance by data source — {style.bold(selected)}")
+    print(table(["Testing children", "n", "Accuracy", "Precision", "Recall", "Specificity", "ROC-AUC",
+                 "At-Risk found", "On-track cleared"], src_rows, highlight={0}, style=style))
+    print(style.dim("  The real-only row is the best estimate of performance on actual RHU records."))
 
     # 3. Training vs testing ---------------------------------------------------
     print(section("3. Training vs. Testing Performance (overfitting check)", style))
