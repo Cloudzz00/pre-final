@@ -1762,7 +1762,9 @@ html { scroll-behavior: smooth; }
 .filter-bar select.select-sm:disabled { opacity: .55; cursor: not-allowed; }
 .range-group { display: inline-flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
 .range-word { font-size: 13px; font-weight: 600; color: var(--text-secondary); white-space: nowrap; }
-.range-group .select-shell, .range-group .select-sm { min-width: 104px; }
+.range-group .select-shell, .range-group .select-sm { min-width: 84px; }
+/* Short values (Start, End, 2026): a tighter trigger so the arrow sits by the text. */
+.range-group .select-trigger { padding-left: 10px; padding-right: 10px; gap: 6px; }
 @media (max-width: 640px) {
   .range-group { width: 100%; }
   .range-group .select-shell { min-width: 0; width: auto; flex: 1 1 0; }
