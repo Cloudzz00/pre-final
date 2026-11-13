@@ -2,7 +2,7 @@
    single year is selected (From and To the same). See resolve_range(). #}
 {% macro period_selects(years, months, year_from, year_to, month, month_active) %}
 <span class="range-group" role="group" aria-label="Birth year range">
-  <span class="range-word">Children born</span>
+  <span class="range-word">Birth year</span>
   <select class="form-control select-sm" name="from" onchange="this.form.submit()" aria-label="Born from year">
     <option value="">Start</option>
     {% for y in years|reverse %}
