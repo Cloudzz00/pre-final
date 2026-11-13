@@ -5,7 +5,7 @@
   <span class="range-word">Birth year</span>
   <select class="form-control select-sm" name="from" onchange="this.form.submit()" aria-label="Born from year">
     <option value="">Start</option>
-    {% for y in years|reverse %}
+    {% for y in years %}
     <option value="{{ y }}" {% if year_from == y|string %}selected{% endif %}>{{ y }}</option>
     {% endfor %}
   </select>
