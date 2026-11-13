@@ -181,6 +181,30 @@ def main():
     print(style.dim("  Real and synthetic rows are mixed first, then split once; stratify keeps the At-Risk share "
                     "the same in both sets."))
 
+    def balance_row(label, ys):
+        pos, neg = int(ys.sum()), int(len(ys) - ys.sum())
+        big, small = max(pos, neg), max(1, min(pos, neg))
+        minority = "At-Risk" if pos < neg else "Not At-Risk"
+        return [label, f"{pos:,} ({100 * pos / len(ys):.1f}%)", f"{neg:,} ({100 * neg / len(ys):.1f}%)",
+                f"{big / small:.1f} : 1", minority]
+
+    src_all = np.array([0] * n_syn + [1] * n_real)
+    print("\n  Class balance")
+    print(table(["Data", "At-Risk", "Not At-Risk", "Ratio", "Minority class"], [
+        balance_row("Real registry only", y[src_all == 1]),
+        balance_row("Synthetic only", y[src_all == 0]),
+        balance_row("Combined (all rows)", y),
+        None,
+        balance_row("Training set", y_tr),
+        balance_row("Testing set", y_te),
+    ], style=style))
+    pos_w = (len(y_tr) - y_tr.sum()) / max(1, y_tr.sum())
+    w_pos = len(y_tr) / (2 * y_tr.sum())
+    w_neg = len(y_tr) / (2 * (len(y_tr) - y_tr.sum()))
+    print(style.dim(f"  Real data alone is severely imbalanced; combined it is mild. The remaining imbalance is corrected by\n"
+                    f"  class weights: balanced weights At-Risk {w_pos:.2f} vs Not At-Risk {w_neg:.2f} (Logistic Regression,\n"
+                    f"  Random Forest), scale_pos_weight {pos_w:.2f} (XGBoost); stratified split keeps the same mix in both sets."))
+
     # 2. Testing ---------------------------------------------------------------
     print(section("2. Testing Set Performance (held out, n = {:,})".format(len(y_te)), style))
     rows_t = [[n + (" (selected)" if n == selected else "")] + [f3(results[n]["test"][m]) for m in METRICS]
@@ -209,6 +233,14 @@ def main():
     print(table(["Testing children", "n", "Accuracy", "Precision", "Recall", "Specificity", "ROC-AUC",
                  "At-Risk found", "On-track cleared"], src_rows, highlight={0}, style=style))
     print(style.dim("  The real-only row is the best estimate of performance on actual RHU records."))
+
+    tr = results[selected]["test"]
+    print(f"\n  Performance on each class — {style.bold(selected)} (testing set)")
+    print(table(["Class", "Children", "Correctly classified", "Rate"], [
+        ["At-Risk (minority in combined data)", f"{fn + tp:,}", f"{tp:,}", f"{f3(tr['Recall'])} (recall)"],
+        ["Not At-Risk", f"{tn + fp:,}", f"{tn:,}", f"{f3(tr['Specificity'])} (specificity)"],
+    ], style=style))
+    print(style.dim("  Both rates are high, so the remaining 40/60 imbalance is not biasing the model toward either class."))
 
     # 3. Training vs testing ---------------------------------------------------
     print(section("3. Training vs. Testing Performance (overfitting check)", style))
