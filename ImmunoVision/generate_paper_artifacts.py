@@ -456,7 +456,7 @@ def tables_17_18(children, args, tables_dir):
     from sklearn.preprocessing import StandardScaler
 
     rows, _ = dp.generate_training_dataset(args.n_synthetic, args.seed, children)
-    source = (["Synthetic"] * args.n_synthetic) + (["Registry"] * len(children))
+    source = ["Registry" if r["source"] == "real" else "Synthetic" for r in rows]
 
     X = np.array([[r[c] for c in dp.FEATURE_COLUMNS] for r in rows], dtype=float)
     y = np.array([1 if r["label"] == "At-Risk" else 0 for r in rows], dtype=int)
@@ -534,8 +534,8 @@ def tables_19_20_figure_07(children, args, tables_dir, figures_dir, plt):
     from sklearn.ensemble import RandomForestClassifier
     from sklearn.model_selection import train_test_split
 
-    source = np.array((["Synthetic"] * args.n_synthetic) + (["Registry"] * len(children)))
     rows, _ = dp.generate_training_dataset(args.n_synthetic, args.seed, children)
+    source = np.array(["Registry" if r["source"] == "real" else "Synthetic" for r in rows])
     age_days = np.array([r["age_days"] for r in rows])
     X = np.array([[r[c] for c in dp.FEATURE_COLUMNS] for r in rows], dtype=float)
     y = np.array([1 if r["label"] == "At-Risk" else 0 for r in rows], dtype=int)

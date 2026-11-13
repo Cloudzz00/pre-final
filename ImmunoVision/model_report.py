@@ -102,11 +102,13 @@ def main():
     with contextlib.redirect_stdout(io.StringIO()):  # silence import notes from the loader
         real = dp.load_and_merge_real_registries()
         rows, _ = dp.generate_training_dataset(3000, SEED, real)
-    n_real, n_syn = len(real), len(rows) - len(real)
+    src_all = np.array([1 if r["source"] == "real" else 0 for r in rows])  # 1 = real, 0 = synthetic
+    n_real, n_syn = int(src_all.sum()), int(len(rows) - src_all.sum())
+    n_excluded = len(real) - n_real  # real children without a complete first year
 
     X = np.array([[r[c] for c in dp.FEATURE_COLUMNS] for r in rows], dtype=float)
     y = np.array([1 if r["label"] == "At-Risk" else 0 for r in rows], dtype=int)
-    X_tr, X_te, y_tr, y_te, s_tr, s_te = train_test_split(X, y, np.array([0] * n_syn + [1] * n_real), test_size=0.2, random_state=SEED, stratify=y)
+    X_tr, X_te, y_tr, y_te, s_tr, s_te = train_test_split(X, y, src_all, test_size=0.2, random_state=SEED, stratify=y)
     scaler = StandardScaler().fit(X_tr)
 
     def evaluate(model, Xa, ya):
@@ -160,7 +162,8 @@ def main():
         None,
         ["Total", f"{len(y):,}", f"{y.sum():,}", f"{len(y) - y.sum():,}"],
     ], style=style))
-    print(style.dim(f"  Sources: {n_real:,} RHU registry children + {n_syn:,} synthetic children. "
+    print(style.dim(f"  Sources: {n_real:,} RHU registry children (complete first year; {n_excluded:,} younger children "
+                    f"excluded) + {n_syn:,} synthetic children, balanced to {100 * y.mean():.0f}% At-Risk.\n  "
                     f"Stratified split, random_state = {SEED}.\n"
                     f"  Threshold: probability ≥ {dp.RISK_THRESHOLD:.2f} = At-Risk. "
                     "Selection rule: highest testing recall, ties broken by ROC-AUC."))
@@ -176,7 +179,7 @@ def main():
                 [["Training (80%)", "", "", ""]] + [["  " + r[0]] + r[1:] for r in by_source(y_tr, s_tr)]
                 + [None, ["Testing (20%)", "", "", ""]] + [["  " + r[0]] + r[1:] for r in by_source(y_te, s_te)]
                 + [None, ["All rows", "", "", ""]]
-                + [["  " + r[0]] + r[1:] for r in by_source(y, np.array([0] * n_syn + [1] * n_real))],
+                + [["  " + r[0]] + r[1:] for r in by_source(y, src_all)],
                 style=style))
     print(style.dim("  Real and synthetic rows are mixed first, then split once; stratify keeps the At-Risk share "
                     "the same in both sets."))
@@ -184,11 +187,10 @@ def main():
     def balance_row(label, ys):
         pos, neg = int(ys.sum()), int(len(ys) - ys.sum())
         big, small = max(pos, neg), max(1, min(pos, neg))
-        minority = "At-Risk" if pos < neg else "Not At-Risk"
+        minority = "None (balanced)" if pos == neg else ("At-Risk" if pos < neg else "Not At-Risk")
         return [label, f"{pos:,} ({100 * pos / len(ys):.1f}%)", f"{neg:,} ({100 * neg / len(ys):.1f}%)",
                 f"{big / small:.1f} : 1", minority]
 
-    src_all = np.array([0] * n_syn + [1] * n_real)
     print("\n  Class balance")
     print(table(["Data", "At-Risk", "Not At-Risk", "Ratio", "Minority class"], [
         balance_row("Real registry only", y[src_all == 1]),
@@ -201,8 +203,9 @@ def main():
     pos_w = (len(y_tr) - y_tr.sum()) / max(1, y_tr.sum())
     w_pos = len(y_tr) / (2 * y_tr.sum())
     w_neg = len(y_tr) / (2 * (len(y_tr) - y_tr.sum()))
-    print(style.dim(f"  Real data alone is severely imbalanced; combined it is mild. The remaining imbalance is corrected by\n"
-                    f"  class weights: balanced weights At-Risk {w_pos:.2f} vs Not At-Risk {w_neg:.2f} (Logistic Regression,\n"
+    combined = "balanced" if abs(y.mean() - 0.5) < 0.005 else "mildly imbalanced"
+    print(style.dim(f"  Real data alone is severely imbalanced; the combined training data is {combined}.\n"
+                    f"  Class weights: balanced weights At-Risk {w_pos:.2f} vs Not At-Risk {w_neg:.2f} (Logistic Regression,\n"
                     f"  Random Forest), scale_pos_weight {pos_w:.2f} (XGBoost); stratified split keeps the same mix in both sets."))
 
     # 2. Testing ---------------------------------------------------------------
@@ -237,10 +240,10 @@ def main():
     tr = results[selected]["test"]
     print(f"\n  Performance on each class — {style.bold(selected)} (testing set)")
     print(table(["Class", "Children", "Correctly classified", "Rate"], [
-        ["At-Risk (minority in combined data)", f"{fn + tp:,}", f"{tp:,}", f"{f3(tr['Recall'])} (recall)"],
+        ["At-Risk", f"{fn + tp:,}", f"{tp:,}", f"{f3(tr['Recall'])} (recall)"],
         ["Not At-Risk", f"{tn + fp:,}", f"{tn:,}", f"{f3(tr['Specificity'])} (specificity)"],
     ], style=style))
-    print(style.dim("  Both rates are high, so the remaining 40/60 imbalance is not biasing the model toward either class."))
+    print(style.dim("  Both rates are high, so the model is not biased toward either class."))
 
     # 3. Training vs testing ---------------------------------------------------
     print(section("3. Training vs. Testing Performance (overfitting check)", style))

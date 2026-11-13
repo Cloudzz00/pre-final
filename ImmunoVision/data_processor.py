@@ -163,6 +163,10 @@ CONTINUATION_WINDOW_DAYS = 365  # model max age
 # train or predict on.
 ML_ASSESSMENT_FLOOR_DAYS = GRACE_PERIOD_DAYS  # model min age
 
+# Share of At-Risk rows in the training data after balancing (0.5 = 50/50).
+# Chosen by comparing training ratios on real children (5-fold CV).
+TRAINING_AT_RISK_SHARE = 0.5
+
 
 ROLE_ADMIN, ROLE_RHU, ROLE_BHW = "admin", "rhu", "bhw"
 REQUEST_PENDING, REQUEST_APPROVED, REQUEST_REJECTED, REQUEST_FULFILLED = (  # request statuses
@@ -677,17 +681,24 @@ def generate_synthetic_children(barangays, n_per_barangay=(6, 14), seed=99,  # d
     return children
 
 
-def generate_training_dataset(n_children=3000, seed=7, real_children=None):  # training rows
+def generate_training_dataset(n_children=3000, seed=7, real_children=None, target_share=TRAINING_AT_RISK_SHARE):  # training rows
     """Builds the labeled feature dataset for model training: early-warning
     features (snapshot at a random in-progress age) -> final 12-month outcome.
     Combines synthetic children with any real registry children supplied
     (data augmentation - the real sample alone is too small to train on
     reliably, per literature on small clinical datasets).
+
+    Real children whose first year is not complete in the registry (born
+    less than 365 days before its last recorded dose) are left out: their
+    12-month outcome is not known yet, and doses they were too young for
+    would be counted as never given. Synthetic Not At-Risk rows are then
+    subsampled so the training data is `target_share` At-Risk (50/50 by
+    default); pass target_share=None to keep every synthetic row.
     """
     rng = random.Random(seed)  # fixed seed
     rows = []
 
-    def _add_row(dob, date_registered, sex, doses_dict, barangay):  # one row
+    def _add_row(dob, date_registered, sex, doses_dict, barangay, source):  # one row
         dose_records = _dose_records_for(doses_dict)
         label = final_outcome_label(dob, dose_records, window_days=365)  # label
         # Sampled across the same window predict_for_child() serves at
@@ -698,6 +709,7 @@ def generate_training_dataset(n_children=3000, seed=7, real_children=None):  # t
         feats = compute_features(dob, date_registered, sex, dose_records, assessment_date, barangay_risk_rate=None)  # features
         feats["barangay"] = barangay
         feats["label"] = label
+        feats["source"] = source  # "synthetic" or "real"
         rows.append(feats)  # add row
 
     for _ in range(n_children):  # 3,000 synthetic
@@ -708,10 +720,23 @@ def generate_training_dataset(n_children=3000, seed=7, real_children=None):  # t
         reg_delay = int(max(0, rng.gauss(mu=propensity * 20, sigma=5)))  # reg delay
         date_registered = dob + timedelta(days=reg_delay)
         history = _simulate_dose_history(dob, propensity, rng)  # doses
-        _add_row(dob, date_registered, sex, {r["code"]: r["date_administered"] for r in history}, barangay)  # add synthetic
+        _add_row(dob, date_registered, sex, {r["code"]: r["date_administered"] for r in history}, barangay, "synthetic")  # add synthetic
 
-    for c in (real_children or []):  # 1,689 real
-        _add_row(c["date_of_birth"], c["date_registered"], c["sex"], c["doses"], c["barangay"])  # add real
+    real_children = real_children or []
+    dose_dates = [d for c in real_children for d in c["doses"].values() if d]
+    data_end = max(dose_dates) if dose_dates else date.today()  # last dose in the registry
+    for c in real_children:  # real children with a complete first year
+        if c["date_of_birth"] + timedelta(days=CONTINUATION_WINDOW_DAYS) > data_end:
+            continue  # first year not finished in the data: outcome unknown
+        _add_row(c["date_of_birth"], c["date_registered"], c["sex"], c["doses"], c["barangay"], "real")  # add real
+
+    if target_share:  # balance At-Risk / Not At-Risk by dropping synthetic Not At-Risk rows
+        at_risk = sum(1 for r in rows if r["label"] == "At-Risk")
+        real_ok = sum(1 for r in rows if r["label"] != "At-Risk" and r["source"] == "real")
+        syn_ok = [i for i, r in enumerate(rows) if r["label"] != "At-Risk" and r["source"] == "synthetic"]
+        keep = max(0, min(len(syn_ok), round(at_risk * (1 - target_share) / target_share) - real_ok))
+        drop = set(syn_ok) - set(random.Random(seed + 1).sample(syn_ok, keep))
+        rows = [r for i, r in enumerate(rows) if i not in drop]
 
     barangay_counts = defaultdict(lambda: [0, 0])  # barangay counts
     for r in rows:
@@ -748,7 +773,8 @@ def train_and_save_model(n_synthetic=3000, seed=7, use_real_data=True):  # train
     import numpy as np  # lazy: training only
     X = np.array([[r[c] for c in FEATURE_COLUMNS] for r in rows], dtype=float)  # X features
     y = np.array([1 if r["label"] == "At-Risk" else 0 for r in rows], dtype=int)  # y labels
-    print(f"Training dataset: {len(y)} rows ({len(real_children)} real + {n_synthetic} synthetic), "
+    n_real_rows = sum(1 for r in rows if r["source"] == "real")
+    print(f"Training dataset: {len(y)} rows ({n_real_rows} real + {len(y) - n_real_rows} synthetic), "
           f"{y.sum()} At-Risk ({100 * y.mean():.1f}%)")
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=seed, stratify=y)  # 80/20 split
@@ -798,7 +824,8 @@ def train_and_save_model(n_synthetic=3000, seed=7, use_real_data=True):  # train
         "scaler": scaler if needs_scaler else None, "needs_scaler": needs_scaler,
         "feature_columns": FEATURE_COLUMNS, "barangay_risk_rate": barangay_risk_rate,
         "metrics": best_metrics, "all_metrics": all_metrics, "feature_importance": feature_importance,
-        "real_data_children": len(real_children),
+        "real_data_children": n_real_rows, "synthetic_children": len(y) - n_real_rows,
+        "at_risk_share": float(y.mean()),
     }
     joblib.dump(artifact, MODEL_PATH)  # save
     print(f"Saved model -> {MODEL_PATH}")
