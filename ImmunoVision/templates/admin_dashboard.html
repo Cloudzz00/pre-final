@@ -39,13 +39,13 @@
 {{ small_group_note(municipality.total_children) }}
 
 <div class="stat-grid">
-  <div class="stat-card">
+  <a class="stat-card stat-link" href="{{ url_for('admin.municipality_map') ~ '#density' }}" title="View child density by barangay">
     <div class="stat-icon bg-blue">{{ icon('users', 21) }}</div>
     <div class="stat-value">{{ municipality.total_children }}</div>
     <div class="stat-label">Total Children</div>
     <div class="stat-caption">{% if selected_barangay %}{{ selected_barangay.name }}{% else %}All {{ municipality.barangays }} barangays{% endif %}</div>
-  </div>
-  <div class="stat-card">
+  </a>
+  <a class="stat-card stat-link" href="{{ url_for('admin.municipality_map') ~ '#heatmap' }}" title="View coverage heatmap">
     <div class="stat-icon bg-teal">{{ icon('activity', 21) }}</div>
     <div class="stat-value">{{ municipality.coverage_rate }}%</div>
     <div class="stat-label">Coverage Rate</div>
@@ -54,19 +54,19 @@
     <div class="stat-caption" title="{% if municipality.target_coverage_rate is not none %}Against {{ '{:,}'.format(municipality.target_population_total) }} DOH/PSA projected children, {{ municipality.target_barangays_set }} of {{ municipality.barangays }} barangays set{% else %}DOH target coverage appears here once barangay targets are set in the table below{% endif %}">
       {% if municipality.target_coverage_rate is not none %}DOH target basis: {{ municipality.target_coverage_rate }}%{% else %}Target: 95%{% endif %}
     </div>
-  </div>
-  <div class="stat-card">
+  </a>
+  <a class="stat-card stat-link" href="{{ '#coverage-by-barangay' }}" title="View fully immunized by barangay">
     <div class="stat-icon bg-green">{{ icon('check-circle', 21) }}</div>
     <div class="stat-value">{{ municipality.fully_immunized }}</div>
     <div class="stat-label">Fully Immunized</div>
     <div class="stat-caption">of {{ '{:,}'.format(municipality.total_children) }} children</div>
-  </div>
-  <div class="stat-card">
+  </a>
+  <a class="stat-card stat-link" href="{{ '#coverage-by-barangay' }}" title="View barangays by coverage, lowest first">
     <div class="stat-icon bg-orange">{{ icon('alert-triangle', 21) }}</div>
     <div class="stat-value">{{ municipality.below_target }}</div>
     <div class="stat-label">Below Target</div>
     <div class="stat-caption">Barangays under 95%</div>
-  </div>
+  </a>
 </div>
 
 {# Its own class, not the map page's. This previously borrowed .map-wrap;

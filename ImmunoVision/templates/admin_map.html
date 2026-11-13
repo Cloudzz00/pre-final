@@ -377,6 +377,12 @@ document.querySelectorAll('[data-tabgroup="mapTabs"] [data-tab]').forEach(btn =>
   });
 });
 
+/* Open the tab named in the URL (e.g. /admin/map#density), so dashboard cards
+   can link straight to it. Clicking runs the same code as a user's click. */
+const hashTab = location.hash &&
+  document.querySelector(`[data-tabgroup="mapTabs"] [data-tab="${CSS.escape(location.hash.slice(1))}"]`);
+if (hashTab) hashTab.click();
+
 renderLegend();
 if (typeof L === 'undefined') { goOffline(); } else { initLeaflet(); }
 
