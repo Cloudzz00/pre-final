@@ -3827,6 +3827,10 @@ def toggle_user(user_id):
     u = db.session.get(User, user_id) or abort(404)
     if u.id == current_user.id:
         abort(400)
+    # The ICTMO Administrator audits the admin's actions, so the admin must not
+    # be able to switch that account off.
+    if u.role == "superadmin":
+        abort(403)
     u.is_active_flag = not u.is_active_flag
     db.session.commit()
     log_activity(f"{'Enabled' if u.is_active_flag else 'Disabled'} user account: {u.username}")
