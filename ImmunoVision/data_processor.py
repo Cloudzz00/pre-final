@@ -399,8 +399,12 @@ def generated_child_names(placeholders, taken_names):  # generate names
 # Feature engineering (Explore) -- shared by training and inference.
 # ---------------------------------------------------------------------------
 
-FEATURE_COLUMNS = [  # 12 features
-    "sex_male", "age_days", "registration_delay_days", "barangay_risk_rate",
+# Sex and barangay risk rate are recorded but are not model inputs. Sex carried
+# almost no weight and should not affect who is flagged; the barangay rate was
+# computed one way in training and another way in use, and would score a child
+# partly by where they live.
+FEATURE_COLUMNS = [  # 10 features
+    "age_days", "registration_delay_days",
     "doses_due", "doses_completed", "doses_delayed", "doses_missed",
     "completion_rate", "avg_delay_days", "max_delay_days", "days_since_last_dose",
 ]
@@ -430,11 +434,6 @@ FEATURE_MODEL_ROLE = {  # feature roles
         "Distinguishes one long lapse from consistent small delays."),
     "age_days": ("Context",
         "Older children have more doses due, so age conditions every other count."),
-    "barangay_risk_rate": ("Raises risk",
-        "Historical non-completion in the child's barangay. Captures access and distance effects "
-        "the child-level features cannot."),
-    "sex_male": ("Neutral",
-        "Collected for completeness. No association is assumed; the model decides whether it matters."),
 }
 
 # How much a missed dose of each vaccine matters.
@@ -489,10 +488,8 @@ def weighted_missed(missed_codes):  # weighted misses
 
 
 FEATURE_LABELS = {  # feature labels
-    "sex_male": "Sex (Male)",
     "age_days": "Child's Age",
     "registration_delay_days": "Delay in RHU Registration After Birth",
-    "barangay_risk_rate": "Barangay Historical Risk Rate",
     "doses_due": "Number of Doses Due So Far",
     "doses_completed": "Doses Completed On Time",
     "doses_delayed": "Doses Administered Late",
@@ -505,7 +502,7 @@ FEATURE_LABELS = {  # feature labels
 }
 
 
-def compute_features(date_of_birth, date_registered, sex, dose_records, assessment_date, barangay_risk_rate):  # make 12 features
+def compute_features(date_of_birth, date_registered, sex, dose_records, assessment_date, barangay_risk_rate):  # make features
     """dose_records: list of {recommended_age_days, date_administered}."""
     age_days = (assessment_date - date_of_birth).days  # age
     registration_delay = max(0, (date_registered - date_of_birth).days)  # reg delay
@@ -875,7 +872,6 @@ def _load_artifact():  # load model
 _REFERENCE_NOT_AT_RISK = {  # normal values
     "doses_missed": 0.2, "doses_delayed": 0.5, "avg_delay_days": 8.0, "max_delay_days": 15.0,
     "completion_rate": 0.95, "registration_delay_days": 5.0, "days_since_last_dose": 30.0,
-    "barangay_risk_rate": 0.15,
 }
 
 
@@ -896,8 +892,6 @@ def _describe(key, feats):  # reason text
         return f"Registered {feats['registration_delay_days']:.0f} days after birth"
     if key == "days_since_last_dose":
         return f"{feats['days_since_last_dose']:.0f} days since last vaccination visit"
-    if key == "barangay_risk_rate":
-        return f"Barangay historical at-risk rate: {feats['barangay_risk_rate']*100:.0f}%"
     return ""
 
 
@@ -1013,7 +1007,7 @@ def predict_for_child(date_of_birth, date_registered, sex, doses_dict, barangay_
     child is never scored on inputs nothing in training ever resembled."""
     dose_records = _dose_records_for(doses_dict)  # match schedule
     age_days = (date.today() - date_of_birth).days  # age
-    feats = compute_features(  # 12 features
+    feats = compute_features(  # features
         date_of_birth, date_registered, sex, dose_records, date.today(),
         barangay_risk_rate=BARANGAY_BASE_RISK.get(barangay_name, 0.15),
     )
