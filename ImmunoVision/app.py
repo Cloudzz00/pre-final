@@ -2199,6 +2199,23 @@ def _positive_int(value):
     return n if n >= 1 else None
 
 
+def _whole_number(value):
+    """The value as a whole number of 0 or more, or None."""
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return None
+    return n if n >= 0 else None
+
+
+def _iso_date(value):
+    """A YYYY-MM-DD string as a date, or None if it is not a real date."""
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        return None
+
+
 VALID_ROLES = ("rhu", "bhw", "admin", "superadmin")
 VALID_PRIORITIES = ("Normal", "High", "Urgent")
 MIN_PASSWORD_LENGTH = 8
@@ -3181,7 +3198,10 @@ def record_dose(child_id):
         abort(403)
     vt = VaccineType.query.filter_by(code=request.form.get("vaccine_code")).first() or abort(404)
     date_str = request.form.get("date")
-    administered = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else date.today()
+    administered = _iso_date(date_str) if date_str else date.today()
+    if administered is None:
+        flash("Please enter a valid date.", "error")
+        return redirect(_due_list_return_url())
     date_error = _dose_date_error(child.date_of_birth, [(vt.name, administered)])
     if date_error:
         flash(date_error, "error")
@@ -3622,7 +3642,10 @@ def dashboard():
 @admin_bp.route("/assign-barangay", methods=["GET", "POST"])
 def assign_barangay():
     if request.method == "POST":
-        u = db.session.get(User, int(request.form.get("user_id"))) or abort(404)
+        u = db.session.get(User, _positive_int(request.form.get("user_id")) or 0)
+        if u is None or u.role != "bhw":
+            flash("Select a barangay health worker.", "error")
+            return redirect(url_for("admin.assign_barangay"))
         barangay_id = request.form.get("barangay_id", type=int)
         if not barangay_id:
             flash("Select a barangay.", "error")
@@ -3659,10 +3682,14 @@ def campaigns():
         if not (name and start_date_str and end_date_str and min_months and max_months):
             flash("Fill in all required fields.", "error")
             return redirect(url_for("admin.campaigns"))
-        start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
-        end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
-        if end_date < start_date:
-            flash("End date can't be before the start date.", "error")
+        start_date, end_date = _iso_date(start_date_str), _iso_date(end_date_str)
+        min_m, max_m = _whole_number(min_months), _whole_number(max_months)
+        error = ("Please enter valid start and end dates." if start_date is None or end_date is None else
+                 "End date can't be before the start date." if end_date < start_date else
+                 "Ages must be whole numbers of months (0 or more)." if min_m is None or max_m is None else
+                 "The minimum age can't be greater than the maximum age." if min_m > max_m else None)
+        if error:
+            flash(error, "error")
             return redirect(url_for("admin.campaigns"))
 
         if new_vaccine_name:
@@ -3681,7 +3708,7 @@ def campaigns():
             db.session.add(vt)
             db.session.flush()
             vaccine_type_id = vt.id
-        elif existing_vt_id:
+        elif existing_vt_id and db.session.get(VaccineType, _positive_int(existing_vt_id) or 0):
             vaccine_type_id = int(existing_vt_id)
         else:
             flash("Choose an existing vaccine or add a new one.", "error")
@@ -3689,7 +3716,7 @@ def campaigns():
 
         campaign = Campaign(
             name=name, vaccine_type_id=vaccine_type_id,
-            min_age_days=int(min_months) * 30, max_age_days=int(max_months) * 30,
+            min_age_days=min_m * 30, max_age_days=max_m * 30,
             start_date=start_date, end_date=end_date, created_by_id=current_user.id,
         )
         db.session.add(campaign)
@@ -3718,22 +3745,27 @@ def campaigns():
 def campaign_detail(campaign_id):
     campaign = db.session.get(Campaign, campaign_id) or abort(404)
     if request.method == "POST":
-        campaign.name = (request.form.get("name") or campaign.name).strip()
         start_date_str = request.form.get("start_date")
         end_date_str = request.form.get("end_date")
-        new_start = datetime.strptime(start_date_str, "%Y-%m-%d").date() if start_date_str else campaign.start_date
-        new_end = datetime.strptime(end_date_str, "%Y-%m-%d").date() if end_date_str else campaign.end_date
-        if new_end < new_start:
-            flash("End date can't be before the start date.", "error")
-            return redirect(url_for("admin.campaign_detail", campaign_id=campaign.id))
-        campaign.start_date, campaign.end_date = new_start, new_end
+        new_start = _iso_date(start_date_str) if start_date_str else campaign.start_date
+        new_end = _iso_date(end_date_str) if end_date_str else campaign.end_date
         min_months = request.form.get("min_age_months")
         max_months = request.form.get("max_age_months")
-        if min_months:
-            campaign.min_age_days = int(min_months) * 30
-        if max_months:
-            campaign.max_age_days = int(max_months) * 30
-        barangay_ids = {int(v) for v in request.form.getlist("barangay_ids")}
+        new_min = _whole_number(min_months) * 30 if min_months and _whole_number(min_months) is not None else (
+            None if min_months else campaign.min_age_days)
+        new_max = _whole_number(max_months) * 30 if max_months and _whole_number(max_months) is not None else (
+            None if max_months else campaign.max_age_days)
+        error = ("Please enter valid start and end dates." if new_start is None or new_end is None else
+                 "End date can't be before the start date." if new_end < new_start else
+                 "Ages must be whole numbers of months (0 or more)." if new_min is None or new_max is None else
+                 "The minimum age can't be greater than the maximum age." if new_min > new_max else None)
+        if error:
+            flash(error, "error")
+            return redirect(url_for("admin.campaign_detail", campaign_id=campaign.id))
+        campaign.name = (request.form.get("name") or campaign.name).strip()
+        campaign.start_date, campaign.end_date = new_start, new_end
+        campaign.min_age_days, campaign.max_age_days = new_min, new_max
+        barangay_ids = {n for v in request.form.getlist("barangay_ids") if (n := _positive_int(v))}
         current = set(campaign.barangays.all())
         desired = set(Barangay.query.filter(Barangay.id.in_(barangay_ids)).all())
         for b in current - desired:
