@@ -43,7 +43,7 @@
         </div>
         <div class="form-group"><label>Quantity (Vials)</label><input class="form-control" type="number" name="quantity" min="1" placeholder="e.g. 100" required></div>
         <div class="form-group"><label>Batch Number</label><input class="form-control" name="batch_number" placeholder="e.g. BCG-2026-D" required></div>
-        <div class="form-group"><label>Expiry Date</label><input class="form-control" type="date" name="expiry_date"></div>
+        <div class="form-group"><label>Expiry Date</label><input class="form-control" type="date" name="expiry_date" min="{{ today_iso }}"></div>
         <div class="form-group"><label>Storage Location</label><input class="form-control" name="storage_location" placeholder="e.g. Refrigerator A, Shelf 2"></div>
       </div>
       <div class="modal-footer">
