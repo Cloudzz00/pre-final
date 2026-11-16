@@ -39,9 +39,11 @@
   </td>
   <td>{% if u.last_login_at %}{{ (u.last_login_at|local).strftime('%Y-%m-%d') }}<div class="text-muted" style="font-size:11.5px;">{{ (u.last_login_at|local).strftime('%H:%M') }}</div>{% else %}—{% endif %}</td>
   <td><div class="row-actions">
+    {% if u.role != 'superadmin' %}
     <form method="post" action="{{ url_for('admin.reset_user_password', user_id=u.id) }}" style="display:inline">
       <button class="btn btn-warning btn-sm" data-confirm="Set a new temporary password for {{ u.full_name }}? You'll need to give it to them directly.">{{ icon('refresh', 14) }} Reset Password</button>
     </form>
+    {% endif %}
     {% if u.id != current_user.id and u.role != 'superadmin' %}
     <form method="post" action="{{ url_for('admin.toggle_user', user_id=u.id) }}" style="display:inline">
       <button class="btn {{ 'btn-danger' if u.is_active_flag else 'btn-success' }} btn-sm" data-confirm="{{ 'Disable' if u.is_active_flag else 'Enable' }} this account?">{% if u.is_active_flag %}{{ icon('x', 14) }} Disable{% else %}{{ icon('check', 14) }} Enable{% endif %}</button>
@@ -65,7 +67,7 @@
           <div class="form-group"><label>Last Name</label><input class="form-control" name="last_name" placeholder="e.g. Santos" required></div>
           <div class="form-group"><label>Username</label><input class="form-control" name="username" placeholder="e.g. msantos" required></div>
           <div class="form-group"><label>Email Address</label><input class="form-control" type="email" name="email" placeholder="e.g. msantos@rhu.gov.ph"></div>
-          <div class="form-group"><label>Password</label><input class="form-control" type="password" name="password" placeholder="Temporary password" required></div>
+          <div class="form-group"><label>Password</label><input class="form-control" type="password" name="password" placeholder="At least 8 characters" minlength="8" required></div>
           <div class="form-group"><label>Confirm Password</label><input class="form-control" type="password" name="password_confirm" placeholder="Confirm password" required></div>
           <div class="form-group"><label>Role</label>
             <select class="form-control" name="role" id="roleSelect" required>

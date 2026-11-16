@@ -2182,6 +2182,27 @@ def _render_due_list(template_ctx, children, can_record, **extra):
 # ---------------------------------------------------------------------------
 
 auth_bp = Blueprint("auth", __name__)
+def _safe_next(target):
+    """Only follow ?next= when it points to a page on this site. A full URL
+    or a //host link would send the user to another website after login."""
+    if target and target.startswith("/") and not target.startswith(("//", "/\\")):
+        return target
+    return None
+
+
+def _positive_int(value):
+    """The value as a whole number of 1 or more, or None."""
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return None
+    return n if n >= 1 else None
+
+
+VALID_ROLES = ("rhu", "bhw", "admin", "superadmin")
+VALID_PRIORITIES = ("Normal", "High", "Urgent")
+MIN_PASSWORD_LENGTH = 8
+
 ROLE_HOME = {"admin": "admin.dashboard", "superadmin": "superadmin.logs",
              "rhu": "rhu.dashboard", "bhw": "bhw.dashboard"}
 
@@ -2274,7 +2295,7 @@ def login():
             user.last_login_at = datetime.utcnow()
             db.session.commit()
             log_activity("Logged in")
-            return redirect(request.args.get("next") or url_for(ROLE_HOME[user.role]))
+            return redirect(_safe_next(request.args.get("next")) or url_for(ROLE_HOME[user.role]))
         flash("Invalid username or password.", "error")
     return render_template("login.html")
 
@@ -2645,12 +2666,27 @@ def municipality_map():
 @rhu_bp.route("/inventory", methods=["GET", "POST"])
 def inventory():  # inventory page
     if request.method == "POST":  # add batch
+        antigen = db.session.get(VaccineAntigen, _positive_int(request.form.get("antigen_id")) or 0)
+        quantity = _positive_int(request.form.get("quantity"))
+        batch_number = (request.form.get("batch_number") or "").strip()
+        expiry = None
+        if request.form.get("expiry_date"):
+            try:
+                expiry = datetime.strptime(request.form.get("expiry_date"), "%Y-%m-%d").date()
+            except ValueError:
+                expiry = False
+        error = ("Please choose a vaccine." if antigen is None else
+                 "Please enter a batch number." if not batch_number else
+                 "Quantity must be a whole number of 1 or more." if quantity is None else
+                 "Please enter a valid expiry date." if expiry is False else
+                 "This batch has already expired and cannot be added." if expiry and expiry < date.today() else None)
+        if error:
+            flash(error, "error")
+            return redirect(url_for("rhu.inventory"))
         batch = InventoryBatch(  # new batch
-            antigen_id=int(request.form.get("antigen_id")), batch_number=request.form.get("batch_number"),
-            quantity_on_hand=int(request.form.get("quantity")), storage_location=request.form.get("storage_location"),
-            expiry_date=(datetime.strptime(request.form.get("expiry_date"), "%Y-%m-%d").date()
-                        if request.form.get("expiry_date") else None),
-            reorder_level=50, added_at=datetime.utcnow(),
+            antigen_id=antigen.id, batch_number=batch_number,
+            quantity_on_hand=quantity, storage_location=request.form.get("storage_location"),
+            expiry_date=expiry, reorder_level=50, added_at=datetime.utcnow(),
         )
         db.session.add(batch)
         db.session.commit()  # save
@@ -2664,6 +2700,7 @@ def inventory():  # inventory page
              "expiring_soon": sum(r["expiring"] for r in rows)}
     return render_template("rhu_inventory.html", **_rhu_ctx(
         "inventory", page_title="Vaccine Inventory", rows=rows, stats=stats, antigens=core_antigens(),
+        today_iso=date.today().isoformat(),
     ))
 
 
@@ -3288,12 +3325,20 @@ def continuation():
 def requests():  # BHW requests
     bid = current_user.barangay_id
     if request.method == "POST":  # submit
+        antigen = db.session.get(VaccineAntigen, _positive_int(request.form.get("antigen_id")) or 0)
+        quantity = _positive_int(request.form.get("quantity"))
+        priority = request.form.get("priority", "Normal")
+        error = ("Please choose a vaccine." if antigen is None else
+                 "Quantity must be a whole number of 1 or more." if quantity is None else
+                 "Please choose a valid priority." if priority not in VALID_PRIORITIES else None)
+        if error:
+            flash(error, "error")
+            return redirect(url_for("bhw.requests"))
         last = VaccineRequest.query.order_by(VaccineRequest.id.desc()).first()
         code = f"REQ-{datetime.now().year}-{(last.id if last else 0) + 1:03d}"  # request code
         vr = VaccineRequest(request_code=code, barangay_id=bid, requested_by_id=current_user.id,  # new request
-                            antigen_id=int(request.form.get("antigen_id")),
-                            quantity_requested=int(request.form.get("quantity")),
-                            priority=request.form.get("priority", "Normal"), notes=request.form.get("notes"))
+                            antigen_id=antigen.id, quantity_requested=quantity,
+                            priority=priority, notes=request.form.get("notes"))
         db.session.add(vr)
         db.session.commit()  # save
         log_activity(f"Submitted vaccine request {code} ({vr.antigen.name}, {vr.quantity_requested} vials)")  # log
@@ -3785,14 +3830,20 @@ def update_warning_levels():
 def users():
     if request.method == "POST":
         role = request.form.get("role")
-        username = request.form.get("username").strip()
-        if User.query.filter_by(username=username).first():
-            flash("Username already exists.", "error")
+        username = (request.form.get("username") or "").strip()
+        password = request.form.get("password") or ""
+        error = ("Please choose a valid role." if role not in VALID_ROLES else
+                 "Please enter a username." if not username else
+                 f"Password must be at least {MIN_PASSWORD_LENGTH} characters." if len(password) < MIN_PASSWORD_LENGTH else
+                 "Please choose a barangay for the BHW." if role == "bhw" and not request.form.get("barangay_id") else
+                 "Username already exists." if User.query.filter_by(username=username).first() else None)
+        if error:
+            flash(error, "error")
             return redirect(url_for("admin.users"))
         u = User(username=username, full_name=f"{request.form.get('first_name')} {request.form.get('last_name')}".strip(),
                  role=role, barangay_id=(int(request.form.get("barangay_id"))
                                          if role == "bhw" and request.form.get("barangay_id") else None))
-        u.set_password(request.form.get("password") or "password123")
+        u.set_password(password)
         db.session.add(u)
         db.session.commit()
         log_activity(f"Created user account: {u.full_name} ({u.role_label})")
@@ -3812,6 +3863,11 @@ def users():
 @admin_bp.route("/users/<int:user_id>/reset-password", methods=["POST"])
 def reset_user_password(user_id):
     u = db.session.get(User, user_id) or abort(404)
+    # Same reason as toggle_user: the admin must not take over the account
+    # that audits the admin. The ICTMO Administrator changes its own password
+    # from Settings.
+    if u.role == "superadmin":
+        abort(403)
     temp_password = secrets.token_urlsafe(6)
     u.set_password(temp_password)
     u.password_reset_requested_at = None
