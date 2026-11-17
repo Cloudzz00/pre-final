@@ -1,0 +1,145 @@
+{% extends "layout_app.html" %}
+{% from "_icons.html" import icon %}
+{% block content %}
+{# The barangay's own vaccine stock, counted in doses. It changes only when
+   vials physically arrive (confirmed below), doses are given, or a count or
+   wastage is recorded - never because of a click elsewhere. #}
+<div class="page-head">
+  <div>
+    <div class="text-muted" style="font-size:13px;">Barangay {{ current_user.barangay.name }} &middot; counted in doses</div>
+  </div>
+  {% if untracked %}
+  <button class="btn btn-primary rounded-pill-btn" data-open-modal="openingModal">{{ icon('plus', 14) }} Opening Count</button>
+  {% endif %}
+</div>
+
+{% if incoming %}
+<div class="card card-pad" style="margin-bottom:18px;border-color:var(--primary);">
+  <div class="dashboard-card-title"><span class="dashboard-section-icon icon-blue">{{ icon('package', 18) }}</span>
+    <div><div class="card-title mb-0">Incoming: confirm what arrived</div>
+    <div class="card-sub mb-0">These vaccines are in transit to your barangay. Count them when they arrive; only good doses are added to your stock.</div></div></div>
+  {% for t in incoming %}
+  <form method="post" action="{{ url_for('bhw.stock_receive', transfer_id=t.id) }}" class="incoming-block" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+    <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <div><b>{{ t.code }}</b> &middot; {{ t.antigen.name }} &middot;
+        {% if t.kind == 'delivery' %}from RHU{% if t.request %} (request {{ t.request.request_code }}){% endif %}{% else %}from {{ t.from_barangay.name }}{% endif %}</div>
+      <div class="text-muted" style="font-size:12.5px;">Sent {{ (t.dispatched_at|local).strftime('%b %d, %Y %H:%M') }}</div>
+    </div>
+    <div class="table-wrap auto-height" style="margin-top:8px;">
+      <table class="data-table compact">
+        <thead><tr><th>Batch</th><th>Expiry</th><th>Sent</th><th>Good doses received</th><th>If fewer: reason</th></tr></thead>
+        <tbody>
+        {% for item in t.items %}
+          <tr>
+            <td>{{ item.batch_number }}</td>
+            <td>{{ item.expiry_date.strftime('%b %d, %Y') if item.expiry_date else '-' }}</td>
+            <td>{{ item.doses_sent }} doses<div class="text-muted" style="font-size:11.5px;">{{ vials_label(item.doses_sent, item.doses_per_vial) }} &middot; {{ item.doses_per_vial }} per vial</div></td>
+            <td><input class="form-control table-input" type="number" name="good_{{ item.id }}" value="{{ item.doses_sent }}" min="0" max="{{ item.doses_sent }}" required style="width:110px;"></td>
+            <td>
+              <select class="form-control select-sm" name="reason_{{ item.id }}">
+                <option value="">All arrived</option>
+                {% for reason in loss_reasons %}<option value="{{ reason }}">{{ reason }}</option>{% endfor %}
+              </select>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:10px;flex-wrap:wrap;">
+      <input class="form-control" name="note" maxlength="255" placeholder="Note (optional)" style="max-width:320px;">
+      <button class="btn btn-primary btn-sm" data-confirm="Confirm the doses you counted for {{ t.code }}?">{{ icon('check', 14) }} Confirm receipt</button>
+    </div>
+  </form>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="card card-pad" style="margin-bottom:18px;">
+  <div class="card-title">Stock by Vaccine</div>
+  <div class="card-sub">"Needed soon" = doses your children are due for in the next 30 days or overdue by up to 90 days. Reserved doses are set aside for another barangay and should not be used.</div>
+  <div class="table-wrap auto-height" style="margin-top:10px;">
+    <table class="data-table">
+      <thead><tr><th>Vaccine</th><th>In fridge</th><th>Reserved</th><th>Available to use</th><th>Needed soon</th><th>Nearest expiry</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td><b>{{ r.antigen.name }}</b></td>
+          <td>{% if r.tracked %}<b>{{ r.in_fridge }}</b> doses<div class="text-muted" style="font-size:11.5px;">{{ r.vials }}</div>{% else %}<span class="text-muted">-</span>{% endif %}</td>
+          <td>{{ r.reserved if r.reserved else '-' }}</td>
+          <td>{% if r.tracked %}<b>{{ r.available }}</b> doses{% else %}<span class="text-muted">-</span>{% endif %}
+            {% if r.expired %}<div style="font-size:11.5px;color:var(--red);">{{ r.expired }} expired doses to dispose</div>{% endif %}</td>
+          <td>{{ r.needed }}</td>
+          <td>{{ r.nearest_expiry.strftime('%b %d, %Y') if r.nearest_expiry else '-' }}</td>
+          <td><span class="badge badge-{{ r.color }}">{{ r.status }}</span></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if untracked %}
+  <p class="text-muted" style="font-size:12.5px;margin-top:10px;">Vaccines marked "Not tracked yet" start being tracked with an <b>Opening Count</b> (count what is in your fridge now) or when your first delivery from the RHU is confirmed.</p>
+  {% endif %}
+</div>
+
+<div class="card card-pad">
+  <div class="card-title">Stock History</div>
+  <div class="card-sub">Every change to your barangay's stock, newest first.</div>
+  <div class="table-wrap auto-height" style="margin-top:10px;">
+    <table class="data-table compact">
+      <thead><tr><th>Date</th><th>Vaccine</th><th>Change</th><th>Doses</th><th>Batch</th><th>By</th><th>Note</th></tr></thead>
+      <tbody>
+      {% for m in history %}
+        <tr>
+          <td>{{ (m.created_at|local).strftime('%b %d, %Y %H:%M') }}</td>
+          <td>{{ m.antigen.name }}</td>
+          <td>{{ movement_labels.get(m.kind, m.kind) }}</td>
+          <td style="color:{{ 'var(--green-dark, #16a34a)' if m.doses > 0 else 'var(--red)' }};font-weight:600;">{{ '+' if m.doses > 0 else '' }}{{ m.doses }}</td>
+          <td>{{ m.stock.batch_number if m.stock else '-' }}</td>
+          <td>{{ m.user.full_name if m.user else '-' }}</td>
+          <td class="text-muted">{{ m.note or '' }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7"><div class="empty-state"><div class="ic">{{ icon('package', 34) }}</div><div class="t">No stock changes yet</div></div></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if untracked %}
+<div class="modal-scrim" id="openingModal">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Opening Count</h3><button class="modal-close" data-close-modal>×</button></div>
+    <form method="post" action="{{ url_for('bhw.stock_opening') }}">
+      <div class="modal-body">
+        <p class="text-muted" style="font-size:13px;margin-top:0;">Count one batch of a vaccine that is in your fridge now. Repeat for each batch. This starts stock tracking for that vaccine.</p>
+        <div class="form-group"><label>Vaccine</label>
+          <select class="form-control" name="antigen_id" id="openingAntigen" required>
+            {% for a in untracked %}<option value="{{ a.id }}" data-dpv="{{ default_per_vial[a.id] }}">{{ a.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group"><label>Batch Number</label><input class="form-control" name="batch_number" required placeholder="From the vial label"></div>
+        <div class="form-group"><label>Expiry Date</label><input class="form-control" type="date" name="expiry_date" min="{{ today_iso }}" required></div>
+        <div class="form-group"><label>Doses per Vial</label><input class="form-control" type="number" name="doses_per_vial" id="openingDpv" min="1" max="100" required></div>
+        <div class="form-grid-2">
+          <div class="form-group"><label>Full (unopened) vials</label><input class="form-control" type="number" name="full_vials" min="0" value="0" required></div>
+          <div class="form-group"><label>Loose doses in an opened vial</label><input class="form-control" type="number" name="loose_doses" min="0" value="0"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" data-close-modal>Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Count</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+(function () {
+  var sel = document.getElementById('openingAntigen'), dpv = document.getElementById('openingDpv');
+  function fill() { var o = sel.options[sel.selectedIndex]; if (o) dpv.value = o.getAttribute('data-dpv'); }
+  if (sel && dpv) { sel.addEventListener('change', fill); fill(); }
+})();
+</script>
+{% endif %}
+{% endblock %}

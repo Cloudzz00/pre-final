@@ -51,6 +51,12 @@ VACCINE_ANTIGENS = [  # 7 routine vaccines (Inventory / Requests)
     ("MMR", "MMR"),
 ]
 
+# Usual doses per vial (WHO/DOH EPI). Only pre-fills the Add Stock form; each
+# batch records its own value from the label, and the admin can change these.
+DEFAULT_DOSES_PER_VIAL = {
+    "BCG": 20, "HEPB": 10, "PENTA": 1, "OPV": 20, "PCV": 4, "IPV": 5, "MMR": 10, "ROTA": 1,
+}
+
 ANTIGEN_PROTECTS = {  # disease each vaccine prevents
     "BCG":   "Tuberculosis",
     "HEPB":  "Hepatitis B",

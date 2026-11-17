@@ -296,6 +296,10 @@ class InventoryBatch(db.Model):
     reorder_level = db.Column(db.Integer, nullable=False, default=50)
     added_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_archived = db.Column(db.Boolean, default=False, nullable=False)
+    # Doses in one vial of this batch, read from the label when the stock
+    # arrives. Null for batches added before this field existed: the vaccine's
+    # default is used for those (see app.batch_doses_per_vial()).
+    doses_per_vial = db.Column(db.Integer, nullable=True)
 
     antigen = db.relationship("VaccineAntigen")
 
@@ -339,4 +343,114 @@ class ActivityLog(db.Model):
     action = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    user = db.relationship("User")
+
+
+# ---------------------------------------------------------------------------
+# Barangay vaccine inventory
+#
+# The RHU's own stock stays in InventoryBatch (counted in vials). Stock a
+# barangay holds is kept per batch in BarangayStock, counted in doses, and
+# changes only through a StockMovement. Stock that is travelling (an RHU
+# delivery, or a redistribution between barangays) is a StockTransfer: it is
+# in nobody's fridge until the receiving BHW confirms what arrived.
+# ---------------------------------------------------------------------------
+
+class VialSize(db.Model):
+    """Default doses per vial for a vaccine, set by the administrator. Only
+    pre-fills the Add Stock form; each batch keeps its own value."""
+    __tablename__ = "vial_sizes"
+    antigen_id = db.Column(db.Integer, db.ForeignKey("vaccine_antigens.id"), primary_key=True)
+    doses_per_vial = db.Column(db.Integer, nullable=False)
+
+
+class BarangayStock(db.Model):
+    """One batch of one vaccine held in a barangay's fridge, in doses."""
+    __tablename__ = "barangay_stock"
+    id = db.Column(db.Integer, primary_key=True)
+    barangay_id = db.Column(db.Integer, db.ForeignKey("barangays.id"), nullable=False, index=True)
+    antigen_id = db.Column(db.Integer, db.ForeignKey("vaccine_antigens.id"), nullable=False)
+    batch_number = db.Column(db.String(50), nullable=False)
+    expiry_date = db.Column(db.Date, nullable=True)
+    doses_per_vial = db.Column(db.Integer, nullable=False, default=1)
+    doses_on_hand = db.Column(db.Integer, nullable=False, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    barangay = db.relationship("Barangay")
+    antigen = db.relationship("VaccineAntigen")
+
+    @property
+    def is_expired(self):
+        return self.expiry_date is not None and self.expiry_date < date.today()
+
+
+class StockTransfer(db.Model):
+    """Stock on its way to a barangay. kind "delivery" = from the RHU (a
+    distributed request); kind "redistribution" = from another barangay.
+    status: reserved -> in_transit -> received, or cancelled."""
+    __tablename__ = "stock_transfers"
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(30), unique=True, nullable=False)
+    kind = db.Column(db.String(20), nullable=False)
+    from_barangay_id = db.Column(db.Integer, db.ForeignKey("barangays.id"), nullable=True)  # null = RHU
+    to_barangay_id = db.Column(db.Integer, db.ForeignKey("barangays.id"), nullable=False, index=True)
+    antigen_id = db.Column(db.Integer, db.ForeignKey("vaccine_antigens.id"), nullable=False)
+    request_id = db.Column(db.Integer, db.ForeignKey("vaccine_requests.id"), nullable=True)
+    status = db.Column(db.String(20), nullable=False)
+    reason = db.Column(db.String(255))
+    created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    dispatched_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    dispatched_at = db.Column(db.DateTime, nullable=True)
+    received_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    received_at = db.Column(db.DateTime, nullable=True)
+    received_note = db.Column(db.String(255))
+
+    from_barangay = db.relationship("Barangay", foreign_keys=[from_barangay_id])
+    to_barangay = db.relationship("Barangay", foreign_keys=[to_barangay_id])
+    antigen = db.relationship("VaccineAntigen")
+    request = db.relationship("VaccineRequest")
+    items = db.relationship("StockTransferItem", backref="transfer", order_by="StockTransferItem.id")
+
+    @property
+    def doses_sent(self):
+        return sum(i.doses_sent for i in self.items)
+
+    @property
+    def doses_received(self):
+        return sum(i.doses_received or 0 for i in self.items)
+
+
+class StockTransferItem(db.Model):
+    """One batch inside a transfer."""
+    __tablename__ = "stock_transfer_items"
+    id = db.Column(db.Integer, primary_key=True)
+    transfer_id = db.Column(db.Integer, db.ForeignKey("stock_transfers.id"), nullable=False)
+    batch_number = db.Column(db.String(50), nullable=False)
+    expiry_date = db.Column(db.Date, nullable=True)
+    doses_per_vial = db.Column(db.Integer, nullable=False, default=1)
+    doses_sent = db.Column(db.Integer, nullable=False)
+    doses_received = db.Column(db.Integer, nullable=True)   # good doses counted on arrival
+    doses_lost = db.Column(db.Integer, nullable=False, default=0)
+    loss_reason = db.Column(db.String(100))
+    source_stock_id = db.Column(db.Integer, db.ForeignKey("barangay_stock.id"), nullable=True)
+
+
+class StockMovement(db.Model):
+    """Every change to a barangay's stock, signed (+ in, - out), in doses."""
+    __tablename__ = "stock_movements"
+    id = db.Column(db.Integer, primary_key=True)
+    barangay_id = db.Column(db.Integer, db.ForeignKey("barangays.id"), nullable=True, index=True)
+    antigen_id = db.Column(db.Integer, db.ForeignKey("vaccine_antigens.id"), nullable=False)
+    barangay_stock_id = db.Column(db.Integer, db.ForeignKey("barangay_stock.id"), nullable=True)
+    kind = db.Column(db.String(30), nullable=False)
+    doses = db.Column(db.Integer, nullable=False)
+    vaccination_record_id = db.Column(db.Integer, db.ForeignKey("vaccination_records.id"), nullable=True)
+    transfer_id = db.Column(db.Integer, db.ForeignKey("stock_transfers.id"), nullable=True)
+    note = db.Column(db.String(255))
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    antigen = db.relationship("VaccineAntigen")
+    stock = db.relationship("BarangayStock")
     user = db.relationship("User")
