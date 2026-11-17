@@ -267,8 +267,8 @@ def table_15(children, assessment_date, out_dir):
     not_at_risk = 0
     for c in children:
         dose_records = dp._dose_records_for(c["doses"])
-        feats = dp.compute_features(c["date_of_birth"], c["date_registered"], c["sex"],
-                                     dose_records, assessment_date, barangay_risk_rate=None)
+        feats = dp.compute_features(c["date_of_birth"], c["date_registered"],
+                                     dose_records, assessment_date)
         if feats["completion_rate"] >= 0.90:
             fully_immunized += 1
         if feats["completion_rate"] >= 1.0:
@@ -402,8 +402,8 @@ def figure_06(children, assessment_date, out_dir, plt):
     by_b = defaultdict(lambda: [0, 0])
     for c in children:
         dose_records = dp._dose_records_for(c["doses"])
-        feats = dp.compute_features(c["date_of_birth"], c["date_registered"], c["sex"],
-                                     dose_records, assessment_date, barangay_risk_rate=None)
+        feats = dp.compute_features(c["date_of_birth"], c["date_registered"],
+                                     dose_records, assessment_date)
         b = c["barangay"]
         by_b[b][1] += 1
         if feats["completion_rate"] >= 0.90:
@@ -455,7 +455,7 @@ def tables_17_18(children, args, tables_dir):
     from sklearn.model_selection import train_test_split
     from sklearn.preprocessing import StandardScaler
 
-    rows, _ = dp.generate_training_dataset(args.n_synthetic, args.seed, children)
+    rows = dp.generate_training_dataset(args.n_synthetic, args.seed, children)
     source = ["Registry" if r["source"] == "real" else "Synthetic" for r in rows]
 
     X = np.array([[r[c] for c in dp.FEATURE_COLUMNS] for r in rows], dtype=float)
@@ -534,7 +534,7 @@ def tables_19_20_figure_07(children, args, tables_dir, figures_dir, plt):
     from sklearn.ensemble import RandomForestClassifier
     from sklearn.model_selection import train_test_split
 
-    rows, _ = dp.generate_training_dataset(args.n_synthetic, args.seed, children)
+    rows = dp.generate_training_dataset(args.n_synthetic, args.seed, children)
     source = np.array(["Registry" if r["source"] == "real" else "Synthetic" for r in rows])
     age_days = np.array([r["age_days"] for r in rows])
     X = np.array([[r[c] for c in dp.FEATURE_COLUMNS] for r in rows], dtype=float)
@@ -734,8 +734,7 @@ def table_21(args, tables_dir, assessment_date):
     for name, dob, reg, doses_dict in profiles:
         dose_records = dp._dose_records_for(doses_dict)
         age_days = (assessment_date - dob).days
-        feats = dp.compute_features(dob, reg, "F", dose_records, assessment_date,
-                                     barangay_risk_rate=dp.BARANGAY_BASE_RISK.get(BARANGAY, 0.15))
+        feats = dp.compute_features(dob, reg, dose_records, assessment_date)
         due, given, missed = feats["doses_due"], feats["doses_completed"], feats["doses_missed"]
 
         if dp.model_is_trained() and dp.ML_ASSESSMENT_FLOOR_DAYS <= age_days <= dp.CONTINUATION_WINDOW_DAYS:

@@ -358,7 +358,7 @@ def main():
     print(f"Loaded {len(children)} children.\n")
 
     print("Building training dataset ...")
-    rows, _ = dp.generate_training_dataset(args.n_synthetic, args.seed, children)
+    rows = dp.generate_training_dataset(args.n_synthetic, args.seed, children)
     source = np.array(["Registry" if r["source"] == "real" else "Synthetic" for r in rows])
     age_days = np.array([r["age_days"] for r in rows])
     X = np.array([[r[c] for c in dp.FEATURE_COLUMNS] for r in rows], dtype=float)
