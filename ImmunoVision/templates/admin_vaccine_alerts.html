@@ -33,7 +33,7 @@
     <div class="table-wrap auto-height">
       <table class="data-table compact">
         <thead><tr>
-          <th>Vaccine</th><th>Vials Left</th><th>Warn At</th><th>Status</th><th>Stock Level</th>
+          <th>Vaccine</th><th>Vials Left</th><th>Warn At</th><th title="Pre-fills the Add Stock form; each batch keeps its own value">Doses per Vial (default)</th><th>Status</th><th>Stock Level</th>
         </tr></thead>
         <tbody>
           {% for r in stock %}
@@ -46,6 +46,14 @@
                        value="{{ r.reorder }}" min="0" max="100000" step="5"
                        aria-label="Warning level for {{ r.antigen.name }}">
                 <span class="text-muted">vials</span>
+              </div>
+            </td>
+            <td>
+              <div class="warn-cell">
+                <input class="warn-input" type="number" name="dpv_{{ r.antigen.id }}"
+                       value="{{ default_per_vial[r.antigen.id] }}" min="1" max="100" step="1"
+                       aria-label="Default doses per vial for {{ r.antigen.name }}">
+                <span class="text-muted">doses</span>
               </div>
             </td>
             <td><span class="badge badge-{{ r.color }}">{{ r.status }}</span></td>
@@ -63,7 +71,7 @@
       </table>
     </div>
     <div style="display:flex;justify-content:flex-end;margin-top:16px;">
-      <button class="btn btn-primary btn-sm">{{ icon('check', 14) }} Save warning levels</button>
+      <button class="btn btn-primary btn-sm">{{ icon('check', 14) }} Save settings</button>
     </div>
   </form>
 </div>
