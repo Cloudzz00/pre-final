@@ -101,7 +101,7 @@ def main():
 
     with contextlib.redirect_stdout(io.StringIO()):  # silence import notes from the loader
         real = dp.load_and_merge_real_registries()
-        rows, _ = dp.generate_training_dataset(3000, SEED, real)
+        rows = dp.generate_training_dataset(3000, SEED, real)
     src_all = np.array([1 if r["source"] == "real" else 0 for r in rows])  # 1 = real, 0 = synthetic
     n_real, n_syn = int(src_all.sum()), int(len(rows) - src_all.sum())
     n_excluded = len(real) - n_real  # real children without a complete first year
