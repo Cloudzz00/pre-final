@@ -17,7 +17,12 @@
    them and arrive when the receiving BHW counts them in. #}
 <div class="page-head">
   <div><div class="text-muted" style="font-size:13px;">Stock kept in each barangay &middot; counted in doses</div></div>
-  <button class="btn btn-primary rounded-pill-btn" data-open-modal="newTransferModal">{{ icon('plus', 14) }} New Redistribution</button>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    {% set export_kind = {'stock': 'stock', 'transfers': 'transfers', 'discrepancies': 'discrepancies'}[tab] %}
+    <a class="btn btn-outline rounded-pill-btn" href="{{ url_for('rhu.barangay_stock_csv', kind=export_kind) }}">{{ icon('download', 14) }} Export CSV</a>
+    {% if tab == 'transfers' %}<a class="btn btn-outline rounded-pill-btn" href="{{ url_for('rhu.barangay_stock_csv', kind='movements') }}" title="Every stock change in every barangay, last 90 days">{{ icon('download', 14) }} Stock History CSV</a>{% endif %}
+    <button class="btn btn-primary rounded-pill-btn" data-open-modal="newTransferModal">{{ icon('plus', 14) }} New Redistribution</button>
+  </div>
 </div>
 
 <div class="pill-tabs" style="margin-bottom:16px;">

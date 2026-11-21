@@ -27,7 +27,7 @@
           {% if n.unread %}<span class="unread-dot"></span>{% endif %}
         </div>
         <div class="notif-body">{{ n.body }}</div>
-        <div class="notif-time">{{ n.time_label }}</div>
+        <div class="notif-time">{{ n.time_label }}{% if n.url %} &middot; <a class="link" href="{{ n.url }}">Open &rsaquo;</a>{% endif %}</div>
       </div>
     </div>
   {% else %}

@@ -171,8 +171,11 @@
 </div>
 
 <div class="card card-pad">
-  <div class="card-title">Stock History</div>
-  <div class="card-sub">Every change to your barangay's stock, newest first.</div>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
+    <div><div class="card-title">Stock History</div>
+    <div class="card-sub">Every change to your barangay's stock, newest first.</div></div>
+    <a class="btn btn-outline btn-sm" href="{{ url_for('bhw.stock_csv') }}">{{ icon('download', 14) }} Export CSV</a>
+  </div>
   <div class="table-wrap auto-height" style="margin-top:10px;">
     <table class="data-table compact">
       <thead><tr><th>Date</th><th>Vaccine</th><th>Change</th><th>Doses</th><th>Batch</th><th>By</th><th>Note</th></tr></thead>
