@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transfer Slip {{ t.code }}</title>
+<style>
+  body { font-family: Arial, Helvetica, sans-serif; color:#111; background:#f3f4f6; margin:0; padding:24px 16px; }
+  .slip { max-width:760px; margin:0 auto; background:#fff; border:1px solid #d1d5db; border-radius:10px; padding:28px; }
+  .head { display:flex; justify-content:space-between; gap:16px; border-bottom:2px solid #111; padding-bottom:12px; flex-wrap:wrap; }
+  h1 { font-size:20px; margin:4px 0 2px; }
+  .muted { color:#555; font-size:12px; }
+  .code { font-size:22px; font-weight:700; text-align:right; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin:16px 0; }
+  .box { border:1px solid #d1d5db; border-radius:8px; padding:10px; }
+  .box .l { font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:#555; font-weight:700; }
+  .box .v { font-size:14px; font-weight:700; margin-top:3px; }
+  table { width:100%; border-collapse:collapse; margin-top:8px; font-size:13px; }
+  th, td { border:1px solid #d1d5db; padding:8px; text-align:left; }
+  th { background:#f3f4f6; }
+  .signs { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:34px; }
+  .sign { border-top:1px solid #111; padding-top:6px; font-size:12px; }
+  .note { font-size:12px; margin-top:16px; padding:10px; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; }
+  .actions { max-width:760px; margin:0 auto 12px; text-align:right; }
+  .actions button { padding:8px 16px; font-size:14px; border-radius:8px; border:1px solid #2563eb; background:#2563eb; color:#fff; cursor:pointer; }
+  @media print { body { background:#fff; padding:0; } .slip { border:0; } .actions { display:none; } }
+  @media (max-width:560px) { .signs { grid-template-columns:1fr; } .code { text-align:left; } }
+</style>
+</head>
+<body>
+<div class="actions"><button onclick="window.print()">Print slip</button></div>
+<div class="slip">
+  <div class="head">
+    <div>
+      <div class="muted">Rural Health Unit &middot; San Jacinto</div>
+      <h1>Vaccine Transfer Slip</h1>
+      <div class="muted">{{ 'Delivery from the RHU' if t.kind == 'delivery' else 'Redistribution between barangays' }}</div>
+    </div>
+    <div>
+      <div class="code">{{ t.code }}</div>
+      <div class="muted" style="text-align:right;">Status: {{ status_labels.get(t.status, t.status) }}</div>
+    </div>
+  </div>
+  <div class="grid">
+    <div class="box"><div class="l">From</div><div class="v">{{ t.from_barangay.name if t.from_barangay else 'RHU' }}</div></div>
+    <div class="box"><div class="l">To</div><div class="v">{{ t.to_barangay.name }}</div></div>
+    <div class="box"><div class="l">Vaccine</div><div class="v">{{ t.antigen.name }}</div></div>
+    <div class="box"><div class="l">Reserved / created</div><div class="v">{{ (t.created_at|local).strftime('%b %d, %Y') if t.created_at else '-' }}</div></div>
+  </div>
+  <table>
+    <thead><tr><th>Batch</th><th>Expiry</th><th>Doses per vial</th><th>Vials</th><th>Doses</th><th>Received (good)</th></tr></thead>
+    <tbody>
+    {% for item in t.items if item.doses_sent %}
+      <tr>
+        <td>{{ item.batch_number }}</td>
+        <td>{{ item.expiry_date.strftime('%b %d, %Y') if item.expiry_date else '-' }}</td>
+        <td>{{ item.doses_per_vial }}</td>
+        <td>{{ vials_label(item.doses_sent, item.doses_per_vial) }}</td>
+        <td><b>{{ item.doses_sent }}</b></td>
+        <td>{{ item.doses_received if item.doses_received is not none else '' }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6">No doses left on this transfer.</td></tr>
+    {% endfor %}
+    </tbody>
+    <tfoot><tr><th colspan="4">Total</th><th>{{ t.doses_sent }}</th><th>{{ t.doses_received if t.received_at else '' }}</th></tr></tfoot>
+  </table>
+  {% if t.reason %}<p class="muted" style="margin-top:10px;">Reason: {{ t.reason }}</p>{% endif %}
+  {% if t.status == 'reserved' %}
+  <div class="note"><b>Reserved for redistribution.</b> Keep these vials in the fridge, apart from the stock in use, with this slip attached, until they are picked up.</div>
+  {% endif %}
+  <div class="signs">
+    <div class="sign">Released by (name, signature, date)
+      {% if t.dispatched_at %}<div class="muted">Recorded: {{ (t.dispatched_at|local).strftime('%b %d, %Y %H:%M') }}</div>{% endif %}</div>
+    <div class="sign">Received by (name, signature, date)
+      {% if t.received_at %}<div class="muted">Recorded: {{ (t.received_at|local).strftime('%b %d, %Y %H:%M') }}</div>{% endif %}</div>
+  </div>
+  <p class="muted" style="margin-top:22px;">Cold chain: carry in a vaccine carrier with ice packs. The receiver counts the vials on arrival and records only the good doses in ImmunoVision.</p>
+</div>
+</body>
+</html>

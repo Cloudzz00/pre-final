@@ -390,7 +390,8 @@ class BarangayStock(db.Model):
 class StockTransfer(db.Model):
     """Stock on its way to a barangay. kind "delivery" = from the RHU (a
     distributed request); kind "redistribution" = from another barangay.
-    status: reserved -> in_transit -> received, or cancelled."""
+    status: reserved -> in_transit -> received, or cancelled (a cancelled
+    in-transit redistribution is "returning" until the sender counts it back)."""
     __tablename__ = "stock_transfers"
     id = db.Column(db.Integer, primary_key=True)
     code = db.Column(db.String(30), unique=True, nullable=False)
@@ -408,6 +409,12 @@ class StockTransfer(db.Model):
     received_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     received_at = db.Column(db.DateTime, nullable=True)
     received_note = db.Column(db.String(255))
+    # A reservation shrinks when the sender's reserved doses get used or lost
+    # (a child vaccinated, wastage, a count); doses_reduced keeps the total cut.
+    doses_reduced = db.Column(db.Integer, default=0)
+    reduce_reason = db.Column(db.String(255))
+    cancelled_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    cancelled_at = db.Column(db.DateTime, nullable=True)
 
     from_barangay = db.relationship("Barangay", foreign_keys=[from_barangay_id])
     to_barangay = db.relationship("Barangay", foreign_keys=[to_barangay_id])

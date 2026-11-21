@@ -19,23 +19,69 @@
   {% endif %}
 </div>
 
+{% if reduced %}
+<div class="card card-pad" style="margin-bottom:18px;border-color:var(--amber, #d97706);">
+  <div class="card-title mb-0">Reserved doses were used</div>
+  <div class="card-sub mb-0" style="margin-top:4px;">The RHU has been alerted.</div>
+  <ul style="margin:8px 0 0 18px;font-size:13px;">
+  {% for t in reduced %}
+    <li><b>{{ t.code }}</b> to {{ t.to_barangay.name }}: {{ t.doses_reduced }} {{ t.antigen.name }} doses used ({{ t.reduce_reason }}).
+      {% if t.status == 'cancelled' and not t.cancelled_by_id %}Cancelled: no reserved doses left.{% elif t.status == 'reserved' %}Now {{ t.doses_sent }} doses.{% endif %}</li>
+  {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% if outgoing %}
+<div class="card card-pad" style="margin-bottom:18px;border-color:var(--amber, #d97706);">
+  <div class="dashboard-card-title"><span class="dashboard-section-icon icon-orange">{{ icon('refresh', 18) }}</span>
+    <div><div class="card-title mb-0">To send: reserved for redistribution</div>
+    <div class="card-sub mb-0">The RHU set these doses aside for another barangay. Keep the vials in your fridge, apart from the stock in use, with the printed slip attached. Mark them dispatched when they are picked up.</div></div></div>
+  {% for t in outgoing %}
+  <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+    <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:center;">
+      <div><b>{{ t.code }}</b> &middot; {{ t.antigen.name }} &middot; to <b>{{ t.to_barangay.name }}</b>
+        <span class="badge badge-{{ status_colors[t.status] }}" style="margin-left:6px;">{{ status_labels[t.status] }}</span></div>
+      <a class="btn btn-outline btn-sm" href="{{ url_for('bhw.transfer_slip', transfer_id=t.id) }}" target="_blank">{{ icon('printer', 14) }} Print slip</a>
+    </div>
+    <div class="text-muted" style="font-size:12.5px;margin-top:4px;">
+      {% for item in t.items if item.doses_sent %}{{ item.doses_sent }} doses ({{ vials_label(item.doses_sent, item.doses_per_vial) }}) from batch {{ item.batch_number }}{% if item.expiry_date %}, exp {{ item.expiry_date.strftime('%b %d, %Y') }}{% endif %}{{ '; ' if not loop.last }}{% endfor %}
+      {% if t.status == 'in_transit' %} &middot; dispatched {{ (t.dispatched_at|local).strftime('%b %d, %H:%M') }}; waiting for {{ t.to_barangay.name }} to confirm{% endif %}
+    </div>
+    {% if t.status == 'reserved' %}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:8px;">
+      <form method="post" action="{{ url_for('bhw.transfer_cancel', transfer_id=t.id) }}" style="display:flex;gap:6px;">
+        <input class="form-control table-input" name="reason" maxlength="200" placeholder="Reason to cancel" required style="width:180px;">
+        <button class="btn btn-outline btn-sm" data-confirm="Cancel {{ t.code }}? The doses become available to you again.">Cancel</button>
+      </form>
+      <form method="post" action="{{ url_for('bhw.transfer_dispatch', transfer_id=t.id) }}">
+        <button class="btn btn-primary btn-sm" data-confirm="Have the {{ t.doses_sent }} {{ t.antigen.name }} doses for {{ t.to_barangay.name }} been picked up?">{{ icon('check', 14) }} Mark as dispatched</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
 {% if incoming %}
 <div class="card card-pad" style="margin-bottom:18px;border-color:var(--primary);">
   <div class="dashboard-card-title"><span class="dashboard-section-icon icon-blue">{{ icon('package', 18) }}</span>
     <div><div class="card-title mb-0">Incoming: confirm what arrived</div>
-    <div class="card-sub mb-0">These vaccines are in transit to your barangay. Count them when they arrive; only good doses are added to your stock.</div></div></div>
+    <div class="card-sub mb-0">These vaccines are on their way to your fridge. Count them when they arrive; only good doses are added to your stock.</div></div></div>
   {% for t in incoming %}
   <form method="post" action="{{ url_for('bhw.stock_receive', transfer_id=t.id) }}" class="incoming-block" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
     <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;">
       <div><b>{{ t.code }}</b> &middot; {{ t.antigen.name }} &middot;
-        {% if t.kind == 'delivery' %}from RHU{% if t.request %} (request {{ t.request.request_code }}){% endif %}{% else %}from {{ t.from_barangay.name }}{% endif %}</div>
+        {% if t.status == 'returning' %}<b>returning</b>: redistribution to {{ t.to_barangay.name }} was cancelled in transit{% elif t.kind == 'delivery' %}from RHU{% if t.request %} (request {{ t.request.request_code }}){% endif %}{% else %}from {{ t.from_barangay.name }} (redistribution){% endif %}
+        &middot; <a class="link" href="{{ url_for('bhw.transfer_slip', transfer_id=t.id) }}" target="_blank">slip</a></div>
       <div class="text-muted" style="font-size:12.5px;">Sent {{ (t.dispatched_at|local).strftime('%b %d, %Y %H:%M') }}</div>
     </div>
     <div class="table-wrap auto-height" style="margin-top:8px;">
       <table class="data-table compact">
         <thead><tr><th>Batch</th><th>Expiry</th><th>Sent</th><th>Good doses received</th><th>If fewer: reason</th></tr></thead>
         <tbody>
-        {% for item in t.items %}
+        {% for item in t.items if item.doses_sent %}
           <tr>
             <td>{{ item.batch_number }}</td>
             <td>{{ item.expiry_date.strftime('%b %d, %Y') if item.expiry_date else '-' }}</td>

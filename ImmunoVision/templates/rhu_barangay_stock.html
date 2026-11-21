@@ -1,0 +1,206 @@
+{% extends "layout_app.html" %}
+{% from "_icons.html" import icon %}
+{% block content %}
+<style>
+  .vax-pills { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+  .vax-pill { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border:1px solid var(--border); border-radius:999px; font-size:13px; font-weight:600; color:var(--text); text-decoration:none; background:var(--card, #fff); }
+  .vax-pill.active { border-color:var(--primary); color:var(--primary); box-shadow:0 0 0 2px rgba(37,99,235,.12); }
+  .vax-pill .dot { font-size:11px; font-weight:700; padding:1px 7px; border-radius:999px; }
+  .dot-short { background:rgba(220,38,38,.12); color:var(--red); }
+  .dot-surplus { background:rgba(37,99,235,.12); color:var(--primary); }
+  .sub { font-size:11.5px; color:var(--text-secondary); }
+  .transfer-actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .transfer-actions form { display:inline-flex; gap:6px; align-items:center; }
+</style>
+{# Every barangay's own stock, counted in doses. Redistribution only reserves
+   doses in the sender's fridge; they move when the sending BHW dispatches
+   them and arrive when the receiving BHW counts them in. #}
+<div class="page-head">
+  <div><div class="text-muted" style="font-size:13px;">Stock kept in each barangay &middot; counted in doses</div></div>
+  <button class="btn btn-primary rounded-pill-btn" data-open-modal="newTransferModal">{{ icon('plus', 14) }} New Redistribution</button>
+</div>
+
+<div class="pill-tabs" style="margin-bottom:16px;">
+  <a class="pill-tab {{ 'active' if tab == 'stock' }}" href="{{ url_for('rhu.barangay_stock', antigen_id=antigen.id) }}">Stock by Barangay</a>
+  <a class="pill-tab {{ 'active' if tab == 'transfers' }}" href="{{ url_for('rhu.barangay_stock', antigen_id=antigen.id, tab='transfers') }}">Redistributions{% if active_transfers %} ({{ active_transfers|length }}){% endif %}</a>
+  <a class="pill-tab {{ 'active' if tab == 'discrepancies' }}" href="{{ url_for('rhu.barangay_stock', antigen_id=antigen.id, tab='discrepancies') }}">Discrepancies</a>
+</div>
+
+{% if tab == 'stock' %}
+<div class="vax-pills">
+  {% for a in antigens %}{% set c = status_counts[a.id] %}
+  <a class="vax-pill {{ 'active' if a.id == antigen.id }}" href="{{ url_for('rhu.barangay_stock', antigen_id=a.id) }}">{{ a.name }}
+    {% if c['Short'] %}<span class="dot dot-short" title="Short">{{ c['Short'] }}</span>{% endif %}
+    {% if c['Surplus'] %}<span class="dot dot-surplus" title="Surplus">{{ c['Surplus'] }}</span>{% endif %}</a>
+  {% endfor %}
+</div>
+
+{% if suggestions %}
+<div class="card card-pad" style="margin-bottom:18px;border-color:var(--primary);">
+  <div class="dashboard-card-title"><span class="dashboard-section-icon icon-blue">{{ icon('refresh', 18) }}</span>
+    <div><div class="card-title mb-0">Suggested redistributions: {{ antigen.name }}</div>
+    <div class="card-sub mb-0">From barangays with a surplus (soonest-expiring first) to barangays that are short. Whole unopened vials only. Reserving keeps the doses in the sender's fridge until its BHW dispatches them.</div></div></div>
+  <div class="table-wrap auto-height" style="margin-top:10px;">
+    <table class="data-table compact">
+      <thead><tr><th>From</th><th>To</th><th>Doses</th><th>Batches</th><th></th></tr></thead>
+      <tbody>
+      {% for s in suggestions %}
+        <tr>
+          <td><b>{{ s['from'].name }}</b></td>
+          <td><b>{{ s.to.name }}</b></td>
+          <td>{{ s.doses }}</td>
+          <td class="sub">{{ s.batches }}</td>
+          <td><form method="post" action="{{ url_for('rhu.transfer_create') }}">
+            <input type="hidden" name="from_barangay_id" value="{{ s['from'].id }}"><input type="hidden" name="to_barangay_id" value="{{ s.to.id }}">
+            <input type="hidden" name="antigen_id" value="{{ antigen.id }}"><input type="hidden" name="doses" value="{{ s.doses }}">
+            <input type="hidden" name="reason" value="Suggested: {{ s.to.name }} short, {{ s['from'].name }} surplus">
+            <button class="btn btn-primary btn-sm" data-confirm="Reserve {{ s.doses }} {{ antigen.name }} doses in {{ s['from'].name }} for {{ s.to.name }}?">Reserve</button>
+          </form></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<div class="card card-pad">
+  <div class="card-title">{{ antigen.name }}: stock in each barangay</div>
+  <div class="card-sub">Needed = doses due in the next {{ need_ahead }} days or overdue by up to {{ need_behind }} days.
+    <b>Incoming</b>: in transit to the barangay or reserved for it elsewhere. <b>Short</b>: available + incoming is below that need. <b>Surplus</b>: more than {{ surplus_factor }}× the need, or doses expiring within {{ need_ahead }} days that won't be used.</div>
+  <div class="table-wrap auto-height" style="margin-top:10px;">
+    <table class="data-table">
+      <thead><tr><th>Barangay</th><th>In fridge</th><th>Reserved</th><th title="In transit to it, or reserved for it in another barangay">Incoming</th><th>Available</th><th>Needed</th><th>Nearest expiry</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td><b>{{ r.barangay.name }}</b></td>
+          {% if r.status == 'Not tracked' %}
+          <td colspan="5" class="sub">No opening count or confirmed delivery yet{% if r.needed %} &middot; {{ r.needed }} dose{{ "s" if r.needed != 1 }} needed{% endif %}</td>
+          <td>-</td>
+          {% else %}
+          <td>{{ r.in_fridge }}</td>
+          <td>{{ r.reserved or '-' }}</td>
+          <td>{{ r.incoming or '-' }}</td>
+          <td><b>{{ r.available }}</b></td>
+          <td>{{ r.needed }}</td>
+          <td>{{ r.nearest_expiry.strftime('%b %d, %Y') if r.nearest_expiry else '-' }}
+            {% if r.expiring %}<div class="sub" style="color:var(--amber, #b45309);">{{ r.expiring }} expiring within {{ need_ahead }} days</div>{% endif %}</td>
+          {% endif %}
+          <td><span class="badge badge-{{ r.color }}">{{ r.status }}</span>
+            {% if r.short %}<div class="sub" style="color:var(--red);">short {{ r.short }}</div>{% elif r.spare %}<div class="sub">{{ r.spare }} can be sent</div>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% elif tab == 'transfers' %}
+<div class="card card-pad" style="margin-bottom:18px;">
+  <div class="card-title">Active redistributions</div>
+  <div class="card-sub"><b>Reserved for Redistribution</b>: still in the sender's fridge, set aside. <b>In Transit</b>: dispatched by the sender, not yet counted in. <b>Returning</b>: cancelled while in transit; the sender counts the vials back in.</div>
+  <div class="table-wrap auto-height" style="margin-top:10px;">
+    <table class="data-table">
+      <thead><tr><th>Code</th><th>Vaccine</th><th>From → To</th><th>Doses</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+      {% for t in active_transfers %}
+        <tr>
+          <td><b>{{ t.code }}</b><div class="sub">{{ (t.created_at|local).strftime('%b %d, %Y') }}</div></td>
+          <td>{{ t.antigen.name }}</td>
+          <td>{{ t.from_barangay.name }} → {{ t.to_barangay.name }}{% if t.reason %}<div class="sub">{{ t.reason }}</div>{% endif %}</td>
+          <td><b>{{ t.doses_sent }}</b>{% if t.doses_reduced %}<div class="sub" style="color:var(--red);">reduced by {{ t.doses_reduced }}: {{ t.reduce_reason }}</div>{% endif %}</td>
+          <td><span class="badge badge-{{ status_colors[t.status] }}">{{ status_labels[t.status] }}</span>
+            {% if t.dispatched_at %}<div class="sub">since {{ (t.dispatched_at|local).strftime('%b %d, %H:%M') }}</div>{% endif %}</td>
+          <td><div class="transfer-actions">
+            <a class="btn btn-outline btn-sm" href="{{ url_for('rhu.transfer_slip', transfer_id=t.id) }}" target="_blank">{{ icon('printer', 14) }} Slip</a>
+            {% if t.status in ('reserved', 'in_transit') %}
+            <form method="post" action="{{ url_for('rhu.transfer_cancel', transfer_id=t.id) }}">
+              <input class="form-control table-input" name="reason" placeholder="Reason to cancel" maxlength="200" required style="width:150px;">
+              <button class="btn btn-outline btn-sm" data-confirm="Cancel {{ t.code }}?">Cancel</button>
+            </form>
+            {% endif %}
+          </div></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6"><div class="empty-state"><div class="t">No active redistributions</div></div></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+<div class="card card-pad">
+  <div class="card-title">Completed and cancelled</div>
+  <div class="table-wrap auto-height" style="margin-top:10px;">
+    <table class="data-table compact">
+      <thead><tr><th>Code</th><th>Vaccine</th><th>From → To</th><th>Reserved</th><th>Received</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+      {% for t in recent %}
+        <tr>
+          <td><b>{{ t.code }}</b></td>
+          <td>{{ t.antigen.name }}</td>
+          <td>{{ t.from_barangay.name }} → {{ t.to_barangay.name }}{% if t.reason %}<div class="sub">{{ t.reason }}</div>{% endif %}</td>
+          <td>{{ t.doses_sent + (t.doses_reduced or 0) }}{% if t.doses_reduced %}<div class="sub">{{ t.doses_reduced }} used by sender</div>{% endif %}</td>
+          <td>{% if t.received_at %}{{ t.doses_received }}{% if t.doses_received < t.doses_sent %} <span class="sub" style="color:var(--red);">({{ t.doses_sent - t.doses_received }} lost)</span>{% endif %}{% else %}-{% endif %}</td>
+          <td><span class="badge badge-{{ status_colors[t.status] }}">{{ status_labels[t.status] }}</span>
+            {% if t.status == 'cancelled' and t.received_at %}<div class="sub">returned to sender</div>{% endif %}</td>
+          <td><a class="link" href="{{ url_for('rhu.transfer_slip', transfer_id=t.id) }}" target="_blank">Slip</a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7" class="sub">None yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% else %}
+<div class="card card-pad">
+  <div class="card-title">Discrepancy report (last 90 days)</div>
+  <div class="card-sub">Where a barangay's records and its fridge disagreed. Physical counts correct the balance; this shows how much they had to correct, so the RHU can follow up.</div>
+  <div class="table-wrap auto-height" style="margin-top:10px;">
+    <table class="data-table">
+      <thead><tr><th>Barangay</th><th>Count: missing</th><th>Count: extra</th><th>Lost in transit</th><th>Given with no stock</th><th>Reserved doses used</th></tr></thead>
+      <tbody>
+      {% for d in discrepancies %}
+        <tr>
+          <td><b>{{ d.barangay }}</b></td>
+          <td>{% if d.count_missing %}<span style="color:var(--red);font-weight:600;">{{ d.count_missing }}</span>{% else %}-{% endif %}</td>
+          <td>{{ d.count_extra or '-' }}</td>
+          <td>{% if d.transit_lost %}<span style="color:var(--red);font-weight:600;">{{ d.transit_lost }}</span>{% else %}-{% endif %}</td>
+          <td>{{ d.no_stock or '-' }}</td>
+          <td>{{ d.reserved_used or '-' }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6"><div class="empty-state"><div class="ic">{{ icon('check-circle', 34) }}</div><div class="t">No discrepancies recorded</div></div></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="sub" style="margin-top:10px;">Counts are in doses. "Given with no stock" counts doses recorded while the system showed none on hand (usually an unrecorded delivery or opening count).</p>
+</div>
+{% endif %}
+
+<div class="modal-scrim" id="newTransferModal">
+  <div class="modal-box">
+    <div class="modal-head"><h3>New Redistribution</h3><button class="modal-close" data-close-modal>×</button></div>
+    <form method="post" action="{{ url_for('rhu.transfer_create') }}">
+      <div class="modal-body">
+        <div class="form-group"><label>Vaccine</label>
+          <select class="form-control" name="antigen_id" required>{% for a in antigens %}<option value="{{ a.id }}" {{ 'selected' if a.id == antigen.id }}>{{ a.name }}</option>{% endfor %}</select></div>
+        <div class="form-group"><label>From barangay (has the doses)</label>
+          <select class="form-control" name="from_barangay_id" required><option value="">Choose…</option>{% for b in barangays %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}</select></div>
+        <div class="form-group"><label>To barangay (needs the doses)</label>
+          <select class="form-control" name="to_barangay_id" required><option value="">Choose…</option>{% for b in barangays %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}</select></div>
+        <div class="form-group"><label>Doses</label><input class="form-control" type="number" name="doses" min="1" required>
+          <div class="sub" style="margin-top:4px;">Rounded up to whole unopened vials, soonest-expiring batch first.</div></div>
+        <div class="form-group"><label>Reason (optional)</label><input class="form-control" name="reason" maxlength="255" placeholder="e.g. catch-up session in the receiving barangay"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" data-close-modal>Cancel</button>
+        <button type="submit" class="btn btn-primary">Reserve doses</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
