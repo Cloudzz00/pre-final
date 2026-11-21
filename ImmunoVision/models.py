@@ -362,6 +362,9 @@ class VialSize(db.Model):
     __tablename__ = "vial_sizes"
     antigen_id = db.Column(db.Integer, db.ForeignKey("vaccine_antigens.id"), primary_key=True)
     doses_per_vial = db.Column(db.Integer, nullable=False)
+    # True = opened vials are thrown away after the session (e.g. BCG, MMR);
+    # null = use the default in data_processor.DISCARD_AFTER_SESSION.
+    discard_after_session = db.Column(db.Boolean, nullable=True)
 
 
 class BarangayStock(db.Model):

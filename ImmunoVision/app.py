@@ -98,7 +98,7 @@ LOG_CATEGORIES = (  # log categories
     ("Record",  ("Registered child", "Updated child", "Re-assessed risk", " date for ", "Removed",  # records
                  "Recorded")),
     ("Vaccine", ("vaccine stock", "vaccine request", "Approved", "Rejected", "Distributed", "Submitted",  # vaccines
-                 "delivery", "opening stock", "doses per vial", "barangay stock")),
+                 "delivery", "opening stock", "doses per vial", "barangay stock", "physical count")),
     ("Report",  ("Exported",)),  # reports
 )
 
@@ -766,6 +766,7 @@ def stock_levels():  # stock status
     for a in core_antigens():  # each vaccine
         batches = InventoryBatch.query.filter_by(antigen_id=a.id, is_archived=False).all()  # active batches
         total = sum(b.quantity_on_hand for b in batches)  # total vials
+        doses = sum(b.quantity_on_hand * batch_doses_per_vial(b) for b in batches)  # same stock in doses
         reorder = min([b.reorder_level for b in batches], default=50)  # reorder level
         expiring = sum(1 for b in batches if b.is_expiring_soon)  # expiring
         if total <= 0:  # none
@@ -776,7 +777,7 @@ def stock_levels():  # stock status
             status, color = "Low", "amber"
         else:  # enough
             status, color = "Enough", "green"
-        rows.append({"antigen": a, "total": total, "reorder": reorder, "status": status,
+        rows.append({"antigen": a, "total": total, "doses": doses, "reorder": reorder, "status": status,
                      "color": color, "expiring": expiring, "batches": batches,
                      "pct": min(100, round((total / (reorder * 2)) * 100)) if reorder else 100})
     return rows
@@ -1873,10 +1874,12 @@ def _create_child(form, barangay_locked):  # new child
         vt = VaccineType.query.filter_by(code=code).first()
         administered = _ticked_date(form, f"dose_{code}_given", f"dose_{code}", date_registered)  # ticked dose
         doses_dict[code] = administered
-        db.session.add(VaccinationRecord(  # dose row
+        rec = VaccinationRecord(  # dose row
             child_id=child.id, vaccine_type_id=vt.id, date_administered=administered,
             status="completed" if administered else "pending", administered_by_id=current_user.id,
-        ))
+        )
+        db.session.add(rec)
+        stock_on_dose_change(child, vt, rec, None, administered)  # barangay stock
     db.session.commit()  # save
 
     barangay_name = db.session.get(Barangay, barangay_id).name
@@ -1925,8 +1928,10 @@ def _update_child(child, form):  # edit child
             db.session.add(rec)
         if rec.date_administered is not None and rec.date_administered != administered:  # date changed
             date_changes.append((vt.name, rec.date_administered, administered))
+        previous = rec.date_administered
         rec.date_administered = administered  # set date
         rec.status = "completed" if administered else "pending"
+        stock_on_dose_change(child, vt, rec, previous, administered)  # barangay stock
         # Optional doses like Rotavirus stop being given past a real age
         # cutoff (rising intussusception risk in older infants), unlike the
         # core schedule which stays catchable indefinitely. A record past
@@ -1954,8 +1959,10 @@ def _update_child(child, form):  # edit child
             db.session.add(rec)
         if rec.date_administered is not None and rec.date_administered != administered:
             date_changes.append((campaign.name, rec.date_administered, administered))
+        previous = rec.date_administered
         rec.date_administered = administered
         rec.status = "completed" if administered else "pending"
+        stock_on_dose_change(child, db.session.get(VaccineType, campaign.vaccine_type_id), rec, previous, administered)
     db.session.commit()  # save
 
     result = _recompute_risk(child)  # re-predict
@@ -2005,6 +2012,7 @@ def _write_dose(child, vt, rec, administered):  # save one dose
     previous = rec.date_administered
     rec.date_administered = administered
     rec.status = "completed" if administered else "pending"
+    stock_on_dose_change(child, vt, rec, previous, administered)  # barangay stock
     if previous is not None and previous != administered:  # date changed
         _log_dose_date_changes(child, [(vt.name, previous, administered)])
     if administered and vt.is_optional and vt.catch_up_deadline_days is not None:
@@ -2726,7 +2734,75 @@ def inventory():  # inventory page
         "inventory", page_title="Vaccine Inventory", rows=rows, stats=stats, antigens=core_antigens(),
         today_iso=date.today().isoformat(),
         default_per_vial={a.id: default_doses_per_vial(a) for a in core_antigens()},
+        batches=[(b, batch_doses_per_vial(b), batch_distributed(b)) for b in
+                 InventoryBatch.query.filter_by(is_archived=False).order_by(InventoryBatch.antigen_id,
+                                                                            InventoryBatch.expiry_date).all()],
+        wastage_reasons=WASTAGE_REASONS,
     ))
+
+
+def _rhu_batch(batch_id):
+    return db.session.get(InventoryBatch, _positive_int(batch_id) or 0) or abort(404)
+
+
+def _rhu_movement(batch, kind, vials, note):  # RHU stock change, for the audit trail
+    _record_movement(None, batch.antigen_id, kind, vials * batch_doses_per_vial(batch),
+                     note=f"RHU batch {batch.batch_number}: {note}")
+
+
+@rhu_bp.route("/inventory/<int:batch_id>/vial-size", methods=["POST"])
+def batch_vial_size(batch_id):  # correct a batch's doses per vial
+    batch = _rhu_batch(batch_id)
+    per_vial = _positive_int(request.form.get("doses_per_vial"))
+    if per_vial is None or per_vial > 100:
+        flash("Doses per vial must be a whole number from 1 to 100.", "error")
+    elif batch_distributed(batch):
+        flash(f"Batch {batch.batch_number} has already been distributed, so its vial size can no longer be changed. "
+              "A physical count corrects the barangay stock instead.", "error")
+    else:
+        old = batch_doses_per_vial(batch)
+        batch.doses_per_vial = per_vial
+        db.session.commit()
+        log_activity(f"Changed doses per vial for vaccine stock batch {batch.batch_number} from {old} to {per_vial}")
+        flash(f"Batch {batch.batch_number}: {per_vial} doses per vial.", "success")
+    return redirect(url_for("rhu.inventory"))
+
+
+@rhu_bp.route("/inventory/wastage", methods=["POST"])
+def rhu_wastage():  # RHU wastage
+    batch = _rhu_batch(request.form.get("batch_id"))
+    vials = _positive_int(request.form.get("vials"))
+    reason = request.form.get("reason")
+    error = ("Enter the number of vials lost (1 or more)." if vials is None else
+             f"Only {batch.quantity_on_hand} vials of batch {batch.batch_number} are in stock." if vials > batch.quantity_on_hand else
+             "Please choose a reason." if reason not in WASTAGE_REASONS else None)
+    if error:
+        flash(error, "error")
+        return redirect(url_for("rhu.inventory"))
+    batch.quantity_on_hand -= vials
+    _rhu_movement(batch, "wasted", -vials, f"{vials} vials, {reason}")
+    db.session.commit()
+    log_activity(f"Recorded vaccine stock wastage: {batch.antigen.name} {vials} vials (batch {batch.batch_number}, {reason})")
+    flash(f"Recorded {vials} wasted {batch.antigen.name} vials ({reason}).", "success")
+    return redirect(url_for("rhu.inventory"))
+
+
+@rhu_bp.route("/inventory/count", methods=["POST"])
+def rhu_count():  # RHU physical count
+    batch = _rhu_batch(request.form.get("batch_id"))
+    counted = _whole_number(request.form.get("vials"))
+    if counted is None:
+        flash("Vials counted must be a whole number (0 or more).", "error")
+        return redirect(url_for("rhu.inventory"))
+    diff = counted - batch.quantity_on_hand
+    if diff:
+        _rhu_movement(batch, "count_adjustment", diff, f"system {batch.quantity_on_hand}, counted {counted} vials")
+        batch.quantity_on_hand = counted
+        db.session.commit()
+    log_activity(f"Physical count of vaccine stock: {batch.antigen.name} batch {batch.batch_number}, counted {counted} vials"
+                 + (f" (difference {diff:+d})" if diff else ""))
+    flash(f"Batch {batch.batch_number}: {counted} vials" + (f" (difference {diff:+d})." if diff else " (matches)."), "success")
+    return redirect(url_for("rhu.inventory"))
 
 
 @rhu_bp.route("/requests")
@@ -2929,6 +3005,10 @@ def barangay_stock_summary(barangay_id):  # My Stock rows
         else:
             status, color = "OK", "green"
         rows.append({
+            "no_stock": StockMovement.query.filter(
+                StockMovement.barangay_id == barangay_id, StockMovement.antigen_id == a.id,
+                StockMovement.kind == "no_stock",
+                StockMovement.created_at >= datetime.utcnow() - timedelta(days=30)).count(),
             "antigen": a, "tracked": a.id in tracked, "lots": usable,
             "in_fridge": in_fridge, "reserved": held, "available": available,
             "vials": " + ".join(vials_label(lot.doses_on_hand, lot.doses_per_vial) for lot in usable) or "-",
@@ -2936,6 +3016,69 @@ def barangay_stock_summary(barangay_id):  # My Stock rows
             "nearest_expiry": nearest, "needed": needed, "status": status, "color": color,
         })
     return rows
+
+
+WASTAGE_REASONS = ("Broken vial", "Cold-chain failure", "Opened vial discarded", "Contaminated", "Other")
+END_OF_SESSION_REASON = "Opened vial discarded (end of session)"
+
+
+def discards_after_session(antigen):  # discard opened vials after the session?
+    row = db.session.get(VialSize, antigen.id)
+    if row is not None and row.discard_after_session is not None:
+        return row.discard_after_session
+    return antigen.code in dp.DISCARD_AFTER_SESSION
+
+
+def batch_distributed(batch):  # any vial already sent out?
+    return (StockTransferItem.query.join(StockTransfer)
+            .filter(StockTransfer.kind == "delivery", StockTransfer.antigen_id == batch.antigen_id,
+                    StockTransferItem.batch_number == batch.batch_number).first() is not None)
+
+
+def tracking_start(barangay_id, antigen_id):  # date stock tracking began
+    first = (StockMovement.query.filter_by(barangay_id=barangay_id, antigen_id=antigen_id)
+             .order_by(StockMovement.created_at, StockMovement.id).first())
+    return to_local(first.created_at).date() if first else None
+
+
+def usable_lots(barangay_id, antigen_id):  # soonest expiry first
+    lots = BarangayStock.query.filter(BarangayStock.barangay_id == barangay_id,
+                                      BarangayStock.antigen_id == antigen_id,
+                                      BarangayStock.doses_on_hand > 0).all()
+    return sorted([lot for lot in lots if not lot.is_expired], key=lambda lot: (lot.expiry_date or date.max, lot.id))
+
+
+def stock_on_dose_change(child, vt, rec, previous, new):  # keep stock in step with dose records
+    """Called whenever a dose date is saved. A dose recorded by a BHW, dated on
+    or after the day stock tracking began, takes 1 dose from the barangay
+    (soonest expiry first). Removing a dose, or moving it to before tracking
+    began, returns it to the batch it came from. Recording is never blocked:
+    with no stock on hand the dose is saved and flagged instead."""
+    if vt is None or child.barangay_id is None or previous == new:
+        return
+    db.session.flush()  # make sure rec has an id
+    bid, antigen_id = child.barangay_id, vt.antigen_id
+    taken = StockMovement.query.filter_by(vaccination_record_id=rec.id).filter(
+        StockMovement.kind.in_(("administered", "reversal"))).all()
+    consumed = sum(m.doses for m in taken) < 0
+    start = tracking_start(bid, antigen_id)
+    counts = new is not None and start is not None and new >= start
+    if consumed and not counts:  # removed, or moved to before tracking: give it back
+        last = next(m for m in sorted(taken, key=lambda m: -m.id) if m.kind == "administered")
+        if last.stock is not None:
+            last.stock.doses_on_hand += 1
+        _record_movement(bid, antigen_id, "reversal", 1, lot=last.stock, record=rec,
+                         note=f"{vt.name} for {child.display_name} removed or corrected")
+    elif not consumed and counts and previous is None and current_user.is_authenticated \
+            and current_user.role == "bhw":
+        lots = usable_lots(bid, antigen_id)
+        if lots:
+            lots[0].doses_on_hand -= 1
+            _record_movement(bid, antigen_id, "administered", -1, lot=lots[0], record=rec,
+                             note=f"{vt.name} for {child.display_name}")
+        else:
+            _record_movement(bid, antigen_id, "no_stock", 0, record=rec,
+                             note=f"{vt.name} for {child.display_name}: recorded with no stock on hand")
 
 
 def delivery_of(vaccine_request):  # request -> its delivery
@@ -3141,6 +3284,8 @@ def campaign_record_dose(campaign_id, child_id):
             previous = rec.date_administered
             rec.date_administered = administered
             rec.status = "completed" if administered else "pending"
+            stock_on_dose_change(child, db.session.get(VaccineType, campaign.vaccine_type_id),
+                                 rec, previous, administered)  # barangay stock
             db.session.commit()
             if previous is not None and previous != administered:
                 _log_dose_date_changes(child, [(campaign.name, previous, administered)])
@@ -3513,15 +3658,161 @@ def stock():  # My Stock page
     return render_template("bhw_stock.html", **_bhw_ctx(
         "stock", page_title="My Stock", rows=rows, incoming=incoming, history=history,
         untracked=untracked, default_per_vial={a.id: default_doses_per_vial(a) for a in core_antigens()},
-        loss_reasons=LOSS_REASONS, today_iso=date.today().isoformat(),
-        movement_labels=MOVEMENT_LABELS))
+        loss_reasons=LOSS_REASONS, wastage_reasons=WASTAGE_REASONS, session_rows=end_of_session_rows(bid),
+        today_iso=date.today().isoformat(), movement_labels=MOVEMENT_LABELS))
+
+
+def end_of_session_rows(barangay_id):  # leftover doses in today's opened vials
+    """For each vaccine given today, the doses left in the last opened vial
+    (e.g. 4 MMR doses from 10-dose vials leaves 6). Pre-ticked for vaccines
+    discarded after the session; others may be kept (multi-dose vial policy)."""
+    today = date.today()
+    given = [m for m in StockMovement.query.filter_by(barangay_id=barangay_id, kind="administered").filter(
+                 StockMovement.created_at >= datetime.utcnow() - timedelta(days=2)).all()
+             if to_local(m.created_at).date() == today]
+    already = {m.antigen_id for m in StockMovement.query.filter_by(barangay_id=barangay_id, kind="wasted").filter(
+                   StockMovement.note.like(END_OF_SESSION_REASON + "%"),
+                   StockMovement.created_at >= datetime.utcnow() - timedelta(days=2)).all()
+               if to_local(m.created_at).date() == today}
+    out = []
+    for antigen_id in sorted({m.antigen_id for m in given} - already):
+        mine = [m for m in given if m.antigen_id == antigen_id and m.stock is not None]
+        if not mine:
+            continue
+        lot = max(mine, key=lambda m: m.id).stock  # vial opened most recently
+        used = sum(1 for m in mine if m.stock is lot)  # doses taken from that batch today
+        leftover = min((-used) % lot.doses_per_vial if lot.doses_per_vial > 1 else 0, lot.doses_on_hand)
+        if leftover > 0:
+            out.append({"antigen": lot.antigen, "lot": lot, "given_today": len(mine), "leftover": leftover,
+                        "discard": discards_after_session(lot.antigen)})
+    return out
 
 
 MOVEMENT_LABELS = {
     "opening": "Opening count", "received": "Received", "administered": "Dose given",
     "reversal": "Dose removed (returned)", "wasted": "Wastage", "expired": "Expired",
     "count_adjustment": "Count adjustment", "transfer_out": "Sent to barangay", "transfer_in": "Received from barangay",
+    "no_stock": "Dose given (no stock on hand)",
 }
+
+
+def _own_lot(lot_id):  # a batch in the BHW's own barangay, or 404/403
+    lot = db.session.get(BarangayStock, _positive_int(lot_id) or 0) or abort(404)
+    if lot.barangay_id != current_user.barangay_id:
+        abort(403)
+    return lot
+
+
+@bhw_bp.route("/stock/wastage", methods=["POST"])
+def stock_wastage():  # log wastage
+    lot = _own_lot(request.form.get("lot_id"))
+    doses = _positive_int(request.form.get("doses"))
+    reason = request.form.get("reason")
+    error = ("Enter the number of doses lost (1 or more)." if doses is None else
+             f"Only {lot.doses_on_hand} doses of batch {lot.batch_number} are on hand." if doses > lot.doses_on_hand else
+             "Please choose a reason." if reason not in WASTAGE_REASONS else None)
+    if error:
+        flash(error, "error")
+        return redirect(url_for("bhw.stock"))
+    lot.doses_on_hand -= doses
+    _record_movement(lot.barangay_id, lot.antigen_id, "wasted", -doses, lot=lot, note=reason)
+    db.session.commit()
+    log_activity(f"Recorded barangay stock wastage: {lot.antigen.name} {doses} doses (batch {lot.batch_number}, {reason})")
+    flash(f"Recorded {doses} wasted {lot.antigen.name} doses ({reason}).", "success")
+    return redirect(url_for("bhw.stock"))
+
+
+@bhw_bp.route("/stock/discard", methods=["POST"])
+def stock_discard():  # end-of-session discard
+    saved = []
+    for row in end_of_session_rows(current_user.barangay_id):
+        lot = row["lot"]
+        if not request.form.get(f"discard_{lot.id}"):
+            continue
+        doses = _whole_number(request.form.get(f"doses_{lot.id}"))
+        if doses is None or doses > lot.doses_on_hand:
+            flash(f"{lot.antigen.name}: enter 0 to {lot.doses_on_hand} doses to discard.", "error")
+            return redirect(url_for("bhw.stock"))
+        if doses:
+            lot.doses_on_hand -= doses
+            _record_movement(lot.barangay_id, lot.antigen_id, "wasted", -doses, lot=lot,
+                             note=f"{END_OF_SESSION_REASON}, batch {lot.batch_number}")
+            saved.append(f"{lot.antigen.name} {doses}")
+    if not saved:
+        flash("Nothing was discarded.", "info")
+        return redirect(url_for("bhw.stock"))
+    db.session.commit()
+    log_activity("Recorded barangay stock end-of-session discard: " + ", ".join(saved) + " doses")
+    flash("End-of-session discard recorded: " + ", ".join(saved) + " doses.", "success")
+    return redirect(url_for("bhw.stock"))
+
+
+@bhw_bp.route("/stock/expired/<int:antigen_id>", methods=["POST"])
+def stock_dispose_expired(antigen_id):  # dispose expired doses
+    lots = [lot for lot in BarangayStock.query.filter_by(barangay_id=current_user.barangay_id, antigen_id=antigen_id)
+            .filter(BarangayStock.doses_on_hand > 0).all() if lot.is_expired]
+    if not lots:
+        flash("No expired doses to dispose.", "info")
+        return redirect(url_for("bhw.stock"))
+    total = 0
+    for lot in lots:
+        total += lot.doses_on_hand
+        _record_movement(lot.barangay_id, lot.antigen_id, "expired", -lot.doses_on_hand, lot=lot,
+                         note=f"Batch {lot.batch_number} expired {lot.expiry_date.isoformat()}")
+        lot.doses_on_hand = 0
+    db.session.commit()
+    log_activity(f"Disposed expired barangay stock: {lots[0].antigen.name} {total} doses")
+    flash(f"{total} expired {lots[0].antigen.name} doses disposed.", "success")
+    return redirect(url_for("bhw.stock"))
+
+
+@bhw_bp.route("/stock/count/<int:antigen_id>", methods=["POST"])
+def stock_count(antigen_id):  # physical count
+    """Correct the balance to what is physically in the fridge, either batch by
+    batch (full vials + loose doses) or as one total in doses (spread over the
+    batches, soonest expiry first). The difference is recorded."""
+    bid = current_user.barangay_id
+    antigen = db.session.get(VaccineAntigen, antigen_id) or abort(404)
+    lots = usable_lots(bid, antigen_id)
+    if not lots:
+        flash(f"No {antigen.name} stock to count. Use an opening count or confirm a delivery first.", "error")
+        return redirect(url_for("bhw.stock"))
+    total_raw = (request.form.get("total_doses") or "").strip()
+    counted = {}
+    if total_raw:  # one total, spread soonest-expiry first
+        total = _whole_number(total_raw)
+        if total is None:
+            flash("Total doses counted must be a whole number (0 or more).", "error")
+            return redirect(url_for("bhw.stock"))
+        left = total
+        for lot in lots:
+            counted[lot.id] = min(lot.doses_on_hand, left)
+            left -= counted[lot.id]
+        counted[lots[0].id] += left  # any surplus goes to the soonest batch
+    else:  # batch by batch
+        for lot in lots:
+            full = _whole_number(request.form.get(f"full_{lot.id}") or "0")
+            loose = _whole_number(request.form.get(f"loose_{lot.id}") or "0")
+            if full is None or loose is None:
+                flash(f"Batch {lot.batch_number}: full vials and loose doses must be whole numbers.", "error")
+                return redirect(url_for("bhw.stock"))
+            if lot.doses_per_vial > 1 and loose >= lot.doses_per_vial:
+                flash(f"Batch {lot.batch_number}: loose doses must be fewer than one vial ({lot.doses_per_vial}).", "error")
+                return redirect(url_for("bhw.stock"))
+            counted[lot.id] = full * lot.doses_per_vial + loose
+    system = sum(lot.doses_on_hand for lot in lots)
+    for lot in lots:
+        diff = counted[lot.id] - lot.doses_on_hand
+        if diff:
+            _record_movement(bid, antigen_id, "count_adjustment", diff, lot=lot,
+                             note=f"System {lot.doses_on_hand}, counted {counted[lot.id]}")
+            lot.doses_on_hand = counted[lot.id]
+    db.session.commit()
+    new_total = sum(counted.values())
+    log_activity(f"Physical count of barangay stock: {antigen.name} system {system}, counted {new_total} doses")
+    flash(f"{antigen.name} count saved: {new_total} doses"
+          + (f" (difference {new_total - system:+d})." if new_total != system else " (matches the system)."), "success")
+    return redirect(url_for("bhw.stock"))
 
 
 @bhw_bp.route("/stock/opening", methods=["POST"])
@@ -3727,6 +4018,8 @@ def campaign_record_dose(campaign_id, child_id):
             previous = rec.date_administered
             rec.date_administered = administered
             rec.status = "completed" if administered else "pending"
+            stock_on_dose_change(child, db.session.get(VaccineType, campaign.vaccine_type_id),
+                                 rec, previous, administered)  # barangay stock
             db.session.commit()
             if previous is not None and previous != administered:
                 _log_dose_date_changes(child, [(campaign.name, previous, administered)])
@@ -4075,7 +4368,8 @@ def vaccine_alerts():
     harder to find."""
     return render_template("admin_vaccine_alerts.html", **_admin_ctx(
         "vaccines", page_title="Vaccine Alerts", stock=stock_levels(),
-        default_per_vial={a.id: default_doses_per_vial(a) for a in core_antigens()}))
+        default_per_vial={a.id: default_doses_per_vial(a) for a in core_antigens()},
+        discard_after={a.id: discards_after_session(a) for a in core_antigens()}))
 
 
 @admin_bp.route("/vaccine-alerts/warning-levels", methods=["POST"])
@@ -4102,6 +4396,14 @@ def update_warning_levels():
                 row.doses_per_vial = dpv
                 db.session.add(row)
                 changed.append(f"{antigen.name} doses per vial {old} to {dpv}")
+        if request.form.get("has_discard_settings"):
+            want = bool(request.form.get(f"discard_{antigen.id}"))
+            if want != discards_after_session(antigen):
+                row = db.session.get(VialSize, antigen.id) or VialSize(antigen_id=antigen.id,
+                                                                       doses_per_vial=default_doses_per_vial(antigen))
+                row.discard_after_session = want
+                db.session.add(row)
+                changed.append(f"{antigen.name} discard opened vials after session: {'yes' if want else 'no'}")
         raw = request.form.get(f"warn_{antigen.id}")
         if raw is None or not raw.strip():
             continue
@@ -4311,10 +4613,14 @@ def upgrade_schema():
     makes new tables but never adds a column to an existing one, so each new
     column is added here once, if missing. Nothing is removed or changed."""
     from sqlalchemy import inspect, text
-    columns = {c["name"] for c in inspect(db.engine).get_columns("inventory_batches")}
-    if "doses_per_vial" not in columns:
-        with db.engine.begin() as conn:
-            conn.execute(text("ALTER TABLE inventory_batches ADD COLUMN doses_per_vial INTEGER"))
+    added = {"inventory_batches": [("doses_per_vial", "INTEGER")],
+             "vial_sizes": [("discard_after_session", "BOOLEAN")]}
+    for table, new_columns in added.items():
+        columns = {c["name"] for c in inspect(db.engine).get_columns(table)}
+        for name, kind in new_columns:
+            if name not in columns:
+                with db.engine.begin() as conn:
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {kind}"))
 
 
 def name_unnamed_children():

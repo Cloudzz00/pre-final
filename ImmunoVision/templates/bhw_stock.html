@@ -1,6 +1,12 @@
 {% extends "layout_app.html" %}
 {% from "_icons.html" import icon %}
 {% block content %}
+<style>
+  .stock-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:3px; }
+  .link-btn { background:none; border:0; padding:0; color:var(--primary); font-size:12px; font-weight:600; cursor:pointer; }
+  .link-btn:hover { text-decoration:underline; }
+  .link-btn.danger { color:var(--red); }
+</style>
 {# The barangay's own vaccine stock, counted in doses. It changes only when
    vials physically arrive (confirmed below), doses are given, or a count or
    wastage is recorded - never because of a click elsewhere. #}
@@ -55,6 +61,35 @@
 </div>
 {% endif %}
 
+{% if session_rows %}
+<div class="card card-pad" style="margin-bottom:18px;">
+  <div class="dashboard-card-title"><span class="dashboard-section-icon icon-orange">{{ icon('clock', 18) }}</span>
+    <div><div class="card-title mb-0">End of session: opened vials</div>
+    <div class="card-sub mb-0">Leftover doses in the vials opened today. BCG and MMR must be discarded after the session; other opened vials may be kept up to 28 days if the vial monitor and cold chain are OK.</div></div></div>
+  <form method="post" action="{{ url_for('bhw.stock_discard') }}" style="margin-top:12px;">
+    <div class="table-wrap auto-height">
+      <table class="data-table compact">
+        <thead><tr><th>Discard</th><th>Vaccine</th><th>Given today</th><th>Batch</th><th>Leftover doses to discard</th></tr></thead>
+        <tbody>
+        {% for row in session_rows %}
+          <tr>
+            <td><input type="checkbox" name="discard_{{ row.lot.id }}" value="1" {{ 'checked' if row.discard else '' }}></td>
+            <td><b>{{ row.antigen.name }}</b>{% if not row.discard %}<div class="text-muted" style="font-size:11.5px;">may be kept up to 28 days</div>{% endif %}</td>
+            <td>{{ row.given_today }}</td>
+            <td>{{ row.lot.batch_number }} <span class="text-muted">({{ row.lot.doses_per_vial }} per vial)</span></td>
+            <td><input class="form-control table-input" type="number" name="doses_{{ row.lot.id }}" value="{{ row.leftover }}" min="0" max="{{ row.lot.doses_on_hand }}" style="width:100px;"></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:10px;">
+      <button class="btn btn-primary btn-sm" data-confirm="Record the ticked doses as discarded?">{{ icon('check', 14) }} Record discard</button>
+    </div>
+  </form>
+</div>
+{% endif %}
+
 <div class="card card-pad" style="margin-bottom:18px;">
   <div class="card-title">Stock by Vaccine</div>
   <div class="card-sub">"Needed soon" = doses your children are due for in the next 30 days or overdue by up to 90 days. Reserved doses are set aside for another barangay and should not be used.</div>
@@ -64,11 +99,18 @@
       <tbody>
       {% for r in rows %}
         <tr>
-          <td><b>{{ r.antigen.name }}</b></td>
+          <td><b>{{ r.antigen.name }}</b>
+            <div class="stock-actions">
+              {% if r.lots %}<button type="button" class="link-btn" data-open-modal="countModal{{ r.antigen.id }}">Count</button>
+              <button type="button" class="link-btn" data-open-modal="wasteModal{{ r.antigen.id }}">Wastage</button>{% endif %}
+              {% if r.expired %}<form method="post" action="{{ url_for('bhw.stock_dispose_expired', antigen_id=r.antigen.id) }}" style="display:inline">
+                <button class="link-btn danger" data-confirm="Dispose {{ r.expired }} expired {{ r.antigen.name }} doses?">Dispose expired</button></form>{% endif %}
+            </div></td>
           <td>{% if r.tracked %}<b>{{ r.in_fridge }}</b> doses<div class="text-muted" style="font-size:11.5px;">{{ r.vials }}</div>{% else %}<span class="text-muted">-</span>{% endif %}</td>
           <td>{{ r.reserved if r.reserved else '-' }}</td>
           <td>{% if r.tracked %}<b>{{ r.available }}</b> doses{% else %}<span class="text-muted">-</span>{% endif %}
-            {% if r.expired %}<div style="font-size:11.5px;color:var(--red);">{{ r.expired }} expired doses to dispose</div>{% endif %}</td>
+            {% if r.expired %}<div style="font-size:11.5px;color:var(--red);">{{ r.expired }} expired doses to dispose</div>{% endif %}
+            {% if r.no_stock %}<div style="font-size:11.5px;color:var(--red);">{{ r.no_stock }} given with no stock (30 days)</div>{% endif %}</td>
           <td>{{ r.needed }}</td>
           <td>{{ r.nearest_expiry.strftime('%b %d, %Y') if r.nearest_expiry else '-' }}</td>
           <td><span class="badge badge-{{ r.color }}">{{ r.status }}</span></td>
@@ -106,6 +148,63 @@
     </table>
   </div>
 </div>
+
+{% for r in rows if r.lots %}
+<div class="modal-scrim" id="countModal{{ r.antigen.id }}">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Physical Count: {{ r.antigen.name }}</h3><button class="modal-close" data-close-modal>×</button></div>
+    <form method="post" action="{{ url_for('bhw.stock_count', antigen_id=r.antigen.id) }}">
+      <div class="modal-body">
+        <p class="text-muted" style="font-size:13px;margin-top:0;">Count what is in your fridge now. The system currently shows <b>{{ r.in_fridge }} doses</b>.</p>
+        <div class="table-wrap auto-height">
+          <table class="data-table compact">
+            <thead><tr><th>Batch</th><th>Expiry</th><th>System</th><th>Full vials</th><th>Loose doses</th></tr></thead>
+            <tbody>
+            {% for lot in r.lots %}
+              <tr>
+                <td>{{ lot.batch_number }}<div class="text-muted" style="font-size:11.5px;">{{ lot.doses_per_vial }} per vial</div></td>
+                <td>{{ lot.expiry_date.strftime('%b %d, %Y') if lot.expiry_date else '-' }}</td>
+                <td>{{ lot.doses_on_hand }}</td>
+                <td><input class="form-control table-input" type="number" name="full_{{ lot.id }}" min="0" value="{{ lot.doses_on_hand // lot.doses_per_vial }}" style="width:80px;"></td>
+                <td><input class="form-control table-input" type="number" name="loose_{{ lot.id }}" min="0" value="{{ lot.doses_on_hand % lot.doses_per_vial }}" style="width:80px;"></td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="form-group" style="margin-top:12px;"><label>Or, if batches are mixed up: total doses counted</label>
+          <input class="form-control" type="number" name="total_doses" min="0" placeholder="Leave blank to use the batch counts above"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" data-close-modal>Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Count</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="modal-scrim" id="wasteModal{{ r.antigen.id }}">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Record Wastage: {{ r.antigen.name }}</h3><button class="modal-close" data-close-modal>×</button></div>
+    <form method="post" action="{{ url_for('bhw.stock_wastage') }}">
+      <div class="modal-body">
+        <div class="form-group"><label>Batch</label>
+          <select class="form-control" name="lot_id" required>
+            {% for lot in r.lots %}<option value="{{ lot.id }}">{{ lot.batch_number }} ({{ lot.doses_on_hand }} doses on hand)</option>{% endfor %}
+          </select></div>
+        <div class="form-group"><label>Doses lost</label><input class="form-control" type="number" name="doses" min="1" required></div>
+        <div class="form-group"><label>Reason</label>
+          <select class="form-control" name="reason" required>
+            {% for reason in wastage_reasons %}<option value="{{ reason }}">{{ reason }}</option>{% endfor %}
+          </select></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" data-close-modal>Cancel</button>
+        <button type="submit" class="btn btn-primary">Record Wastage</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endfor %}
 
 {% if untracked %}
 <div class="modal-scrim" id="openingModal">

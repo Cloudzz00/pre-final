@@ -30,10 +30,11 @@
      but cannot change it. #}
 
   <form method="post" action="{{ url_for('admin.update_warning_levels') }}" style="margin-top:14px;">
+    <input type="hidden" name="has_discard_settings" value="1">
     <div class="table-wrap auto-height">
       <table class="data-table compact">
         <thead><tr>
-          <th>Vaccine</th><th>Vials Left</th><th>Warn At</th><th title="Pre-fills the Add Stock form; each batch keeps its own value">Doses per Vial (default)</th><th>Status</th><th>Stock Level</th>
+          <th>Vaccine</th><th>Vials Left</th><th>Warn At</th><th title="Pre-fills the Add Stock form; each batch keeps its own value">Doses per Vial (default)</th><th title="Opened vials are discarded at the end of the session (e.g. BCG, MMR)">Discard Opened Vials After Session</th><th>Status</th><th>Stock Level</th>
         </tr></thead>
         <tbody>
           {% for r in stock %}
@@ -56,6 +57,7 @@
                 <span class="text-muted">doses</span>
               </div>
             </td>
+            <td style="text-align:center;"><input type="checkbox" name="discard_{{ r.antigen.id }}" value="1" {{ 'checked' if discard_after[r.antigen.id] else '' }} aria-label="Discard opened {{ r.antigen.name }} vials after the session"></td>
             <td><span class="badge badge-{{ r.color }}">{{ r.status }}</span></td>
             <td>
               <div class="cov-cell">
