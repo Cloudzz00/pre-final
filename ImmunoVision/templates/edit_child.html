@@ -56,6 +56,12 @@
 
     <div class="section-divider-bar">Vaccination Records — BCG &amp; Hepatitis B</div>
     <p class="text-muted" style="font-size:12.5px;margin:-4px 0 14px;">Check a dose to fill in today’s date automatically. You can still edit the date or previously recorded doses.</p>
+    {% if request.blueprint == 'bhw' %}
+    <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin:0 0 14px;cursor:pointer;">
+      <input type="checkbox" name="given_elsewhere" value="1" style="margin-top:3px;">
+      <span><strong>Transferred in:</strong> doses newly added in this edit were given at another health center, so they won&rsquo;t be taken from this barangay&rsquo;s stock.</span>
+    </label>
+    {% endif %}
     <div class="form-grid-2">
       <div class="form-group"><label>BCG (date given)</label><div class="dose-edit-row" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><label style="display:inline-flex;align-items:center;gap:7px;font-weight:400;margin:0;"><input type="checkbox" class="dose-check" data-date-target="dose_BCG" {% if doses['BCG'] %}checked{% endif %}> Given</label><input class="form-control dose-date" style="max-width:185px;" type="date" max="{{ today.isoformat() }}" name="dose_BCG" value="{{ doses['BCG'].isoformat() if doses['BCG'] else '' }}" {% if not doses['BCG'] %}disabled{% endif %}></div></div>
       <div class="form-group"><label>Hepa B-BD (date given)</label><div class="dose-edit-row" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><label style="display:inline-flex;align-items:center;gap:7px;font-weight:400;margin:0;"><input type="checkbox" class="dose-check" data-date-target="dose_HEPA-BD" {% if doses['HEPA-BD'] %}checked{% endif %}> Given</label><input class="form-control dose-date" style="max-width:185px;" type="date" max="{{ today.isoformat() }}" name="dose_HEPA-BD" value="{{ doses['HEPA-BD'].isoformat() if doses['HEPA-BD'] else '' }}" {% if not doses['HEPA-BD'] %}disabled{% endif %}></div></div>

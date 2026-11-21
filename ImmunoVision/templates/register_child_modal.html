@@ -71,6 +71,12 @@
           if that's wrong, change the date shown once you tick the box.
           {% endif %}
         </p>
+        {% if request.blueprint == 'bhw' %}
+        <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin:0 0 14px;cursor:pointer;">
+          <input type="checkbox" name="given_elsewhere" value="1" style="margin-top:3px;">
+          <span><strong>Transferred in:</strong> the doses ticked below were given at another health center, so they won&rsquo;t be taken from this barangay&rsquo;s stock.</span>
+        </label>
+        {% endif %}
 
         {% set vaccine_groups = [
           ('BCG & Hepatitis B', [('BCG', 'BCG'), ('HEPA-BD', 'Hepa B-BD (Birth Dose)')]),

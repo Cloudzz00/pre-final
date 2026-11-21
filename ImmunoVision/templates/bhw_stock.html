@@ -136,7 +136,7 @@
           <td>{{ (m.created_at|local).strftime('%b %d, %Y %H:%M') }}</td>
           <td>{{ m.antigen.name }}</td>
           <td>{{ movement_labels.get(m.kind, m.kind) }}</td>
-          <td style="color:{{ 'var(--green-dark, #16a34a)' if m.doses > 0 else 'var(--red)' }};font-weight:600;">{{ '+' if m.doses > 0 else '' }}{{ m.doses }}</td>
+          <td style="color:{{ 'var(--green-dark, #16a34a)' if m.doses > 0 else ('var(--red)' if m.doses < 0 else 'var(--text-secondary)') }};font-weight:600;">{{ '+' if m.doses > 0 else '' }}{{ m.doses }}</td>
           <td>{{ m.stock.batch_number if m.stock else '-' }}</td>
           <td>{{ m.user.full_name if m.user else '-' }}</td>
           <td class="text-muted">{{ m.note or '' }}</td>
