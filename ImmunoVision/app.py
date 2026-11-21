@@ -95,13 +95,16 @@ def create_app():
 # page and its filter always agree.
 LOG_CATEGORIES = (  # log categories
     ("Login",   ("Logged in", "Logged out")),  # login
-    ("Admin",   ("Created user", "Enabled user", "Disabled user", "Reassigned")),  # admin
-    ("Record",  ("Registered child", "Updated child", "Re-assessed risk", " date for ", "Removed",  # records
-                 "Recorded")),
+    ("Admin",   ("Created user", "Enabled user", "Disabled user", "Reassigned", "Reset password for user",  # admin
+                 "campaign:", "target population")),
+    # Report and Vaccine are checked before Record: "Recorded barangay stock
+    # wastage" is a stock change, not a child record.
+    ("Report",  ("Exported",)),  # reports
     ("Vaccine", ("vaccine stock", "vaccine request", "Approved", "Rejected", "Distributed", "Submitted",  # vaccines
                  "delivery", "opening stock", "doses per vial", "barangay stock", "physical count",
-                 "redistribution", "Redistribution")),
-    ("Report",  ("Exported",)),  # reports
+                 "redistribution")),
+    ("Record",  ("Registered child", "Updated child", "Re-assessed risk", " date for ", "Removed",  # records
+                 "Recorded")),
 )
 
 
@@ -1506,6 +1509,11 @@ def map_markers(mode="heatmap"):
 # ---------------------------------------------------------------------------
 
 def get_notifications(role, barangay_id=None):  # alerts
+    if role == "bhw" and not barangay_id:  # unassigned BHW: nothing municipality-wide
+        return _apply_seen_state([{"category": "System", "severity": "warning", "icon": "map-pin", "icon_bg": "bg-orange",
+                                   "title": "No Barangay Assigned",
+                                   "body": "Ask the administrator to assign your barangay to start using ImmunoVision.",
+                                   "time_label": "Action needed", "unread": True}], current_user)
     notes = []
     for antigen in core_antigens():  # each vaccine
         total = (db.session.query(func.coalesce(func.sum(InventoryBatch.quantity_on_hand), 0))  # stock total
@@ -2982,6 +2990,13 @@ def reserved_doses(barangay_id):  # {antigen_id: doses}
     return out
 
 
+def _stock_schedule():  # (dose code, antigen code, due age in days), core + optional
+    """Every dose barangay stock is kept for: the routine schedule plus
+    optional vaccines such as Rotavirus, which is also stocked and requested."""
+    return ([(code, antigen, days) for code, _n, antigen, _d, days in dp.VACCINE_SCHEDULE] +
+            [(code, antigen, days) for code, _n, antigen, _d, days, _end in dp.OPTIONAL_VACCINE_SCHEDULE])
+
+
 def doses_needed_soon(barangay_id):  # {antigen code: doses}
     """Doses the barangay's children will need soon: not yet given, still
     catchable, and due in the next 30 days or overdue by up to 90 days."""
@@ -2990,7 +3005,7 @@ def doses_needed_soon(barangay_id):  # {antigen code: doses}
     need = Counter()
     for child in filtered_children(barangay_id):
         given = _doses_given(child.id)
-        for code, _name, antigen, _dose, rec_days in dp.VACCINE_SCHEDULE:
+        for code, antigen, rec_days in _stock_schedule():
             vt = vt_lookup.get(code)
             if vt is None or given.get(vt.id) is not None or not _still_catchable(vt, child.age_in_days):
                 continue
@@ -3008,6 +3023,11 @@ def barangay_stock_summary(barangay_id):  # My Stock rows
     tracked = {a for (a,) in db.session.query(StockMovement.antigen_id)
                .filter_by(barangay_id=barangay_id).distinct()}
     need, reserved = doses_needed_soon(barangay_id), reserved_doses(barangay_id)
+    coming = Counter()  # in transit to this barangay, returning to it, or reserved for it elsewhere
+    for t in StockTransfer.query.filter(StockTransfer.status.in_(("reserved", "in_transit", "returning"))).all():
+        if (t.status == "returning" and t.from_barangay_id == barangay_id) or \
+                (t.status != "returning" and t.to_barangay_id == barangay_id):
+            coming[t.antigen_id] += t.doses_sent
     rows = []
     for a in core_antigens():
         mine = [lot for lot in lots if lot.antigen_id == a.id and lot.doses_on_hand > 0]
@@ -3022,7 +3042,7 @@ def barangay_stock_summary(barangay_id):  # My Stock rows
         elif available <= 0:
             status, color = "Out of stock", "red"
         elif available < needed:
-            status, color = "Low", "amber"
+            status, color = ("Low (delivery coming)", "amber") if available + coming[a.id] >= needed else ("Low", "amber")
         elif nearest and (nearest - today).days <= 30:
             status, color = "Expiring soon", "amber"
         else:
@@ -3033,7 +3053,7 @@ def barangay_stock_summary(barangay_id):  # My Stock rows
                 StockMovement.kind == "no_stock",
                 StockMovement.created_at >= datetime.utcnow() - timedelta(days=30)).count(),
             "antigen": a, "tracked": a.id in tracked, "lots": usable,
-            "in_fridge": in_fridge, "reserved": held, "available": available,
+            "in_fridge": in_fridge, "reserved": held, "available": available, "coming": coming[a.id],
             "vials": " + ".join(vials_label(lot.doses_on_hand, lot.doses_per_vial) for lot in usable) or "-",
             "expired": sum(lot.doses_on_hand for lot in mine if lot.is_expired),
             "nearest_expiry": nearest, "needed": needed, "status": status, "color": color,
@@ -3202,7 +3222,7 @@ def doses_needed_by_barangay(barangay_ids=None):  # {barangay id: {antigen code:
         children = children.filter(Child.barangay_id.in_(list(barangay_ids)))
     for child in children.all():
         given = _doses_given(child.id)
-        for code, _name, antigen, _dose, rec_days in dp.VACCINE_SCHEDULE:
+        for code, antigen, rec_days in _stock_schedule():
             vt = vt_lookup.get(code)
             if vt is None or given.get(vt.id) is not None or not _still_catchable(vt, child.age_in_days):
                 continue
@@ -3990,7 +4010,13 @@ def _bhw_ctx(active, **extra):
 @login_required
 @role_required("bhw")
 def _bhw_guard():
-    pass
+    # A BHW sees only their own barangay. Without one (new account, or the
+    # admin cleared it) every barangay filter would be empty and pages would
+    # show the whole municipality, so only Settings stays open.
+    if current_user.barangay_id is None and request.endpoint not in ("bhw.settings", "bhw.notifications"):
+        flash("Your account is not assigned to a barangay yet. Ask the administrator to assign one; "
+              "until then only Settings is available.", "warning")
+        return redirect(url_for("bhw.settings"))
 
 
 @bhw_bp.route("/dashboard")
@@ -4335,7 +4361,8 @@ def stock():  # My Stock page
     untracked = [r["antigen"] for r in rows if not r["tracked"]]
     return render_template("bhw_stock.html", **_bhw_ctx(
         "stock", page_title="My Stock", rows=rows, incoming=incoming, history=history,
-        untracked=untracked, default_per_vial={a.id: default_doses_per_vial(a) for a in core_antigens()},
+        untracked=untracked, all_antigens=core_antigens(),
+        default_per_vial={a.id: default_doses_per_vial(a) for a in core_antigens()},
         loss_reasons=LOSS_REASONS, wastage_reasons=WASTAGE_REASONS, session_rows=end_of_session_rows(bid),
         today_iso=date.today().isoformat(), movement_labels=MOVEMENT_LABELS, outgoing=outgoing, reduced=reduced,
         status_labels=TRANSFER_STATUS_LABELS, status_colors=TRANSFER_STATUS_COLORS))
@@ -4512,7 +4539,11 @@ def stock_count(antigen_id):  # physical count
 
 @bhw_bp.route("/stock/opening", methods=["POST"])
 def stock_opening():  # opening count
-    """Start tracking a vaccine: the BHW counts what is in the fridge, one batch at a time."""
+    """Count a batch that is in the fridge. For a vaccine not tracked yet this
+    is its opening count (it starts tracking); for one already tracked it adds
+    a batch the records were missing (found during a count), recorded as a
+    count adjustment so it shows on the RHU's discrepancy report. Deliveries
+    are confirmed under Incoming instead."""
     bid = current_user.barangay_id
     f = request.form
     antigen = db.session.get(VaccineAntigen, _positive_int(f.get("antigen_id")) or 0)
@@ -4525,7 +4556,6 @@ def stock_opening():  # opening count
         StockMovement.barangay_id == bid, StockMovement.antigen_id == antigen.id,
         StockMovement.kind != "opening").first() is not None
     error = ("Please choose a vaccine." if antigen is None or antigen not in core_antigens() else
-             "This vaccine's stock is already being tracked; use a physical count instead." if already else
              "Please enter the batch number." if not batch_number else
              "Please enter a valid expiry date." if expiry is None else
              "This batch has expired; it cannot be added to usable stock." if expiry < date.today() else
@@ -4538,12 +4568,21 @@ def stock_opening():  # opening count
         return redirect(url_for("bhw.stock"))
     doses = full * per_vial + loose
     lot = _add_to_lot(bid, antigen.id, batch_number, expiry, per_vial, doses)
-    _record_movement(bid, antigen.id, "opening", doses, lot=lot,
-                     note=f"{vials_label(doses, per_vial)} counted")
+    if already:
+        _record_movement(bid, antigen.id, "count_adjustment", doses, lot=lot,
+                         note=f"Batch found during count: {vials_label(doses, per_vial)}")
+    else:
+        _record_movement(bid, antigen.id, "opening", doses, lot=lot,
+                         note=f"{vials_label(doses, per_vial)} counted")
     db.session.commit()
-    log_activity(f"Opening stock count for {current_user.barangay.name}: {antigen.name} {doses} doses "
-                 f"(batch {batch_number})")
-    flash(f"{antigen.name}: {doses} doses added from the opening count.", "success")
+    if already:
+        log_activity(f"Physical count of barangay stock: {antigen.name} batch {batch_number} added, {doses} doses")
+        flash(f"{antigen.name}: batch {batch_number} added ({doses} doses). It shows as a count difference "
+              "on the RHU's discrepancy report.", "success")
+    else:
+        log_activity(f"Opening stock count for {current_user.barangay.name}: {antigen.name} {doses} doses "
+                     f"(batch {batch_number})")
+        flash(f"{antigen.name}: {doses} doses added from the opening count.", "success")
     return redirect(url_for("bhw.stock"))
 
 
