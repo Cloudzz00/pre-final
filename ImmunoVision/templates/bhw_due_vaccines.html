@@ -100,7 +100,15 @@
               <input type="hidden" name="month" value="{{ month }}">
               <input type="hidden" name="overdue" value="{{ '1' if include_overdue else '0' }}">
               <input class="form-control table-input" type="date" name="date" value="{{ today_iso }}" max="{{ today_iso }}" style="max-width:160px;">
+              {% if reserved_only and e.vaccine_code in reserved_only %}
+              <select class="form-control select-sm" name="reserved_reason" required aria-label="Reason for using a reserved dose" title="Only reserved doses are left ({{ reserved_only[e.vaccine_code] }})" style="max-width:190px;">
+                <option value="">Reserved dose: why?</option>
+                {% for reason in reserved_reasons %}<option value="{{ reason }}">{{ reason }}</option>{% endfor %}
+              </select>
+              <button class="btn btn-outline btn-sm" type="submit" data-confirm="Only doses reserved for redistribution ({{ reserved_only[e.vaccine_code] }}) are left. Use 1 reserved dose for this child? The transfer will be reduced and the RHU alerted.">{{ icon('check', 14) }} Record</button>
+              {% else %}
               <button class="btn btn-outline btn-sm" type="submit">{{ icon('check', 14) }} Record</button>
+              {% endif %}
             </form>
           </td>
           {% endif %}

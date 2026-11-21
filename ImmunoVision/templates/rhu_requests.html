@@ -135,6 +135,9 @@
     {% if r.quantity_approved is not none and r.quantity_approved != r.quantity_requested %}
     <div class="text-muted" style="font-size:11.5px;">approved: {{ r.quantity_approved }}</div>
     {% endif %}
+    {% if r.status in ('pending', 'approved') %}{% set pv = preview_request_doses(r.antigen_id, r.quantity_approved or r.quantity_requested) %}
+    <div class="text-muted" style="font-size:11.5px;" title="From the batches distribution would use, soonest expiry first">≈ {{ pv[0] }} doses ({{ pv[1] }})</div>
+    {% elif r.status == 'fulfilled' %}{% set dl = delivery_of(r) %}{% if dl %}<div class="text-muted" style="font-size:11.5px;">= {{ dl.doses_sent }} doses</div>{% endif %}{% endif %}
   </td>
   <td><span class="badge badge-{{ 'red' if r.priority=='Urgent' else 'amber' if r.priority=='High' else 'gray' }}">{{ r.priority }}</span></td>
   <td>{{ (r.requested_at|local).strftime('%Y-%m-%d') }}</td>

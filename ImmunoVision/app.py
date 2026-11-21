@@ -10,6 +10,7 @@ Run: python app.py
 """
 import csv
 import json
+import math
 import io
 import os
 import time
@@ -98,7 +99,8 @@ LOG_CATEGORIES = (  # log categories
     ("Record",  ("Registered child", "Updated child", "Re-assessed risk", " date for ", "Removed",  # records
                  "Recorded")),
     ("Vaccine", ("vaccine stock", "vaccine request", "Approved", "Rejected", "Distributed", "Submitted",  # vaccines
-                 "delivery", "opening stock", "doses per vial", "barangay stock", "physical count")),
+                 "delivery", "opening stock", "doses per vial", "barangay stock", "physical count",
+                 "redistribution", "Redistribution")),
     ("Report",  ("Exported",)),  # reports
 )
 
@@ -157,6 +159,7 @@ RHU_NAV = [
     ("continuation", "target", "Continuation Predictor", "rhu.continuation"),
     ("map", "map", "Municipality Map", "rhu.municipality_map"),
     ("inventory", "package", "Vaccine Inventory", "rhu.inventory"),
+    ("barangay_stock", "refresh", "Barangay Stock", "rhu.barangay_stock"),
     ("requests", "clipboard", "Vaccine Requests", "rhu.requests"),
     ("forecast", "activity", "Vaccine Forecast", "rhu.forecast"),
     ("reports", "file-text", "Reports", "rhu.reports"),
@@ -1550,6 +1553,19 @@ def get_notifications(role, barangay_id=None):  # alerts
                       "time_label": "Today", "unread": True})
 
     if role == "rhu":
+        recent = datetime.utcnow() - timedelta(days=14)
+        for t in StockTransfer.query.filter(StockTransfer.kind == "redistribution", StockTransfer.doses_reduced > 0,
+                                            StockTransfer.created_at >= recent).all():
+            auto_cancelled = t.status == "cancelled" and t.cancelled_by_id is None
+            if t.status != "reserved" and not auto_cancelled:
+                continue
+            notes.append({"category": "Stock", "severity": "warning", "icon": "refresh", "icon_bg": "bg-orange",
+                          "title": f"Redistribution {t.code} {'Cancelled' if auto_cancelled else 'Reduced'}",
+                          "body": f"{t.from_barangay.name} used {t.doses_reduced} reserved {t.antigen.name} doses "
+                                  f"({t.reduce_reason}). "
+                                  + (f"{t.to_barangay.name} still needs a source." if auto_cancelled
+                                     else f"{t.to_barangay.name} will now get {t.doses_sent} doses."),
+                          "time_label": "Recently", "unread": True})
         pending = VaccineRequest.query.filter_by(status="pending").count()
         if pending:
             notes.append({"category": "Request", "severity": "info", "icon": "clipboard", "icon_bg": "bg-blue",
@@ -2917,6 +2933,8 @@ def vials_label(doses, doses_per_vial):  # "8 vials + 5 doses"
     if doses_per_vial <= 1:
         return f"{doses} vial{'s' if doses != 1 else ''}"
     full, loose = divmod(doses, doses_per_vial)
+    if not full and loose:
+        return f"{loose} loose dose{'s' if loose != 1 else ''}"
     text = f"{full} vial{'s' if full != 1 else ''}"
     return text + (f" + {loose} dose{'s' if loose != 1 else ''}" if loose else "")
 
@@ -3051,6 +3069,235 @@ def usable_lots(barangay_id, antigen_id):  # soonest expiry first
     return sorted([lot for lot in lots if not lot.is_expired], key=lambda lot: (lot.expiry_date or date.max, lot.id))
 
 
+# --- Redistribution between barangays ---------------------------------------
+# The RHU reserves doses in one barangay's fridge for another barangay. The
+# vials stay where they are (reserved) until the sending BHW marks them
+# dispatched (in transit), and only reach the receiver when its BHW counts
+# them in. Vials travel whole, so transfers are always in unopened vials.
+
+TRANSFER_STATUS_LABELS = {"reserved": "Reserved for Redistribution", "in_transit": "In Transit",
+                          "received": "Received", "returning": "Returning to sender", "cancelled": "Cancelled"}
+TRANSFER_STATUS_COLORS = {"reserved": "amber", "in_transit": "blue", "received": "green",
+                          "returning": "amber", "cancelled": "gray"}
+SURPLUS_FACTOR = 1.5   # holding more than 1.5x the 30-day need is a surplus
+RESERVED_USE_REASONS = ("Child due today, no other stock", "Outreach or catch-up session", "Other")
+
+
+def _queue_log(action):  # activity log entry, saved with the caller's commit
+    db.session.add(ActivityLog(user_id=current_user.id if current_user.is_authenticated else None, action=action))
+
+
+def reserved_by_lot(barangay_id):  # {lot id: reserved doses}
+    rows = (db.session.query(StockTransferItem.source_stock_id, func.sum(StockTransferItem.doses_sent))
+            .join(StockTransfer, StockTransferItem.transfer_id == StockTransfer.id)
+            .filter(StockTransfer.from_barangay_id == barangay_id, StockTransfer.status == "reserved")
+            .group_by(StockTransferItem.source_stock_id).all())
+    return Counter({lot_id: int(n or 0) for lot_id, n in rows if lot_id})
+
+
+def free_vials(lot, held):  # unopened vials in a lot that are not reserved
+    if lot.is_expired:
+        return 0
+    return max(0, lot.doses_on_hand // lot.doses_per_vial - held.get(lot.id, 0) // lot.doses_per_vial)
+
+
+def plan_transfer(barangay_id, antigen_id, doses, round_up=True):  # [(lot, doses)]
+    """Whole unopened vials covering `doses`, soonest expiry first, from vials
+    not already reserved. round_up: at least `doses` (may be up to one vial
+    more), else [] if there is not enough; otherwise at most `doses`."""
+    held = reserved_by_lot(barangay_id)
+    plan, left = [], doses
+    for lot in usable_lots(barangay_id, antigen_id):
+        if left <= 0:
+            break
+        per_vial = lot.doses_per_vial
+        want = -(-left // per_vial) if round_up else left // per_vial
+        take = min(free_vials(lot, held), want)
+        if take:
+            plan.append((lot, take * per_vial))
+            left -= take * per_vial
+    return plan if (left <= 0 or not round_up) else []
+
+
+def transferable_doses(barangay_id, antigen_id):  # doses in free unopened vials
+    held = reserved_by_lot(barangay_id)
+    return sum(free_vials(lot, held) * lot.doses_per_vial for lot in usable_lots(barangay_id, antigen_id))
+
+
+def pick_lot_for_dose(barangay_id, antigen_id):  # (lot or None, dips into reserved?)
+    """The batch a dose is taken from: soonest expiry first, but skipping
+    doses reserved for another barangay while unreserved ones remain."""
+    lots = usable_lots(barangay_id, antigen_id)
+    if not lots:
+        return None, False
+    held = reserved_by_lot(barangay_id)
+    for lot in lots:
+        if (lot.doses_on_hand - 1) // lot.doses_per_vial * lot.doses_per_vial >= held.get(lot.id, 0):
+            return lot, False
+    return lots[0], True
+
+
+def reserved_only_antigens(barangay_id):  # {antigen id: [transfers]} where only reserved doses are left
+    out = {}
+    for t in StockTransfer.query.filter_by(from_barangay_id=barangay_id, status="reserved").all():
+        out.setdefault(t.antigen_id, []).append(t)
+    return {aid: ts for aid, ts in out.items() if pick_lot_for_dose(barangay_id, aid)[1]}
+
+
+def reconcile_reservations(barangay_id, antigen_id, reason):  # reserved doses must still exist
+    """After stock goes down (a dose given, wastage, a count), a reservation can
+    promise more vials than the fridge holds. The newest transfers are reduced
+    first, in whole vials, to what is left; one reduced to nothing is
+    cancelled. Returns messages for the BHW; the RHU sees the changes on
+    Barangay Stock and in its notifications."""
+    transfers = (StockTransfer.query.filter_by(from_barangay_id=barangay_id, antigen_id=antigen_id,
+                                               status="reserved").order_by(StockTransfer.id.desc()).all())
+    by_lot = defaultdict(list)
+    for t in transfers:  # newest first
+        for item in t.items:
+            if item.doses_sent:
+                by_lot[item.source_stock_id].append(item)
+    cut_by_transfer = Counter()
+    for lot_id, items in by_lot.items():
+        lot = db.session.get(BarangayStock, lot_id) if lot_id else None
+        capacity = 0 if lot is None or lot.is_expired else lot.doses_on_hand // lot.doses_per_vial * lot.doses_per_vial
+        excess = sum(i.doses_sent for i in items) - capacity
+        for item in items:
+            if excess <= 0:
+                break
+            cut = min(item.doses_sent, -(-excess // item.doses_per_vial) * item.doses_per_vial)
+            item.doses_sent -= cut
+            excess -= cut
+            cut_by_transfer[item.transfer_id] += cut
+    messages = []
+    for t in transfers:
+        cut = cut_by_transfer.get(t.id)
+        if not cut:
+            continue
+        t.doses_reduced = (t.doses_reduced or 0) + cut
+        t.reduce_reason = reason[:255]
+        if t.doses_sent == 0:
+            t.status, t.cancelled_at = "cancelled", datetime.utcnow()
+            text = (f"Redistribution {t.code} to {t.to_barangay.name} cancelled: its {cut} reserved "
+                    f"{t.antigen.name} doses were used ({reason}). The RHU has been alerted.")
+        else:
+            text = (f"Redistribution {t.code} to {t.to_barangay.name} reduced by {cut} to {t.doses_sent} "
+                    f"{t.antigen.name} doses ({reason}). The RHU has been alerted.")
+        messages.append(text)
+        _queue_log(text.replace(" The RHU has been alerted.", ""))
+    return messages
+
+
+def doses_needed_by_barangay():  # {barangay id: {antigen code: doses}}
+    """doses_needed_soon() for every barangay in one pass."""
+    today = date.today()
+    vt_lookup = {vt.code: vt for vt in VaccineType.query.all()}
+    need = defaultdict(Counter)
+    for child in Child.query.all():
+        given = _doses_given(child.id)
+        for code, _name, antigen, _dose, rec_days in dp.VACCINE_SCHEDULE:
+            vt = vt_lookup.get(code)
+            if vt is None or given.get(vt.id) is not None or not _still_catchable(vt, child.age_in_days):
+                continue
+            delta = (child.date_of_birth + timedelta(days=rec_days) - today).days
+            if -STOCK_NEED_DAYS_BEHIND <= delta <= STOCK_NEED_DAYS_AHEAD:
+                need[child.barangay_id][antigen] += 1
+    return need
+
+
+def municipal_stock_rows(antigen, need=None):  # RHU Barangay Stock rows for one vaccine
+    """Every barangay's stock of one vaccine, with Surplus / OK / Short.
+    Short: available + incoming (in transit or reserved for it) is below the 30-day need. Surplus: more than
+    1.5x the need, or doses expiring within 30 days that will not be used."""
+    today = date.today()
+    need = need if need is not None else doses_needed_by_barangay()
+    lots = BarangayStock.query.filter(BarangayStock.antigen_id == antigen.id, BarangayStock.doses_on_hand > 0).all()
+    tracked = {b for (b,) in db.session.query(StockMovement.barangay_id)
+               .filter(StockMovement.antigen_id == antigen.id, StockMovement.barangay_id.isnot(None)).distinct()}
+    reserved, incoming = Counter(), Counter()
+    for t in StockTransfer.query.filter(StockTransfer.antigen_id == antigen.id,
+                                        StockTransfer.status.in_(("reserved", "in_transit", "returning"))).all():
+        if t.status == "reserved":  # still in the sender's fridge, already promised to the receiver
+            reserved[t.from_barangay_id] += t.doses_sent
+            incoming[t.to_barangay_id] += t.doses_sent
+        elif t.status == "in_transit":
+            incoming[t.to_barangay_id] += t.doses_sent
+        else:
+            incoming[t.from_barangay_id] += t.doses_sent
+    rows = []
+    for b in Barangay.query.order_by(Barangay.name).all():
+        mine = sorted([lot for lot in lots if lot.barangay_id == b.id and not lot.is_expired],
+                      key=lambda lot: (lot.expiry_date or date.max))
+        in_fridge = sum(lot.doses_on_hand for lot in mine)
+        held = min(reserved[b.id], in_fridge)
+        available = in_fridge - held
+        needed = need.get(b.id, {}).get(antigen.code, 0)
+        expiring = sum(lot.doses_on_hand for lot in mine
+                       if lot.expiry_date and (lot.expiry_date - today).days <= STOCK_NEED_DAYS_AHEAD)
+        spare = short = 0
+        if b.id not in tracked:
+            status, color = "Not tracked", "gray"
+        elif available + incoming[b.id] < needed:
+            status, color, short = "Short", "red", needed - available - incoming[b.id]
+        else:
+            spare = min(max(available - math.ceil(needed * SURPLUS_FACTOR), expiring - needed, 0),
+                        transferable_doses(b.id, antigen.id))
+            status, color = ("Surplus", "blue") if spare > 0 else ("OK", "green")
+        rows.append({"barangay": b, "in_fridge": in_fridge, "reserved": held, "incoming": incoming[b.id],
+                     "available": available, "needed": needed, "expiring": expiring,
+                     "nearest_expiry": mine[0].expiry_date if mine else None,
+                     "status": status, "color": color, "spare": spare, "short": short})
+    return rows
+
+
+def suggest_transfers(antigen, rows):  # match surplus to shortage
+    """Greedy: the largest shortage first, served by the surplus whose doses
+    expire soonest, in whole vials."""
+    shorts = sorted([r for r in rows if r["short"] > 0], key=lambda r: -r["short"])
+    surplus = sorted([dict(r) for r in rows if r["spare"] > 0],
+                     key=lambda r: (r["nearest_expiry"] or date.max, -r["spare"]))
+    out = []
+    for need_row in shorts:
+        left = need_row["short"]
+        for src in surplus:
+            if left <= 0:
+                break
+            if src["spare"] <= 0:
+                continue
+            plan = plan_transfer(src["barangay"].id, antigen.id, min(left, src["spare"]), round_up=False)
+            doses = sum(d for _lot, d in plan)
+            if not doses:
+                continue
+            out.append({"from": src["barangay"], "to": need_row["barangay"], "doses": doses,
+                        "batches": ", ".join(f"{lot.batch_number} (exp {lot.expiry_date.strftime('%b %d, %Y') if lot.expiry_date else '-'})"
+                                             for lot, _d in plan)})
+            src["spare"] -= doses
+            left -= doses
+    return out
+
+
+def discrepancy_rows(days=90):  # per barangay: where the system and the fridge disagreed
+    since = datetime.utcnow() - timedelta(days=days)
+    rows = defaultdict(lambda: Counter())
+    for m in StockMovement.query.filter(StockMovement.created_at >= since, StockMovement.barangay_id.isnot(None),
+                                        StockMovement.kind.in_(("count_adjustment", "no_stock"))).all():
+        if m.kind == "no_stock":
+            rows[m.barangay_id]["no_stock"] += 1
+        elif m.doses < 0:
+            rows[m.barangay_id]["count_missing"] += -m.doses
+        else:
+            rows[m.barangay_id]["count_extra"] += m.doses
+    for t in StockTransfer.query.filter(StockTransfer.received_at >= since).all():
+        lost = sum(i.doses_lost or 0 for i in t.items)
+        if lost:
+            rows[t.to_barangay_id if t.status == "received" else t.from_barangay_id]["transit_lost"] += lost
+    for t in StockTransfer.query.filter(StockTransfer.created_at >= since, StockTransfer.doses_reduced > 0).all():
+        rows[t.from_barangay_id]["reserved_used"] += t.doses_reduced
+    names = {b.id: b.name for b in Barangay.query.all()}
+    return sorted(({"barangay": names.get(bid, "?"), **counts} for bid, counts in rows.items() if bid),
+                  key=lambda r: r["barangay"])
+
+
 def stock_on_dose_change(child, vt, rec, previous, new, given_elsewhere=False):  # keep stock in step with dose records
     """Called whenever a dose date is saved. A dose recorded by a BHW, dated on
     or after the day stock tracking began, takes 1 dose from the barangay
@@ -3076,14 +3323,20 @@ def stock_on_dose_change(child, vt, rec, previous, new, given_elsewhere=False): 
                          note=f"{vt.name} for {child.display_name} removed or corrected")
     elif not consumed and counts and previous is None and current_user.is_authenticated \
             and current_user.role == "bhw":
-        lots = usable_lots(bid, antigen_id)
+        lot, dips_into_reserved = pick_lot_for_dose(bid, antigen_id)
         if given_elsewhere:
             _record_movement(bid, antigen_id, "given_elsewhere", 0, record=rec,
                              note=f"{vt.name} for {child.display_name}: given elsewhere (transferred in)")
-        elif lots:
-            lots[0].doses_on_hand -= 1
-            _record_movement(bid, antigen_id, "administered", -1, lot=lots[0], record=rec,
-                             note=f"{vt.name} for {child.display_name}")
+        elif lot is not None:
+            lot.doses_on_hand -= 1
+            _record_movement(bid, antigen_id, "administered", -1, lot=lot, record=rec,
+                             note=f"{vt.name} for {child.display_name}"
+                                  + (" (reserved dose used)" if dips_into_reserved else ""))
+            if dips_into_reserved:  # only reserved doses were left: shrink the transfer
+                reason = (request.form.get("reserved_reason") or "").strip() if has_request_context() else ""
+                reason = reason if reason else "dose recorded for a child"
+                for message in reconcile_reservations(bid, antigen_id, f"{child.display_name}: {reason}"):
+                    flash(message, "warning")
         else:
             _record_movement(bid, antigen_id, "no_stock", 0, record=rec,
                              note=f"{vt.name} for {child.display_name}: recorded with no stock on hand")
@@ -3093,6 +3346,126 @@ def delivery_of(vaccine_request):  # request -> its delivery
     """The StockTransfer created when a request was distributed, if any
     (requests distributed before barangay stock existed have none)."""
     return StockTransfer.query.filter_by(request_id=vaccine_request.id, kind="delivery").first()
+
+
+def preview_request_doses(antigen_id, vials):  # (doses, "5 x 20 + 5 x 10")
+    """Doses a request of `vials` would give the barangay, from the batches
+    distribution would take (soonest expiry first); vials beyond current
+    stock use the vaccine's usual vial size."""
+    parts, left = [], vials
+    for b in _usable_batches(antigen_id):
+        if left <= 0:
+            break
+        take = min(b.quantity_on_hand, left)
+        parts.append((take, batch_doses_per_vial(b)))
+        left -= take
+    if left > 0:
+        parts.append((left, default_doses_per_vial(db.session.get(VaccineAntigen, antigen_id))))
+    merged = Counter()
+    for n, per_vial in parts:
+        merged[per_vial] += n
+    return sum(n * pv for pv, n in merged.items()), " + ".join(f"{n} × {pv}" for pv, n in merged.items())
+
+
+@rhu_bp.route("/barangay-stock")
+def barangay_stock():  # every barangay's stock, redistribution and discrepancies
+    antigens = core_antigens()
+    chosen_id = _positive_int(request.args.get("antigen_id"))
+    antigen = next((a for a in antigens if a.id == chosen_id), antigens[0])
+    tab = request.args.get("tab") if request.args.get("tab") in ("stock", "transfers", "discrepancies") else "stock"
+    need = doses_needed_by_barangay()
+    status_counts = {a.id: Counter(r["status"] for r in municipal_stock_rows(a, need)) for a in antigens}
+    rows = municipal_stock_rows(antigen, need)
+    active_transfers = (StockTransfer.query.filter(StockTransfer.kind == "redistribution",
+                                         StockTransfer.status.in_(("reserved", "in_transit", "returning")))
+              .order_by(StockTransfer.id.desc()).all())
+    recent = (StockTransfer.query.filter(StockTransfer.kind == "redistribution",
+                                         StockTransfer.status.in_(("received", "cancelled")))
+              .order_by(StockTransfer.id.desc()).limit(30).all())
+    return render_template("rhu_barangay_stock.html", **_rhu_ctx(
+        "barangay_stock", page_title="Barangay Stock", antigens=antigens, antigen=antigen, tab=tab,
+        rows=rows, status_counts=status_counts, suggestions=suggest_transfers(antigen, rows),
+        active_transfers=active_transfers, recent=recent, discrepancies=discrepancy_rows(),
+        barangays=Barangay.query.order_by(Barangay.name).all(),
+        status_labels=TRANSFER_STATUS_LABELS, status_colors=TRANSFER_STATUS_COLORS,
+        surplus_factor=SURPLUS_FACTOR, need_ahead=STOCK_NEED_DAYS_AHEAD, need_behind=STOCK_NEED_DAYS_BEHIND))
+
+
+@rhu_bp.route("/transfers/new", methods=["POST"])
+def transfer_create():  # reserve doses for redistribution
+    """Doses are only reserved: they stay in the sender's fridge, set aside,
+    until its BHW marks them dispatched."""
+    f = request.form
+    src = db.session.get(Barangay, _positive_int(f.get("from_barangay_id")) or 0)
+    dst = db.session.get(Barangay, _positive_int(f.get("to_barangay_id")) or 0)
+    antigen = next((a for a in core_antigens() if a.id == _positive_int(f.get("antigen_id"))), None)
+    doses = _positive_int(f.get("doses"))
+    back = url_for("rhu.barangay_stock", antigen_id=antigen.id if antigen else None, tab="transfers")
+    error = ("Please choose a vaccine." if antigen is None else
+             "Please choose the sending and receiving barangays." if src is None or dst is None else
+             "The sending and receiving barangay must be different." if src.id == dst.id else
+             "Enter the number of doses to move (1 or more)." if doses is None else None)
+    if error:
+        flash(error, "error")
+        return redirect(back)
+    plan = plan_transfer(src.id, antigen.id, doses)
+    if not plan:
+        flash(f"{src.name} has only {transferable_doses(src.id, antigen.id)} {antigen.name} doses in unopened, "
+              "unreserved vials. Vials are moved whole, so opened vials cannot be sent.", "error")
+        return redirect(back)
+    t = StockTransfer(code=_next_transfer_code(), kind="redistribution", from_barangay_id=src.id,
+                      to_barangay_id=dst.id, antigen_id=antigen.id, status="reserved",
+                      reason=(f.get("reason") or "").strip()[:255] or None, created_by_id=current_user.id,
+                      doses_reduced=0)
+    db.session.add(t)
+    db.session.flush()
+    for lot, d in plan:
+        db.session.add(StockTransferItem(transfer_id=t.id, batch_number=lot.batch_number, expiry_date=lot.expiry_date,
+                                         doses_per_vial=lot.doses_per_vial, doses_sent=d, source_stock_id=lot.id))
+    db.session.commit()
+    total = sum(d for _lot, d in plan)
+    log_activity(f"Reserved {total} {antigen.name} doses for redistribution {t.code} from {src.name} to {dst.name}")
+    flash(f"{t.code}: {total} {antigen.name} doses reserved in {src.name} for {dst.name}"
+          + (f" (rounded up from {doses} to whole vials)" if total != doses else "")
+          + f". {src.name}'s BHW marks them dispatched when they are picked up.", "success")
+    return redirect(back)
+
+
+def _cancel_transfer(t, reason, back):  # shared by the RHU and the sending BHW
+    if not reason:
+        flash("Please give a reason for cancelling.", "error")
+        return redirect(back)
+    t.reason = (f"{t.reason}; " if t.reason else "") + f"Cancelled: {reason}"
+    t.reason = t.reason[:255]
+    t.cancelled_by_id, t.cancelled_at = current_user.id, datetime.utcnow()
+    if t.status == "reserved":
+        t.status = "cancelled"
+        message = f"{t.code} cancelled; the {t.doses_sent} reserved {t.antigen.name} doses in {t.from_barangay.name} are available again."
+    else:  # in transit: the vials go back and the sender counts them in
+        t.status = "returning"
+        message = (f"{t.code} cancelled while in transit; {t.from_barangay.name}'s BHW will count the "
+                   f"{t.doses_sent} {t.antigen.name} doses back in when they return.")
+    db.session.commit()
+    log_activity(f"Cancelled redistribution {t.code} ({t.antigen.name}, {t.from_barangay.name} to "
+                 f"{t.to_barangay.name}): {reason}")
+    flash(message, "success")
+    return redirect(back)
+
+
+@rhu_bp.route("/transfers/<int:transfer_id>/cancel", methods=["POST"])
+def transfer_cancel(transfer_id):
+    t = db.session.get(StockTransfer, transfer_id) or abort(404)
+    back = url_for("rhu.barangay_stock", antigen_id=t.antigen_id, tab="transfers")
+    if t.kind != "redistribution" or t.status not in ("reserved", "in_transit"):
+        flash(f"{t.code} can no longer be cancelled.", "error")
+        return redirect(back)
+    return _cancel_transfer(t, (request.form.get("reason") or "").strip()[:200], back)
+
+
+@rhu_bp.route("/transfers/<int:transfer_id>/slip")
+def transfer_slip(transfer_id):
+    t = db.session.get(StockTransfer, transfer_id) or abort(404)
+    return render_template("transfer_slip.html", t=t, status_labels=TRANSFER_STATUS_LABELS)
 
 
 @rhu_bp.route("/requests/<int:req_id>/<action>", methods=["POST"])
@@ -3488,8 +3861,17 @@ def due_vaccines():
     """Month-by-month list of every dose the barangay's children still need,
     with a date field and Record button on each row, so working through a
     month's doses doesn't mean opening each child's full Edit Child form."""
-    return _render_due_list(_bhw_ctx, filtered_children(current_user.barangay_id), can_record=True,
-                            scope_label=current_user.barangay.name if current_user.barangay else "")
+    bid = current_user.barangay_id
+    reserved_only = {}  # dose code -> the transfers its remaining doses are reserved for
+    for antigen_id, transfers in reserved_only_antigens(bid).items():
+        code = db.session.get(VaccineAntigen, antigen_id).code
+        label = ", ".join(f"{t.code} to {t.to_barangay.name}" for t in transfers)
+        for dose_code, antigen_code in dp.ANTIGEN_OF.items():
+            if antigen_code == code:
+                reserved_only[dose_code] = label
+    return _render_due_list(_bhw_ctx, filtered_children(bid), can_record=True,
+                            scope_label=current_user.barangay.name if current_user.barangay else "",
+                            reserved_only=reserved_only, reserved_reasons=RESERVED_USE_REASONS)
 
 
 def _due_list_return_url():
@@ -3658,8 +4040,16 @@ def stock():  # My Stock page
     is reserved, what is arriving, and every change."""
     bid = current_user.barangay_id
     rows = barangay_stock_summary(bid)
-    incoming = (StockTransfer.query.filter_by(to_barangay_id=bid, status="in_transit")
-                .order_by(StockTransfer.dispatched_at).all())
+    incoming = (StockTransfer.query.filter(
+        db.or_(db.and_(StockTransfer.to_barangay_id == bid, StockTransfer.status == "in_transit"),
+               db.and_(StockTransfer.from_barangay_id == bid, StockTransfer.status == "returning")))
+        .order_by(StockTransfer.dispatched_at).all())
+    outgoing = (StockTransfer.query.filter(StockTransfer.from_barangay_id == bid,
+                                           StockTransfer.status.in_(("reserved", "in_transit")))
+                .order_by(StockTransfer.id).all())
+    reduced = (StockTransfer.query.filter(StockTransfer.from_barangay_id == bid, StockTransfer.doses_reduced > 0,
+                                          StockTransfer.created_at >= datetime.utcnow() - timedelta(days=14))
+               .order_by(StockTransfer.id.desc()).all())
     history = (StockMovement.query.filter_by(barangay_id=bid)
                .order_by(StockMovement.created_at.desc(), StockMovement.id.desc()).limit(40).all())
     untracked = [r["antigen"] for r in rows if not r["tracked"]]
@@ -3667,7 +4057,8 @@ def stock():  # My Stock page
         "stock", page_title="My Stock", rows=rows, incoming=incoming, history=history,
         untracked=untracked, default_per_vial={a.id: default_doses_per_vial(a) for a in core_antigens()},
         loss_reasons=LOSS_REASONS, wastage_reasons=WASTAGE_REASONS, session_rows=end_of_session_rows(bid),
-        today_iso=date.today().isoformat(), movement_labels=MOVEMENT_LABELS))
+        today_iso=date.today().isoformat(), movement_labels=MOVEMENT_LABELS, outgoing=outgoing, reduced=reduced,
+        status_labels=TRANSFER_STATUS_LABELS, status_colors=TRANSFER_STATUS_COLORS))
 
 
 def end_of_session_rows(barangay_id):  # leftover doses in today's opened vials
@@ -3702,6 +4093,7 @@ MOVEMENT_LABELS = {
     "count_adjustment": "Count adjustment", "transfer_out": "Sent to barangay", "transfer_in": "Received from barangay",
     "no_stock": "Dose given (no stock on hand)",
     "given_elsewhere": "Given elsewhere (no stock used)",
+    "transfer_returned": "Returned (transfer cancelled)",
 }
 
 
@@ -3725,7 +4117,10 @@ def stock_wastage():  # log wastage
         return redirect(url_for("bhw.stock"))
     lot.doses_on_hand -= doses
     _record_movement(lot.barangay_id, lot.antigen_id, "wasted", -doses, lot=lot, note=reason)
+    adjusted = reconcile_reservations(lot.barangay_id, lot.antigen_id, f"wastage: {reason}")
     db.session.commit()
+    for message in adjusted:
+        flash(message, "warning")
     log_activity(f"Recorded barangay stock wastage: {lot.antigen.name} {doses} doses (batch {lot.batch_number}, {reason})")
     flash(f"Recorded {doses} wasted {lot.antigen.name} doses ({reason}).", "success")
     return redirect(url_for("bhw.stock"))
@@ -3733,7 +4128,7 @@ def stock_wastage():  # log wastage
 
 @bhw_bp.route("/stock/discard", methods=["POST"])
 def stock_discard():  # end-of-session discard
-    saved = []
+    saved, adjusted_ids = [], set()
     for row in end_of_session_rows(current_user.barangay_id):
         lot = row["lot"]
         if not request.form.get(f"discard_{lot.id}"):
@@ -3747,10 +4142,15 @@ def stock_discard():  # end-of-session discard
             _record_movement(lot.barangay_id, lot.antigen_id, "wasted", -doses, lot=lot,
                              note=f"{END_OF_SESSION_REASON}, batch {lot.batch_number}")
             saved.append(f"{lot.antigen.name} {doses}")
+            adjusted_ids.add(lot.antigen_id)
     if not saved:
         flash("Nothing was discarded.", "info")
         return redirect(url_for("bhw.stock"))
+    adjusted = [m for aid in adjusted_ids
+                for m in reconcile_reservations(current_user.barangay_id, aid, "end-of-session discard")]
     db.session.commit()
+    for message in adjusted:
+        flash(message, "warning")
     log_activity("Recorded barangay stock end-of-session discard: " + ", ".join(saved) + " doses")
     flash("End-of-session discard recorded: " + ", ".join(saved) + " doses.", "success")
     return redirect(url_for("bhw.stock"))
@@ -3769,7 +4169,10 @@ def stock_dispose_expired(antigen_id):  # dispose expired doses
         _record_movement(lot.barangay_id, lot.antigen_id, "expired", -lot.doses_on_hand, lot=lot,
                          note=f"Batch {lot.batch_number} expired {lot.expiry_date.isoformat()}")
         lot.doses_on_hand = 0
+    adjusted = reconcile_reservations(current_user.barangay_id, antigen_id, "expired doses disposed")
     db.session.commit()
+    for message in adjusted:
+        flash(message, "warning")
     log_activity(f"Disposed expired barangay stock: {lots[0].antigen.name} {total} doses")
     flash(f"{total} expired {lots[0].antigen.name} doses disposed.", "success")
     return redirect(url_for("bhw.stock"))
@@ -3816,7 +4219,10 @@ def stock_count(antigen_id):  # physical count
             _record_movement(bid, antigen_id, "count_adjustment", diff, lot=lot,
                              note=f"System {lot.doses_on_hand}, counted {counted[lot.id]}")
             lot.doses_on_hand = counted[lot.id]
+    adjusted = reconcile_reservations(bid, antigen_id, "physical count")
     db.session.commit()
+    for message in adjusted:
+        flash(message, "warning")
     new_total = sum(counted.values())
     log_activity(f"Physical count of barangay stock: {antigen.name} system {system}, counted {new_total} doses")
     flash(f"{antigen.name} count saved: {new_total} doses"
@@ -3866,13 +4272,18 @@ def stock_receive(transfer_id):  # confirm a delivery
     """The BHW confirms what physically arrived. Only good doses enter stock;
     short or damaged doses are recorded with a reason."""
     t = db.session.get(StockTransfer, transfer_id) or abort(404)
-    if t.to_barangay_id != current_user.barangay_id:
+    returning = t.status == "returning"  # a cancelled redistribution coming back to the sender
+    dest = t.from_barangay_id if returning else t.to_barangay_id
+    if dest != current_user.barangay_id:
         abort(403)
-    if t.status != "in_transit":
+    if t.status not in ("in_transit", "returning"):
         flash(f"{t.code} is not waiting for confirmation.", "error")
         return redirect(url_for("bhw.stock"))
+    kind = "transfer_returned" if returning else "received" if t.kind == "delivery" else "transfer_in"
     counts = []
     for item in t.items:
+        if not item.doses_sent:
+            continue
         good = _whole_number(request.form.get(f"good_{item.id}"))
         reason = (request.form.get(f"reason_{item.id}") or "").strip()
         if good is None or good > item.doses_sent:
@@ -3886,19 +4297,70 @@ def stock_receive(transfer_id):  # confirm a delivery
         item.doses_received, item.doses_lost = good, item.doses_sent - good
         item.loss_reason = reason if item.doses_lost else None
         if good:
-            lot = _add_to_lot(t.to_barangay_id, t.antigen_id, item.batch_number, item.expiry_date,
+            lot = _add_to_lot(dest, t.antigen_id, item.batch_number, item.expiry_date,
                               item.doses_per_vial, good)
-            _record_movement(t.to_barangay_id, t.antigen_id, "received", good, lot=lot, transfer=t,
+            _record_movement(dest, t.antigen_id, kind, good, lot=lot, transfer=t,
                              note=f"{t.code}" + (f"; {item.doses_lost} lost: {reason}" if item.doses_lost else ""))
-    t.status, t.received_by_id, t.received_at = "received", current_user.id, datetime.utcnow()
+    t.status = "cancelled" if returning else "received"
+    t.received_by_id, t.received_at = current_user.id, datetime.utcnow()
     t.received_note = (request.form.get("note") or "").strip()[:255] or None
     db.session.commit()
     lost = t.doses_sent - t.doses_received
-    log_activity(f"Received delivery {t.code}: {t.antigen.name} {t.doses_received} of {t.doses_sent} doses"
+    what = "returned redistribution" if returning else "delivery" if t.kind == "delivery" else "redistribution"
+    log_activity(f"Received {what} {t.code}: {t.antigen.name} {t.doses_received} of {t.doses_sent} doses"
                  + (f" ({lost} lost)" if lost else ""))
     flash(f"{t.code} received: {t.doses_received} good doses added to stock"
           + (f"; {lost} recorded as lost." if lost else "."), "success")
     return redirect(url_for("bhw.stock"))
+
+
+def _own_transfer(transfer_id):  # a redistribution leaving the BHW's barangay
+    t = db.session.get(StockTransfer, transfer_id) or abort(404)
+    if t.kind != "redistribution" or t.from_barangay_id != current_user.barangay_id:
+        abort(403)
+    return t
+
+
+@bhw_bp.route("/stock/transfers/<int:transfer_id>/dispatch", methods=["POST"])
+def transfer_dispatch(transfer_id):  # vials handed to the carrier
+    t = _own_transfer(transfer_id)
+    if t.status != "reserved":
+        flash(f"{t.code} is not waiting to be dispatched.", "error")
+        return redirect(url_for("bhw.stock"))
+    for message in reconcile_reservations(t.from_barangay_id, t.antigen_id, "checked at dispatch"):
+        flash(message, "warning")
+    if t.status != "reserved":  # nothing left to send
+        db.session.commit()
+        return redirect(url_for("bhw.stock"))
+    for item in t.items:
+        if not item.doses_sent:
+            continue
+        lot = db.session.get(BarangayStock, item.source_stock_id)
+        lot.doses_on_hand -= item.doses_sent
+        _record_movement(t.from_barangay_id, t.antigen_id, "transfer_out", -item.doses_sent, lot=lot, transfer=t,
+                         note=f"{t.code} to {t.to_barangay.name}")
+    t.status, t.dispatched_by_id, t.dispatched_at = "in_transit", current_user.id, datetime.utcnow()
+    db.session.commit()
+    log_activity(f"Dispatched redistribution {t.code}: {t.antigen.name} {t.doses_sent} doses to {t.to_barangay.name}")
+    flash(f"{t.code} dispatched: {t.doses_sent} {t.antigen.name} doses are in transit to {t.to_barangay.name}.", "success")
+    return redirect(url_for("bhw.stock"))
+
+
+@bhw_bp.route("/stock/transfers/<int:transfer_id>/cancel", methods=["POST"])
+def transfer_cancel(transfer_id):  # sender cancels before dispatch
+    t = _own_transfer(transfer_id)
+    if t.status != "reserved":
+        flash(f"{t.code} has left your barangay; only the RHU can cancel it now.", "error")
+        return redirect(url_for("bhw.stock"))
+    return _cancel_transfer(t, (request.form.get("reason") or "").strip()[:200], url_for("bhw.stock"))
+
+
+@bhw_bp.route("/stock/transfers/<int:transfer_id>/slip")
+def transfer_slip(transfer_id):
+    t = db.session.get(StockTransfer, transfer_id) or abort(404)
+    if current_user.barangay_id not in (t.from_barangay_id, t.to_barangay_id):
+        abort(403)
+    return render_template("transfer_slip.html", t=t, status_labels=TRANSFER_STATUS_LABELS)
 
 
 @bhw_bp.route("/requests", methods=["GET", "POST"])
@@ -3931,6 +4393,7 @@ def requests():  # BHW requests
              "rejected": sum(1 for r in reqs if r.status == "rejected")}
     return render_template("bhw_requests.html", **_bhw_ctx(
         "requests", page_title="Vaccine Requests", reqs=reqs, stats=stats, antigens=core_antigens(),
+        per_vial={str(a.id): default_doses_per_vial(a) for a in core_antigens()},
     ))
 
 
@@ -4596,7 +5059,8 @@ def health():
 
 
 app = create_app()
-app.jinja_env.globals.update(delivery_of=delivery_of, vials_label=vials_label)
+app.jinja_env.globals.update(delivery_of=delivery_of, vials_label=vials_label,
+                             preview_request_doses=preview_request_doses, default_doses_per_vial=default_doses_per_vial)
 
 
 def ensure_demo_data():
@@ -4626,7 +5090,9 @@ def upgrade_schema():
     column is added here once, if missing. Nothing is removed or changed."""
     from sqlalchemy import inspect, text
     added = {"inventory_batches": [("doses_per_vial", "INTEGER")],
-             "vial_sizes": [("discard_after_session", "BOOLEAN")]}
+             "vial_sizes": [("discard_after_session", "BOOLEAN")],
+             "stock_transfers": [("doses_reduced", "INTEGER DEFAULT 0"), ("reduce_reason", "VARCHAR(255)"),
+                                 ("cancelled_by_id", "INTEGER"), ("cancelled_at", "DATETIME")]}
     for table, new_columns in added.items():
         columns = {c["name"] for c in inspect(db.engine).get_columns(table)}
         for name, kind in new_columns:
