@@ -4261,8 +4261,11 @@ def campaigns():
             db.session.add(vt)
             db.session.flush()
             vaccine_type_id = vt.id
-        elif existing_vt_id and db.session.get(VaccineType, _positive_int(existing_vt_id) or 0):
-            vaccine_type_id = int(existing_vt_id)
+        elif existing_vt_id and (vt_pick := db.session.get(VaccineType, _positive_int(existing_vt_id) or 0)) \
+                and vt_pick.code not in _KNOWN_DOSE_CODES:
+            # Campaign vaccines are kept apart from routine schedule vaccines,
+            # so campaign doses never draw on a barangay's routine stock.
+            vaccine_type_id = vt_pick.id
         else:
             flash("Choose an existing vaccine or add a new one.", "error")
             return redirect(url_for("admin.campaigns"))
