@@ -1870,6 +1870,7 @@ def _create_child(form, barangay_locked):  # new child
     db.session.flush()
 
     doses_dict = {}
+    elsewhere = bool(form.get("given_elsewhere"))  # transferred in: doses given at another center
     for code, name, antigen_code, dose_no, rec_days in dp.VACCINE_SCHEDULE:  # each dose
         vt = VaccineType.query.filter_by(code=code).first()
         administered = _ticked_date(form, f"dose_{code}_given", f"dose_{code}", date_registered)  # ticked dose
@@ -1879,7 +1880,7 @@ def _create_child(form, barangay_locked):  # new child
             status="completed" if administered else "pending", administered_by_id=current_user.id,
         )
         db.session.add(rec)
-        stock_on_dose_change(child, vt, rec, None, administered)  # barangay stock
+        stock_on_dose_change(child, vt, rec, None, administered, elsewhere)  # barangay stock
     db.session.commit()  # save
 
     barangay_name = db.session.get(Barangay, barangay_id).name
@@ -1916,6 +1917,7 @@ def _update_child(child, form):  # edit child
     existing_by_vt_id = {rec.vaccine_type_id: rec for rec in child.vaccination_records if rec.campaign_id is None}
     past_window_warnings = []
     date_changes = []
+    elsewhere = bool(form.get("given_elsewhere"))  # transferred in: new doses given at another center
     for code in _KNOWN_DOSE_CODES:  # each dose
         vt = vt_by_code.get(code)
         if vt is None:
@@ -1931,7 +1933,7 @@ def _update_child(child, form):  # edit child
         previous = rec.date_administered
         rec.date_administered = administered  # set date
         rec.status = "completed" if administered else "pending"
-        stock_on_dose_change(child, vt, rec, previous, administered)  # barangay stock
+        stock_on_dose_change(child, vt, rec, previous, administered, elsewhere)  # barangay stock
         # Optional doses like Rotavirus stop being given past a real age
         # cutoff (rising intussusception risk in older infants), unlike the
         # core schedule which stays catchable indefinitely. A record past
@@ -1962,7 +1964,8 @@ def _update_child(child, form):  # edit child
         previous = rec.date_administered
         rec.date_administered = administered
         rec.status = "completed" if administered else "pending"
-        stock_on_dose_change(child, db.session.get(VaccineType, campaign.vaccine_type_id), rec, previous, administered)
+        stock_on_dose_change(child, db.session.get(VaccineType, campaign.vaccine_type_id), rec, previous, administered,
+                             elsewhere)
     db.session.commit()  # save
 
     result = _recompute_risk(child)  # re-predict
@@ -3048,12 +3051,14 @@ def usable_lots(barangay_id, antigen_id):  # soonest expiry first
     return sorted([lot for lot in lots if not lot.is_expired], key=lambda lot: (lot.expiry_date or date.max, lot.id))
 
 
-def stock_on_dose_change(child, vt, rec, previous, new):  # keep stock in step with dose records
+def stock_on_dose_change(child, vt, rec, previous, new, given_elsewhere=False):  # keep stock in step with dose records
     """Called whenever a dose date is saved. A dose recorded by a BHW, dated on
     or after the day stock tracking began, takes 1 dose from the barangay
     (soonest expiry first). Removing a dose, or moving it to before tracking
     began, returns it to the batch it came from. Recording is never blocked:
-    with no stock on hand the dose is saved and flagged instead."""
+    with no stock on hand the dose is saved and flagged instead.
+    given_elsewhere: the child transferred in and got this dose at another
+    health center, so no stock is used here (logged for the audit trail)."""
     if vt is None or child.barangay_id is None or previous == new:
         return
     db.session.flush()  # make sure rec has an id
@@ -3072,7 +3077,10 @@ def stock_on_dose_change(child, vt, rec, previous, new):  # keep stock in step w
     elif not consumed and counts and previous is None and current_user.is_authenticated \
             and current_user.role == "bhw":
         lots = usable_lots(bid, antigen_id)
-        if lots:
+        if given_elsewhere:
+            _record_movement(bid, antigen_id, "given_elsewhere", 0, record=rec,
+                             note=f"{vt.name} for {child.display_name}: given elsewhere (transferred in)")
+        elif lots:
             lots[0].doses_on_hand -= 1
             _record_movement(bid, antigen_id, "administered", -1, lot=lots[0], record=rec,
                              note=f"{vt.name} for {child.display_name}")
@@ -3693,6 +3701,7 @@ MOVEMENT_LABELS = {
     "reversal": "Dose removed (returned)", "wasted": "Wastage", "expired": "Expired",
     "count_adjustment": "Count adjustment", "transfer_out": "Sent to barangay", "transfer_in": "Received from barangay",
     "no_stock": "Dose given (no stock on hand)",
+    "given_elsewhere": "Given elsewhere (no stock used)",
 }
 
 
