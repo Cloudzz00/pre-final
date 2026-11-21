@@ -14,9 +14,7 @@
   <div>
     <div class="text-muted" style="font-size:13px;">Barangay {{ current_user.barangay.name }} &middot; counted in doses</div>
   </div>
-  {% if untracked %}
-  <button class="btn btn-primary rounded-pill-btn" data-open-modal="openingModal">{{ icon('plus', 14) }} Opening Count</button>
-  {% endif %}
+  <button class="btn btn-primary rounded-pill-btn" data-open-modal="openingModal">{{ icon('plus', 14) }} {{ 'Opening Count' if untracked|length == all_antigens|length else 'Count a Batch' }}</button>
 </div>
 
 {% if reduced %}
@@ -155,6 +153,7 @@
           <td>{% if r.tracked %}<b>{{ r.in_fridge }}</b> doses<div class="text-muted" style="font-size:11.5px;">{{ r.vials }}</div>{% else %}<span class="text-muted">-</span>{% endif %}</td>
           <td>{{ r.reserved if r.reserved else '-' }}</td>
           <td>{% if r.tracked %}<b>{{ r.available }}</b> doses{% else %}<span class="text-muted">-</span>{% endif %}
+            {% if r.coming %}<div class="text-muted" style="font-size:11.5px;">+{{ r.coming }} on the way</div>{% endif %}
             {% if r.expired %}<div style="font-size:11.5px;color:var(--red);">{{ r.expired }} expired doses to dispose</div>{% endif %}
             {% if r.no_stock %}<div style="font-size:11.5px;color:var(--red);">{{ r.no_stock }} given with no stock (30 days)</div>{% endif %}</td>
           <td>{{ r.needed }}</td>
@@ -255,16 +254,15 @@
 </div>
 {% endfor %}
 
-{% if untracked %}
 <div class="modal-scrim" id="openingModal">
   <div class="modal-box">
-    <div class="modal-head"><h3>Opening Count</h3><button class="modal-close" data-close-modal>×</button></div>
+    <div class="modal-head"><h3>Count a Batch</h3><button class="modal-close" data-close-modal>×</button></div>
     <form method="post" action="{{ url_for('bhw.stock_opening') }}">
       <div class="modal-body">
-        <p class="text-muted" style="font-size:13px;margin-top:0;">Count one batch of a vaccine that is in your fridge now. Repeat for each batch. This starts stock tracking for that vaccine.</p>
+        <p class="text-muted" style="font-size:13px;margin-top:0;">Count one batch that is in your fridge now; repeat for each batch. For a vaccine <b>not tracked yet</b>, this is its opening count. For a tracked vaccine, use it only for a batch missing from your records (found during a count); it is reported to the RHU as a count difference. Deliveries are confirmed under <b>Incoming</b>.</p>
         <div class="form-group"><label>Vaccine</label>
           <select class="form-control" name="antigen_id" id="openingAntigen" required>
-            {% for a in untracked %}<option value="{{ a.id }}" data-dpv="{{ default_per_vial[a.id] }}">{{ a.name }}</option>{% endfor %}
+            {% for a in all_antigens %}<option value="{{ a.id }}" data-dpv="{{ default_per_vial[a.id] }}">{{ a.name }}{{ '' if a in untracked else ' (tracked: add a missing batch)' }}</option>{% endfor %}
           </select>
         </div>
         <div class="form-group"><label>Batch Number</label><input class="form-control" name="batch_number" required placeholder="From the vial label"></div>
@@ -289,5 +287,4 @@
   if (sel && dpv) { sel.addEventListener('change', fill); fill(); }
 })();
 </script>
-{% endif %}
 {% endblock %}
