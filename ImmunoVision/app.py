@@ -1581,6 +1581,8 @@ def get_notifications(role, barangay_id=None):  # alerts
                           "body": f"{recent.request_code} ({recent.antigen.name} - {recent.quantity_requested} vials) approved.",
                           "time_label": "Recently", "unread": False})
 
+    notes.extend(barangay_stock_notes(role, barangay_id))
+
     notes.append({"category": "System", "severity": "info", "icon": "calendar", "icon_bg": "bg-blue",
                   "title": "Monthly Report Due",
                   "body": f"The {date.today().strftime('%B %Y')} monthly immunization report is due at month end.",
@@ -3188,12 +3190,17 @@ def reconcile_reservations(barangay_id, antigen_id, reason):  # reserved doses m
     return messages
 
 
-def doses_needed_by_barangay():  # {barangay id: {antigen code: doses}}
-    """doses_needed_soon() for every barangay in one pass."""
+def doses_needed_by_barangay(barangay_ids=None):  # {barangay id: {antigen code: doses}}
+    """doses_needed_soon() for every barangay (or just barangay_ids) in one pass."""
     today = date.today()
     vt_lookup = {vt.code: vt for vt in VaccineType.query.all()}
     need = defaultdict(Counter)
-    for child in Child.query.all():
+    children = Child.query
+    if barangay_ids is not None:
+        if not barangay_ids:
+            return need
+        children = children.filter(Child.barangay_id.in_(list(barangay_ids)))
+    for child in children.all():
         given = _doses_given(child.id)
         for code, _name, antigen, _dose, rec_days in dp.VACCINE_SCHEDULE:
             vt = vt_lookup.get(code)
@@ -3274,6 +3281,227 @@ def suggest_transfers(antigen, rows):  # match surplus to shortage
             src["spare"] -= doses
             left -= doses
     return out
+
+
+# --- Barangay stock alerts and CSV ------------------------------------------
+
+STUCK_IN_TRANSIT_DAYS = 2      # in transit longer than this: follow up
+STUCK_RESERVED_DAYS = 3        # reserved but not dispatched longer than this
+LARGE_COUNT_GAP = 10           # a physical count this many doses short is flagged
+
+
+def _codes(transfers, limit=4):  # "TRF-2026-001 (Awai), ..."
+    text = ", ".join(f"{t.code} ({t.to_barangay.name})" for t in transfers[:limit])
+    return text + (f" and {len(transfers) - limit} more" if len(transfers) > limit else "")
+
+
+def barangay_stock_shortages(barangay_id=None, need=None):  # [(barangay, antigen, available, incoming, needed)]
+    """Tracked vaccines whose available + incoming doses are below the 30-day
+    need: one barangay (BHW) or all of them (RHU). Kept to a few queries
+    because notifications are rebuilt on every page."""
+    lots = BarangayStock.query.filter(BarangayStock.doses_on_hand > 0)
+    tracked = db.session.query(StockMovement.barangay_id, StockMovement.antigen_id).filter(
+        StockMovement.barangay_id.isnot(None))
+    if barangay_id:
+        lots = lots.filter(BarangayStock.barangay_id == barangay_id)
+        tracked = tracked.filter(StockMovement.barangay_id == barangay_id)
+    tracked = sorted(set(tracked.distinct().all()))
+    if not tracked:  # nothing tracked yet: skip the per-child need calculation
+        return []
+    if need is None:
+        need = doses_needed_by_barangay({bid for bid, _aid in tracked})
+    on_hand = Counter()
+    for lot in lots.all():
+        if not lot.is_expired:
+            on_hand[(lot.barangay_id, lot.antigen_id)] += lot.doses_on_hand
+    reserved, incoming = Counter(), Counter()
+    for t in StockTransfer.query.filter(StockTransfer.status.in_(("reserved", "in_transit", "returning"))).all():
+        if t.status == "reserved":
+            reserved[(t.from_barangay_id, t.antigen_id)] += t.doses_sent
+            incoming[(t.to_barangay_id, t.antigen_id)] += t.doses_sent
+        elif t.status == "in_transit":
+            incoming[(t.to_barangay_id, t.antigen_id)] += t.doses_sent
+        else:
+            incoming[(t.from_barangay_id, t.antigen_id)] += t.doses_sent
+    antigens = {a.id: a for a in core_antigens()}
+    barangays = {b.id: b for b in Barangay.query.all()}
+    out = []
+    for bid, aid in tracked:
+        antigen = antigens.get(aid)
+        if antigen is None or bid not in barangays:
+            continue
+        key = (bid, aid)
+        available = on_hand[key] - min(reserved[key], on_hand[key])
+        needed = need.get(bid, {}).get(antigen.code, 0)
+        if available + incoming[key] < needed:
+            out.append((barangays[bid], antigen, available, incoming[key], needed))
+    return out
+
+
+def barangay_stock_notes(role, barangay_id=None):  # alerts for the bell
+    now, today = datetime.utcnow(), date.today()
+    notes = []
+    stuck_cutoff = now - timedelta(days=STUCK_IN_TRANSIT_DAYS)
+    reserve_cutoff = now - timedelta(days=STUCK_RESERVED_DAYS)
+    soon = today + timedelta(days=STOCK_NEED_DAYS_AHEAD)
+    if role == "rhu":
+        stock_url = url_for("rhu.barangay_stock")
+        transfers_url = url_for("rhu.barangay_stock", tab="transfers")
+        stuck = (StockTransfer.query.filter(StockTransfer.status == "in_transit", StockTransfer.dispatched_at < stuck_cutoff)
+                 .order_by(StockTransfer.dispatched_at).all())
+        if stuck:
+            notes.append({"category": "Stock", "severity": "critical", "icon": "clock", "icon_bg": "bg-red",
+                          "title": f"{len(stuck)} Transfer{'s' if len(stuck) != 1 else ''} In Transit Over {STUCK_IN_TRANSIT_DAYS} Days",
+                          "body": f"Not yet confirmed by the receiving barangay: {_codes(stuck)}. Check the vials reached a fridge.",
+                          "time_label": "Follow up", "unread": True, "url": transfers_url})
+        returning = (StockTransfer.query.filter(StockTransfer.status == "returning", StockTransfer.cancelled_at < stuck_cutoff)
+                     .order_by(StockTransfer.cancelled_at).all())
+        if returning:
+            notes.append({"category": "Stock", "severity": "warning", "icon": "refresh", "icon_bg": "bg-orange",
+                          "title": f"{len(returning)} Cancelled Transfer{'s' if len(returning) != 1 else ''} Not Returned",
+                          "body": "Cancelled in transit, but the sender has not counted the vials back in: "
+                                  + ", ".join(f"{t.code} ({t.from_barangay.name})" for t in returning[:4]) + ".",
+                          "time_label": "Follow up", "unread": True, "url": transfers_url})
+        waiting = (StockTransfer.query.filter(StockTransfer.status == "reserved", StockTransfer.created_at < reserve_cutoff)
+                   .order_by(StockTransfer.created_at).all())
+        if waiting:
+            notes.append({"category": "Stock", "severity": "warning", "icon": "refresh", "icon_bg": "bg-orange",
+                          "title": f"{len(waiting)} Redistribution{'s' if len(waiting) != 1 else ''} Not Dispatched",
+                          "body": f"Reserved over {STUCK_RESERVED_DAYS} days ago and still in the sender's fridge: {_codes(waiting)}.",
+                          "time_label": "Follow up", "unread": True, "url": transfers_url})
+        week = now - timedelta(days=7)
+        lost = [t for t in StockTransfer.query.filter(StockTransfer.received_at >= week).all()
+                if any(i.doses_lost for i in t.items)]
+        for t in lost:
+            n = sum(i.doses_lost or 0 for i in t.items)
+            where = t.to_barangay.name if t.status == "received" else t.from_barangay.name
+            notes.append({"category": "Stock", "severity": "warning", "icon": "alert-triangle", "icon_bg": "bg-orange",
+                          "title": f"{t.code}: {n} Doses Lost in Transit",
+                          "body": f"{where} received {t.doses_received} of {t.doses_sent} {t.antigen.name} doses ("
+                                  + ", ".join(sorted({i.loss_reason for i in t.items if i.loss_reason})) + ").",
+                          "time_label": "This week", "unread": True, "url": url_for("rhu.barangay_stock", tab="discrepancies")})
+        gaps = Counter()
+        for m in StockMovement.query.filter(StockMovement.kind == "count_adjustment", StockMovement.doses < 0,
+                                            StockMovement.created_at >= week, StockMovement.barangay_id.isnot(None)).all():
+            gaps[(m.barangay_id, m.antigen_id)] += -m.doses
+        for (bid, aid), n in sorted(gaps.items()):
+            if n >= LARGE_COUNT_GAP:
+                b, a = db.session.get(Barangay, bid), db.session.get(VaccineAntigen, aid)
+                notes.append({"category": "Stock", "severity": "warning", "icon": "alert-triangle", "icon_bg": "bg-orange",
+                              "title": f"Count Discrepancy: {b.name} {a.name}",
+                              "body": f"Physical counts this week found {n} {a.name} doses fewer than the records.",
+                              "time_label": "This week", "unread": True,
+                              "url": url_for("rhu.barangay_stock", tab="discrepancies")})
+        shortages = barangay_stock_shortages()
+        if shortages:
+            names = sorted({b.name for b, *_ in shortages})
+            notes.append({"category": "Stock", "severity": "warning", "icon": "package", "icon_bg": "bg-orange",
+                          "title": f"{len(names)} Barangay{'s' if len(names) != 1 else ''} Short on Vaccines",
+                          "body": "; ".join(f"{b.name} {a.name} ({avail + inc} of {need} doses)"
+                                            for b, a, avail, inc, need in shortages[:4])
+                                  + (f"; and {len(shortages) - 4} more." if len(shortages) > 4 else ".")
+                                  + " See Barangay Stock for suggested redistributions.",
+                          "time_label": "Today", "unread": True, "url": stock_url})
+        expiring = (BarangayStock.query.filter(BarangayStock.doses_on_hand > 0, BarangayStock.expiry_date >= today,
+                                               BarangayStock.expiry_date <= soon).all())
+        if expiring:
+            by_barangay = Counter()
+            for lot in expiring:
+                by_barangay[lot.barangay.name if lot.barangay else "?"] += lot.doses_on_hand
+            notes.append({"category": "Expiry", "severity": "warning", "icon": "hourglass", "icon_bg": "bg-amber",
+                          "title": f"Barangay Stock Expiring Within {STOCK_NEED_DAYS_AHEAD} Days",
+                          "body": ", ".join(f"{name}: {n} doses" for name, n in sorted(by_barangay.items())[:5])
+                                  + ". Consider redistributing to where they will be used.",
+                          "time_label": "Today", "unread": True, "url": stock_url})
+    elif role == "bhw" and barangay_id:
+        stock_url = url_for("bhw.stock")
+        incoming = StockTransfer.query.filter(
+            db.or_(db.and_(StockTransfer.to_barangay_id == barangay_id, StockTransfer.status == "in_transit"),
+                   db.and_(StockTransfer.from_barangay_id == barangay_id, StockTransfer.status == "returning"))).all()
+        for t in incoming:
+            late = (t.dispatched_at or now) < stuck_cutoff
+            source = ("returning to you" if t.status == "returning"
+                      else "from the RHU" if t.kind == "delivery" else f"from {t.from_barangay.name}")
+            notes.append({"category": "Request", "severity": "critical" if late else "info", "icon": "package",
+                          "icon_bg": "bg-red" if late else "bg-blue",
+                          "title": f"{t.code}: Confirm What Arrived",
+                          "body": f"{t.doses_sent} {t.antigen.name} doses {source} are in transit"
+                                  + (f" since {to_local(t.dispatched_at).strftime('%b %d')}" if t.dispatched_at else "")
+                                  + ". Count them on arrival and confirm on My Stock.",
+                          "time_label": "Action needed", "unread": True, "url": stock_url})
+        for t in StockTransfer.query.filter_by(from_barangay_id=barangay_id, status="reserved").all():
+            late = t.created_at and t.created_at < reserve_cutoff
+            notes.append({"category": "Request", "severity": "warning" if late else "info", "icon": "refresh",
+                          "icon_bg": "bg-orange" if late else "bg-blue",
+                          "title": f"{t.code}: Reserved for {t.to_barangay.name}",
+                          "body": f"Keep {t.doses_sent} {t.antigen.name} doses apart for {t.to_barangay.name} and do not use them. "
+                                  + ("Reserved over 3 days ago: mark them dispatched once picked up."
+                                     if late else "Mark them dispatched when they are picked up."),
+                          "time_label": "Action needed", "unread": True, "url": stock_url})
+        for b, a, avail, inc, need in barangay_stock_shortages(barangay_id):
+            notes.append({"category": "Stock", "severity": "critical" if avail <= 0 else "warning", "icon": "package",
+                          "icon_bg": "bg-red" if avail <= 0 else "bg-orange",
+                          "title": f"Barangay {a.name} {'Out of Stock' if avail <= 0 else 'Low'}",
+                          "body": f"{avail} {a.name} doses available" + (f" (+{inc} on the way)" if inc else "")
+                                  + f"; your children need {need} in the next {STOCK_NEED_DAYS_AHEAD} days. Request more from the RHU.",
+                          "time_label": "Today", "unread": True, "url": url_for("bhw.requests")})
+        expiring = (BarangayStock.query.filter(BarangayStock.barangay_id == barangay_id, BarangayStock.doses_on_hand > 0,
+                                               BarangayStock.expiry_date >= today, BarangayStock.expiry_date <= soon)
+                    .order_by(BarangayStock.expiry_date).all())
+        for lot in expiring:
+            notes.append({"category": "Expiry", "severity": "warning", "icon": "hourglass", "icon_bg": "bg-amber",
+                          "title": f"{lot.antigen.name} Batch {lot.batch_number} Expiring",
+                          "body": f"{lot.doses_on_hand} doses expire on {lot.expiry_date.strftime('%b %d, %Y')}. "
+                                  "Use them first; the RHU may redistribute what you cannot use.",
+                          "time_label": "Today", "unread": True, "url": stock_url})
+        expired = BarangayStock.query.filter(BarangayStock.barangay_id == barangay_id, BarangayStock.doses_on_hand > 0,
+                                             BarangayStock.expiry_date < today).all()
+        if expired:
+            notes.append({"category": "Expiry", "severity": "critical", "icon": "hourglass", "icon_bg": "bg-red",
+                          "title": "Expired Doses to Dispose",
+                          "body": f"{sum(l.doses_on_hand for l in expired)} expired doses are still counted in your stock. "
+                                  "Dispose of them on My Stock.",
+                          "time_label": "Action needed", "unread": True, "url": stock_url})
+    return notes
+
+
+def _csv_cell(value):  # dates readable; text that Excel would run as a formula is quoted
+    if isinstance(value, datetime):
+        return to_local(value).strftime("%Y-%m-%d %H:%M")
+    if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, str) and value[:1] in ("=", "+", "-", "@"):
+        return "'" + value
+    return "" if value is None else value
+
+
+def _csv_response(title, header_rows, columns, rows, filename, log):
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow([f"ImmunoVision - {title}"])
+    w.writerow(["San Jacinto Rural Health Unit, Pangasinan"])
+    for row in header_rows:
+        w.writerow(row)
+    w.writerow(["Generated", datetime.now().strftime("%b %d, %Y %I:%M %p")])
+    w.writerow([])
+    w.writerow(columns)
+    for row in rows:
+        w.writerow([_csv_cell(v) for v in row])
+    log_activity(log)
+    return Response(buf.getvalue(), mimetype="text/csv",
+                    headers={"Content-Disposition": f"attachment; filename={filename}"})
+
+
+def movement_csv_rows(movements):  # stock history rows
+    return [[m.created_at, m.stock.barangay.name if m.stock and m.stock.barangay else
+             (db.session.get(Barangay, m.barangay_id).name if m.barangay_id else "RHU"),
+             m.antigen.name, MOVEMENT_LABELS.get(m.kind, m.kind), m.doses,
+             m.stock.batch_number if m.stock else "",
+             db.session.get(StockTransfer, m.transfer_id).code if m.transfer_id else "",
+             m.user.full_name if m.user else "", m.note or ""] for m in movements]
+
+
+MOVEMENT_CSV_COLUMNS = ["Date", "Barangay", "Vaccine", "Change", "Doses", "Batch", "Transfer", "By", "Note"]
 
 
 def discrepancy_rows(days=90):  # per barangay: where the system and the fridge disagreed
@@ -3389,6 +3617,58 @@ def barangay_stock():  # every barangay's stock, redistribution and discrepancie
         barangays=Barangay.query.order_by(Barangay.name).all(),
         status_labels=TRANSFER_STATUS_LABELS, status_colors=TRANSFER_STATUS_COLORS,
         surplus_factor=SURPLUS_FACTOR, need_ahead=STOCK_NEED_DAYS_AHEAD, need_behind=STOCK_NEED_DAYS_BEHIND))
+
+
+@rhu_bp.route("/barangay-stock/export.csv")
+def barangay_stock_csv():  # CSV of the Barangay Stock page
+    kind = request.args.get("kind", "stock")
+    stamp = f"{date.today():%Y%m%d}"
+    if kind == "transfers":
+        rows = []
+        for t in StockTransfer.query.order_by(StockTransfer.id).all():
+            rows.append([t.code, "Delivery from RHU" if t.kind == "delivery" else "Redistribution", t.antigen.name,
+                         t.from_barangay.name if t.from_barangay else "RHU", t.to_barangay.name,
+                         TRANSFER_STATUS_LABELS.get(t.status, t.status) + (" (returned)" if t.status == "cancelled" and t.received_at else ""),
+                         t.doses_sent, t.doses_received if t.received_at else "",
+                         sum(i.doses_lost or 0 for i in t.items) if t.received_at else "",
+                         "; ".join(sorted({i.loss_reason for i in t.items if i.loss_reason})),
+                         t.doses_reduced or 0, t.reduce_reason or "", t.reason or "",
+                         t.created_at, t.dispatched_at, t.received_at, t.cancelled_at])
+        return _csv_response("Vaccine Transfers", [], [
+            "Code", "Type", "Vaccine", "From", "To", "Status", "Doses sent/reserved", "Doses received", "Doses lost",
+            "Loss reason", "Reserved doses used by sender", "Reduction reason", "Reason", "Created", "Dispatched",
+            "Received/returned", "Cancelled"], rows, f"immunovision_transfers_{stamp}.csv",
+            "Exported vaccine transfers (CSV)")
+    if kind == "movements":
+        days = request.args.get("days", type=int) or 90
+        days = max(1, min(days, 3650))
+        since = datetime.utcnow() - timedelta(days=days)
+        moves = (StockMovement.query.filter(StockMovement.created_at >= since)
+                 .order_by(StockMovement.created_at, StockMovement.id).all())
+        return _csv_response("Barangay Stock History", [["Period", f"Last {days} days"]], MOVEMENT_CSV_COLUMNS,
+                             movement_csv_rows(moves), f"immunovision_stock_history_{stamp}.csv",
+                             "Exported barangay stock history (CSV)")
+    if kind == "discrepancies":
+        rows = [[d["barangay"], d.get("count_missing", 0), d.get("count_extra", 0), d.get("transit_lost", 0),
+                 d.get("no_stock", 0), d.get("reserved_used", 0)] for d in discrepancy_rows()]
+        return _csv_response("Stock Discrepancy Report", [["Period", "Last 90 days"]], [
+            "Barangay", "Count: doses missing", "Count: doses extra", "Lost in transit", "Doses given with no stock",
+            "Reserved doses used"], rows, f"immunovision_discrepancies_{stamp}.csv",
+            "Exported stock discrepancy report (CSV)")
+    need = doses_needed_by_barangay()
+    rows = []
+    for a in core_antigens():
+        for r in municipal_stock_rows(a, need):
+            tracked = r["status"] != "Not tracked"
+            rows.append([a.name, r["barangay"].name, r["status"]] +
+                        ([r["in_fridge"], r["reserved"], r["incoming"], r["available"]] if tracked else ["", "", "", ""]) +
+                        [r["needed"], r["spare"] or "", r["short"] or "", r["expiring"] if tracked else "",
+                         r["nearest_expiry"]])
+    return _csv_response("Barangay Stock", [["Needed", f"Doses due in the next {STOCK_NEED_DAYS_AHEAD} days or "
+                                              f"overdue by up to {STOCK_NEED_DAYS_BEHIND} days"]], [
+        "Vaccine", "Barangay", "Status", "In fridge", "Reserved", "Incoming", "Available", "Needed",
+        "Can be sent", "Short by", f"Expiring within {STOCK_NEED_DAYS_AHEAD} days", "Nearest expiry"],
+        rows, f"immunovision_barangay_stock_{stamp}.csv", "Exported barangay stock (CSV)")
 
 
 @rhu_bp.route("/transfers/new", methods=["POST"])
@@ -4319,6 +4599,35 @@ def _own_transfer(transfer_id):  # a redistribution leaving the BHW's barangay
     if t.kind != "redistribution" or t.from_barangay_id != current_user.barangay_id:
         abort(403)
     return t
+
+
+@bhw_bp.route("/stock/export.csv")
+def stock_csv():  # My Stock as CSV: current stock, then full history
+    bid = current_user.barangay_id
+    barangay = current_user.barangay.name if current_user.barangay else ""
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["ImmunoVision - Barangay Stock"])
+    w.writerow(["Barangay", barangay])
+    w.writerow(["Generated", datetime.now().strftime("%b %d, %Y %I:%M %p")])
+    w.writerow([])
+    w.writerow(["Vaccine", "Status", "In fridge (doses)", "Vials", "Reserved", "Available", "Needed soon",
+                "Nearest expiry", "Expired to dispose"])
+    for r in barangay_stock_summary(bid):
+        w.writerow([_csv_cell(v) for v in [r["antigen"].name, r["status"], r["in_fridge"] if r["tracked"] else "",
+                                           r["vials"] if r["tracked"] else "", r["reserved"] or "",
+                                           r["available"] if r["tracked"] else "", r["needed"],
+                                           r["nearest_expiry"], r["expired"] or ""]])
+    w.writerow([])
+    w.writerow(["Stock history"])
+    w.writerow(MOVEMENT_CSV_COLUMNS)
+    moves = (StockMovement.query.filter_by(barangay_id=bid)
+             .order_by(StockMovement.created_at, StockMovement.id).all())
+    for row in movement_csv_rows(moves):
+        w.writerow([_csv_cell(v) for v in row])
+    log_activity("Exported barangay stock (CSV)")
+    return Response(buf.getvalue(), mimetype="text/csv",
+                    headers={"Content-Disposition": f"attachment; filename=immunovision_my_stock_{date.today():%Y%m%d}.csv"})
 
 
 @bhw_bp.route("/stock/transfers/<int:transfer_id>/dispatch", methods=["POST"])
