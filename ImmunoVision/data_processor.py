@@ -57,6 +57,12 @@ DEFAULT_DOSES_PER_VIAL = {
     "BCG": 20, "HEPB": 10, "PENTA": 1, "OPV": 20, "PCV": 4, "IPV": 5, "MMR": 10, "ROTA": 1,
 }
 
+# Vaccines whose opened vials are discarded at the end of the session or after
+# 6 hours (WHO multi-dose vial policy, 2014; Philippine NIP manual: BCG and MMR
+# once reconstituted). Other opened vials may be kept up to 28 days if the
+# policy's conditions are met. The admin can change this per vaccine.
+DISCARD_AFTER_SESSION = {"BCG", "MMR"}
+
 ANTIGEN_PROTECTS = {  # disease each vaccine prevents
     "BCG":   "Tuberculosis",
     "HEPB":  "Hepatitis B",
