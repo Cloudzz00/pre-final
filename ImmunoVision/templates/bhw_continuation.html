@@ -43,7 +43,7 @@
 
 <div class="card card-pad">
   <div class="card-title">Children to Follow Up</div>
-  <div class="card-sub">Sorted by continuation likelihood, lowest first — visit the children at the top of the list first. Below 30% = visit urgently.</div>
+  <div class="card-sub">Sorted by continuation likelihood, lowest first — visit the children at the top of the list first.</div>
   <div class="table-wrap">
   <table class="data-table">
     <thead><tr>
@@ -65,9 +65,6 @@
         </td>
         <td>
           <span class="progress-track"><span class="progress-fill {{ 'red' if r.continuation_pct < 30 else 'amber' }}" style="width:{{ r.continuation_pct }}%"></span></span>{{ r.continuation_pct }}%
-          <div style="margin-top:4px;"><span class="badge badge-{{ 'red' if r.continuation_pct < 30 else 'amber' }}">
-            {{ 'Visit Urgently' if r.continuation_pct < 30 else 'Visit Soon' }}
-          </span></div>
         </td>
         <td>
           {% if r.next_dose %}
