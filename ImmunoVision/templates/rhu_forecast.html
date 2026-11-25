@@ -32,7 +32,7 @@
     <div class="stat-icon {{ 'bg-teal' if loop.first else 'bg-purple' }}">{{ icon('package', 21) }}</div>
     <div class="stat-value stat-value-range">{{ y.total_low }}&ndash;{{ y.total_high }}</div>
     <div class="stat-label">Doses Needed in {{ y.year }}</div>
-    <div class="stat-caption">{{ y.known_total }} already due from current records</div>
+    <div class="stat-caption">{{ y.known_total }} from children already registered</div>
   </div>
   {% endfor %}
 </div>
@@ -50,13 +50,13 @@
 {% for y in forecast.years %}
 <div class="card card-pad" style="margin-bottom:18px;">
   <div class="card-title">{{ y.year }} Requirement</div>
-  <div class="card-sub">Per vaccine, in vials of one dose</div>
+  <div class="card-sub">Per vaccine, in doses, for January to December {{ y.year }}. “From registered children” = doses that children already in the registry become due for that year; “Projected new” = babies not yet born.</div>
   <div class="table-wrap auto-height">
     <table class="data-table compact">
       <thead><tr>
         <th>Vaccine</th>
         <th>Doses per Child</th>
-        <th>Already Due</th>
+        <th>From Registered Children</th>
         <th>Projected New</th>
         <th>Total Needed</th>
       </tr></thead>

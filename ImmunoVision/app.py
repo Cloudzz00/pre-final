@@ -2209,8 +2209,13 @@ def _render_due_list(template_ctx, children, can_record, **extra):
         events = [e for e in events if args["search"].lower() in e["child_name"].lower()]
     if args["status_filter"]:
         events = [e for e in events if e["status"] == args["status_filter"]]
-    month_label = ("All months" if args["month"] == "all"
-                   else dict(args["month_options"])[args["month"]])
+    if args["month"] == "all":  # say exactly which dates "All months" covers
+        last = _month_bounds(args["month_options"][-1][0])[1]
+        month_label = f"All months ({date.today():%b %d, %Y} – {last:%b %d, %Y})"
+    else:
+        month_label = dict(args["month_options"])[args["month"]]
+    if args["include_overdue"]:
+        month_label += f", plus overdue from the last {DUE_OVERDUE_DAYS} days"
     return render_template("bhw_due_vaccines.html", **template_ctx(
         "due_list", page_title="Vaccination Due List", events=events, summary=summary,
         summary_total=sum(r["count"] for r in summary), month_label=month_label,
