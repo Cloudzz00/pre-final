@@ -12,9 +12,8 @@
     <span class="filter-select-icon">{{ icon('calendar', 15) }}</span>
     <select name="month" class="select-sm" onchange="this.form.submit()" aria-label="Month">
       {% for key, label in month_options %}
-      <option value="{{ key }}" {% if month==key %}selected{% endif %}>{{ 'This month (' ~ label ~ ')' if loop.first else label }}</option>
+      <option value="{{ key }}" {% if month==key %}selected{% endif %}>{{ 'This month' if loop.first else label }}</option>
       {% endfor %}
-      <option value="all" {% if month=='all' %}selected{% endif %}>All months</option>
       <option value="{{ year_key }}" {% if month==year_key %}selected{% endif %}>Whole year {{ year_label }}</option>
     </select>
     <span class="filter-chevron">{{ icon('chevron-left', 12, 2.5) }}</span>
@@ -116,7 +115,7 @@
         </tr>
         {% else %}
         <tr><td colspan="5"><div class="empty-state"><div class="ic">{{ icon('check-circle', 34) }}</div>
-          <div class="t">No children need a dose in {{ month_label if month != 'all' else 'the coming months' }}</div></div></td></tr>
+          <div class="t">No children need a dose in {{ month_label }}</div></div></td></tr>
         {% endfor %}
       </tbody>
     </table>
