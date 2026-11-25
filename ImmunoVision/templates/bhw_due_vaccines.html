@@ -15,6 +15,7 @@
       <option value="{{ key }}" {% if month==key %}selected{% endif %}>{{ 'This month (' ~ label ~ ')' if loop.first else label }}</option>
       {% endfor %}
       <option value="all" {% if month=='all' %}selected{% endif %}>All months</option>
+      <option value="{{ year_key }}" {% if month==year_key %}selected{% endif %}>Whole year {{ year_label }}</option>
     </select>
     <span class="filter-chevron">{{ icon('chevron-left', 12, 2.5) }}</span>
   </div>

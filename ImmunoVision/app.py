@@ -2136,6 +2136,12 @@ def monthly_due_list(children, month_key, include_overdue=True):
     options = _month_options(today)
     if month_key == "all":
         first, last = today, _month_bounds(options[-1][0])[1]
+    elif month_key.startswith("year-"):
+        # A whole calendar year, the same period as the Forecast; overdue doses
+        # from before it are not carried in, so the two pages count the same doses.
+        year = int(month_key[5:])
+        first, last = date(year, 1, 1), date(year, 12, 31)
+        include_overdue = False
     else:
         first, last = _month_bounds(month_key)
     overdue_floor = today - timedelta(days=DUE_OVERDUE_DAYS)
@@ -2188,15 +2194,20 @@ def due_summary(events):
             for a in order if counts[a]]
 
 
+def _year_key(today=None):  # "year-2027": next calendar year, the Forecast's first year
+    return f"year-{(today or date.today()).year + 1}"
+
+
 def _due_list_args():
     """Reads and validates the Due List filters from the query string or,
     after recording a dose, from the posted form."""
     src = request.values
     options = _month_options()
     month = src.get("month") or options[0][0]
-    if month != "all" and month not in {k for k, _ in options}:
+    if month not in ("all", _year_key()) and month not in {k for k, _ in options}:
         month = options[0][0]
-    return {"month": month, "include_overdue": src.get("overdue", "1") != "0",
+    return {"month": month, "year_key": _year_key(), "year_label": str(date.today().year + 1),
+            "include_overdue": src.get("overdue", "1") != "0",
             "search": src.get("q", "").strip(), "status_filter": src.get("status", ""),
             "month_options": options}
 
@@ -2209,12 +2220,15 @@ def _render_due_list(template_ctx, children, can_record, **extra):
         events = [e for e in events if args["search"].lower() in e["child_name"].lower()]
     if args["status_filter"]:
         events = [e for e in events if e["status"] == args["status_filter"]]
+    whole_year = args["month"] == args["year_key"]
     if args["month"] == "all":  # say exactly which dates "All months" covers
         last = _month_bounds(args["month_options"][-1][0])[1]
         month_label = f"All months ({date.today():%b %d, %Y} – {last:%b %d, %Y})"
+    elif whole_year:
+        month_label = f"Whole year {args['year_label']} (Jan 1 – Dec 31), same period as the Forecast"
     else:
         month_label = dict(args["month_options"])[args["month"]]
-    if args["include_overdue"]:
+    if args["include_overdue"] and not whole_year:
         month_label += f", plus overdue from the last {DUE_OVERDUE_DAYS} days"
     return render_template("bhw_due_vaccines.html", **template_ctx(
         "due_list", page_title="Vaccination Due List", events=events, summary=summary,
