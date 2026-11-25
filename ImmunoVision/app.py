@@ -2126,17 +2126,14 @@ def _month_bounds(key):
 def monthly_due_list(children, month_key, include_overdue=True):
     """Doses still to give, per child, for one calendar month.
 
-    month_key is "YYYY-MM" or "all". A month shows every dose whose due date
-    falls in it; with include_overdue, doses missed before that month (within
-    the last DUE_OVERDUE_DAYS) are carried in too, since those children still
-    need them. Without it, no dose already past due is listed at all. "all" covers the overdue window through the end of the sixth
-    month. Returns (events, summary): summary is one row per antigen with the
+    month_key is "YYYY-MM" or "year-YYYY" (a whole calendar year). A month
+    shows every dose whose due date falls in it; with include_overdue, doses
+    missed before that month (within the last DUE_OVERDUE_DAYS) are carried in
+    too, since those children still need them. Without it, no dose already past
+    due is listed at all. A whole year never carries overdue doses. Returns (events, summary): summary is one row per antigen with the
     number of doses needed, in schedule order."""
     today = date.today()
-    options = _month_options(today)
-    if month_key == "all":
-        first, last = today, _month_bounds(options[-1][0])[1]
-    elif month_key.startswith("year-"):
+    if month_key.startswith("year-"):
         # A whole calendar year, the same period as the Forecast; overdue doses
         # from before it are not carried in, so the two pages count the same doses.
         year = int(month_key[5:])
@@ -2204,7 +2201,7 @@ def _due_list_args():
     src = request.values
     options = _month_options()
     month = src.get("month") or options[0][0]
-    if month not in ("all", _year_key()) and month not in {k for k, _ in options}:
+    if month != _year_key() and month not in {k for k, _ in options}:
         month = options[0][0]
     return {"month": month, "year_key": _year_key(), "year_label": str(date.today().year + 1),
             "include_overdue": src.get("overdue", "1") != "0",
@@ -2221,11 +2218,8 @@ def _render_due_list(template_ctx, children, can_record, **extra):
     if args["status_filter"]:
         events = [e for e in events if e["status"] == args["status_filter"]]
     whole_year = args["month"] == args["year_key"]
-    if args["month"] == "all":  # say exactly which dates "All months" covers
-        last = _month_bounds(args["month_options"][-1][0])[1]
-        month_label = f"All months ({date.today():%b %d, %Y} – {last:%b %d, %Y})"
-    elif whole_year:
-        month_label = f"Whole year {args['year_label']} (Jan 1 – Dec 31), same period as the Forecast"
+    if whole_year:
+        month_label = f"Whole year {args['year_label']} (Jan 1 – Dec 31)"
     else:
         month_label = dict(args["month_options"])[args["month"]]
     if args["include_overdue"] and not whole_year:
