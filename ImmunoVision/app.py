@@ -4991,7 +4991,7 @@ def _quick_doses(child):
                 if earliest > today:
                     row["lock"] = f"from {earliest:%m/%d/%y}"
                 elif latest < earliest:
-                    row["lock"] = f"fix {_short_dose_name(nxt)} date first"
+                    row["lock"] = f"fix {_short_dose_name(nxt)} first"
         rows.append(row)
     return rows
 
