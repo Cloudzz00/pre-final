@@ -2056,7 +2056,7 @@ def _log_dose_date_changes(child, changes):  # log date edits
                          f"{old.isoformat()} to {new.isoformat()}")
 
 
-def _write_dose(child, vt, rec, administered):  # save one dose
+def _write_dose(child, vt, rec, administered, given_elsewhere=False):  # save one dose
     """Writes one dose onto a VaccinationRecord (creating it if it doesn't
     exist yet), same per-dose logic _update_child applies when saving the
     full Edit Child form. Returns the vaccine's name as a warning if an
@@ -2067,7 +2067,7 @@ def _write_dose(child, vt, rec, administered):  # save one dose
     previous = rec.date_administered
     rec.date_administered = administered
     rec.status = "completed" if administered else "pending"
-    stock_on_dose_change(child, vt, rec, previous, administered)  # barangay stock
+    stock_on_dose_change(child, vt, rec, previous, administered, given_elsewhere)  # barangay stock
     if previous is not None and previous != administered:  # date changed
         _log_dose_date_changes(child, [(vt.name, previous, administered)])
     if administered and vt.is_optional and vt.catch_up_deadline_days is not None:
@@ -5054,11 +5054,32 @@ def _quick_error(message, status=400):
     return jsonify({"ok": False, "error": message}), status
 
 
+def _quick_other(child):
+    """Optional vaccines, active campaign doses and supplements (Vitamin A,
+    MNP): everything else the Edit Child form held."""
+    vt_by_code = {vt.code: vt for vt in VaccineType.query.all()}
+    given = _doses_given(child.id)
+    optional = []
+    for code, name, _a, _d, _r, deadline in dp.OPTIONAL_VACCINE_SCHEDULE:
+        vt = vt_by_code.get(code)
+        if vt:
+            when = given.get(vt.id)
+            optional.append({"code": code, "name": name, "date": when,
+                             "past_window": when is not None and (when - child.date_of_birth).days > deadline})
+    campaigns = []
+    for c in eligible_campaigns_for_child(child):
+        rec = child.vaccination_records.filter_by(campaign_id=c.id).first()
+        campaigns.append({"id": c.id, "name": f"{c.vaccine_type.name} - {c.name}",
+                          "date": rec.date_administered if rec else None})
+    return {"optional": optional, "campaigns": campaigns}
+
+
 def quick_panel(child_id):
     child = _quick_child(child_id)
     rows = _quick_doses(child)
     return render_template("_child_quick_panel.html", child=child, groups=_quick_groups(rows),
-                           today=date.today(), show_stock=current_user.role == "bhw")
+                           other=_quick_other(child), today=date.today(),
+                           show_stock=current_user.role == "bhw")
 
 
 def quick_record(child_id):
@@ -5095,7 +5116,7 @@ def quick_record(child_id):
     existing = {r.vaccine_type_id: r for r in child.vaccination_records if r.campaign_id is None}
     for code in codes:
         vt = vt_by_code[code]
-        _write_dose(child, vt, existing.get(vt.id), given_on[code])
+        _write_dose(child, vt, existing.get(vt.id), given_on[code], bool(request.form.get("given_elsewhere")))
     db.session.commit()
     result = _recompute_risk(child)
     short = [rows[c]["short"] for c in codes]
@@ -5220,7 +5241,88 @@ def quick_info(child_id):
     return jsonify({"ok": True, "child": new, "risk": risk, "row": _quick_row_state(child)})
 
 
+def quick_remove(child_id):
+    """Removes a recorded core dose (it becomes not given). Its stock goes back
+    to the batch it came from and the removal is logged, as on the Edit form."""
+    child = _quick_child(child_id)
+    code = request.form.get("code", "")
+    vt = VaccineType.query.filter_by(code=code).first()
+    if vt is None or code not in dp.VACCINE_CODES:
+        return _quick_error("Unknown dose.")
+    rec = next((r for r in child.vaccination_records if r.campaign_id is None
+                and r.vaccine_type_id == vt.id and r.date_administered), None)
+    if rec is None:
+        return _quick_error("This dose is not recorded.")
+    _write_dose(child, vt, rec, None)
+    db.session.commit()
+    result = _recompute_risk(child)
+    return jsonify({"ok": True, "risk": result["label"], "row": _quick_row_state(child)})
+
+
+def quick_other(child_id):
+    """Saves optional vaccines, campaign doses, Vitamin A and MNP - the rest of
+    the old Edit Child form - with the same date checks."""
+    child = _quick_child(child_id)
+    data = _quick_other(child)
+    form = request.form
+    elsewhere = bool(form.get("given_elsewhere"))
+    opt = {o["code"]: _parse_form_date(form.get(f"dose_{o['code']}")) for o in data["optional"]}
+    camp = {c["id"]: _parse_form_date(form.get(f"dose_campaign_{c['id']}")) for c in data["campaigns"]}
+    vit_a = _parse_form_date(form.get("vitamin_a_date"))
+    for key in [f"dose_{c}" for c in opt] + [f"dose_campaign_{c}" for c in camp] + ["vitamin_a_date"]:
+        if form.get(key) and _parse_form_date(form.get(key)) is None:
+            return _quick_error("Please enter valid dates.")
+    names = {o["code"]: o["name"] for o in data["optional"]}
+    cnames = {c["id"]: c["name"] for c in data["campaigns"]}
+    dated = [(names[c], d) for c, d in opt.items()] + [(cnames[c], d) for c, d in camp.items()] + [("Vitamin A", vit_a)]
+    error = _dose_date_error(child.date_of_birth, dated)
+    if error:
+        return _quick_error(error)
+    vt_by_code = {vt.code: vt for vt in VaccineType.query.all()}
+    existing = {r.vaccine_type_id: r for r in child.vaccination_records if r.campaign_id is None}
+    warnings = []
+    for code, when in opt.items():
+        vt = vt_by_code[code]
+        rec = existing.get(vt.id)
+        if (rec.date_administered if rec else None) == when:
+            continue
+        w = _write_dose(child, vt, rec, when, elsewhere)
+        if w:
+            warnings.append(w)
+    changes = []
+    for cid, when in camp.items():
+        campaign = db.session.get(Campaign, cid)
+        rec = child.vaccination_records.filter_by(campaign_id=cid).first()
+        if (rec.date_administered if rec else None) == when:
+            continue
+        if rec is None:
+            rec = VaccinationRecord(child_id=child.id, vaccine_type_id=campaign.vaccine_type_id, campaign_id=cid)
+            db.session.add(rec)
+        if rec.date_administered is not None:
+            changes.append((campaign.name, rec.date_administered, when))
+        previous = rec.date_administered
+        rec.date_administered = when
+        rec.status = "completed" if when else "pending"
+        stock_on_dose_change(child, db.session.get(VaccineType, campaign.vaccine_type_id), rec, previous, when, elsewhere)
+    child.vitamin_a_date = vit_a
+    child.mnp_given = form.get("mnp_given") == "1"
+    db.session.commit()
+    _log_dose_date_changes(child, changes)
+    result = _recompute_risk(child)
+    log_activity(f"Updated optional vaccines, campaigns and supplements for {child_label(child)}")
+    g.pop("_iv_cache", None)
+    fresh = _quick_other(child)
+    fmt = lambda d: d.isoformat() if d else ""
+    return jsonify({"ok": True, "risk": result["label"], "row": _quick_row_state(child),
+                    "warnings": [f"{w} was recorded past its usual eligibility age; please double-check it." for w in warnings],
+                    "values": {**{f"dose_{o['code']}": fmt(o["date"]) for o in fresh["optional"]},
+                               **{f"dose_campaign_{c['id']}": fmt(c["date"]) for c in fresh["campaigns"]},
+                               "vitamin_a_date": fmt(child.vitamin_a_date), "mnp_given": "1" if child.mnp_given else ""}})
+
+
 for _bp in (rhu_bp, bhw_bp):
+    _bp.add_url_rule("/children/<int:child_id>/quick-remove", "quick_remove", quick_remove, methods=["POST"])
+    _bp.add_url_rule("/children/<int:child_id>/quick-other", "quick_other", quick_other, methods=["POST"])
     _bp.add_url_rule("/children/<int:child_id>/panel", "quick_panel", quick_panel)
     _bp.add_url_rule("/children/<int:child_id>/quick-record", "quick_record", quick_record, methods=["POST"])
     _bp.add_url_rule("/children/<int:child_id>/quick-undo", "quick_undo", quick_undo, methods=["POST"])

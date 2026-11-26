@@ -69,9 +69,12 @@ tr.qp-row > td { background: #f8fafc !important; padding: 0 !important; border-b
 .qp-info-grid dd { margin: 0; font-size: 13px; font-weight: 600; color: var(--text-primary); overflow-wrap: anywhere; }
 .qp-info-grid label { display: block; margin: 0; }
 .qp-info-grid .qp-in { width: 100%; height: 34px; }
-.qp-info-form[hidden], .qp-info-view[hidden] { display: none; }
+.qp-info-form[hidden], .qp-info-view[hidden], .qp-other-form[hidden], .qp-other-view[hidden] { display: none; }
 .qp-info-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 12px; }
 .qp-info-actions .qp-help { margin: 0 auto 0 0; }
+.qp-elsewhere { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; color: var(--text-secondary); margin-top: 10px; cursor: pointer; }
+.qp-elsewhere[hidden] { display: none; }
+.qp-elsewhere input { margin-top: 2px; accent-color: var(--primary); }
 .qp-in { box-sizing: border-box; height: 34px; padding: 0 9px; border: 1px solid var(--border-strong); border-radius: 8px; font: inherit; font-size: 13px; background: #fff; }
 .qp-link { border: 0; background: none; padding: 0; font: inherit; color: var(--primary); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 .qp-hint { color: var(--text-secondary); font-size: 13px; margin: -4px 0 10px; }
@@ -91,6 +94,8 @@ tr.qp-row > td { background: #f8fafc !important; padding: 0 !important; border-b
 .qc-note { font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; margin: 0; }
 .qc-warn { font-size: 12.5px; line-height: 1.45; color: #92400e; margin: 0 0 12px; }
 .qc-arrow { color: var(--text-secondary); margin: 0 5px; font-weight: 400; }
+.qc-danger { background: var(--red); color: #fff; border: 0; }
+.qc-danger:hover { filter: brightness(1.05); }
 .qc-box .modal-footer .btn { min-width: 110px; justify-content: center; }
 .qp-toast { position: fixed; right: 28px; bottom: 24px; z-index: 60; max-width: 440px; background: #111827; color: #fff; border-radius: 12px; padding: 12px 16px; font-size: 13px; box-shadow: 0 12px 30px rgba(0,0,0,.25); display: flex; flex-direction: column; gap: 6px; }
 .qp-toast .row1 { display: flex; gap: 14px; align-items: flex-start; }
@@ -139,10 +144,11 @@ tr.qp-row > td { background: #f8fafc !important; padding: 0 !important; border-b
       <button type="button" class="btn btn-primary qc-ok">Confirm</button></div></div>`;
   document.body.appendChild(scrim);
   let settle = null;
-  function askConfirm(title, html, okText) {
+  function askConfirm(title, html, okText, danger) {
     scrim.querySelector('.qc-title').textContent = title;
     scrim.querySelector('.qc-body').innerHTML = html;
     scrim.querySelector('.qc-ok').textContent = okText || 'Confirm';
+    scrim.querySelector('.qc-ok').className = 'btn qc-ok ' + (danger ? 'qc-danger' : 'btn-primary');
     scrim.classList.add('open');
     setTimeout(() => scrim.querySelector('.qc-ok').focus(), 30);
     return new Promise(res => { settle = res; });
@@ -270,6 +276,7 @@ tr.qp-row > td { background: #f8fafc !important; padding: 0 !important; border-b
     const msg = rec.querySelector('.qp-msg');
     const btn = panel.querySelector('.qp-btn');
     const dobMin = rec.dataset.dob;
+    const elsewhereBox = rec.querySelector('.qp-elsewhere'), elsewhereCb = rec.querySelector('.qp-elsewhere-cb');
     const dateRows = {};  // dose code -> its row (kept while the dose stays selected)
 
     function defaultDate(b) {
@@ -303,6 +310,7 @@ tr.qp-row > td { background: #f8fafc !important; padding: 0 !important; border-b
       helpEmpty.hidden = picked.length > 0;
       helpSome.hidden = picked.length === 0;
       rec.classList.toggle('qp-empty', picked.length === 0);
+      if (elsewhereBox) elsewhereBox.hidden = picked.length === 0;
       const problems = [];
       picked.forEach(b => {
         const input = dateRows[b.value].querySelector('input'), note = dateRows[b.value].querySelector('.qp-dnote');
@@ -340,7 +348,8 @@ tr.qp-row > td { background: #f8fafc !important; padding: 0 !important; border-b
           `<b style="white-space:nowrap">${longDate(d)}${d !== today ? '<span class="qc-chg">(not today)</span>' : ''}</b></li>`;
       }).join('');
       const changed = picked.some(b => dateOf(b) !== today);
-      const stocked = picked.filter(b => b.dataset.stock !== '');
+      const elsewhere = !!(elsewhereCb && elsewhereCb.checked);
+      const stocked = elsewhere ? [] : picked.filter(b => b.dataset.stock !== '');
       const empty = stocked.filter(b => +b.dataset.stock <= 0).map(b => b.dataset.short);
       const used = stocked.filter(b => +b.dataset.stock > 0).map(b => `${b.dataset.short} (${b.dataset.stock} left, ${+b.dataset.stock - 1} after)`);
       const html = whoHtml(tr) +
@@ -348,10 +357,12 @@ tr.qp-row > td { background: #f8fafc !important; padding: 0 !important; border-b
         (changed ? `<div class="qc-warn">A date is not today. Make sure it matches the date written on the child's card.</div>` : '') +
         (empty.length ? `<div class="qc-warn">No stock for ${esc(empty.join(', '))}. ${empty.length === 1 ? 'It' : 'They'} will be saved and flagged as recorded with no stock.</div>` : '') +
         (used.length ? `<div class="qc-sec"><div class="qc-lbl">Barangay stock</div><p class="qc-note">1 dose each will be taken: ${esc(used.join(', '))}.</p></div>` : '') +
+        (elsewhere ? `<div class="qc-sec"><div class="qc-lbl">Transferred in</div><p class="qc-note">Given at another health center. No stock is taken from this barangay.</p></div>` : '') +
         `<p class="qc-note">The child's risk is re-assessed after saving. You can undo right after.</p>`;
       if (!await askConfirm('Confirm recording', html, `Confirm, record ${picked.length} dose${picked.length === 1 ? '' : 's'}`)) return;
       btn.disabled = true; btn.textContent = 'Saving…';
       const payload = { codes };
+      if (elsewhere) payload.given_elsewhere = '1';
       picked.forEach(b => { payload['date_' + b.value] = dateOf(b); });
       const r = await post('quick-record', id, payload);
       if (!r.ok) { showMsg(r.error, 'err'); btn.disabled = false; btn.textContent = `Record ${codes.length} dose${codes.length === 1 ? '' : 's'}`; return; }
@@ -389,6 +400,18 @@ tr.qp-row > td { background: #f8fafc !important; padding: 0 !important; border-b
       fixDate.focus();
     }));
     fix.querySelector('.qp-fix-cancel').addEventListener('click', () => { fix.hidden = true; });
+    fix.querySelector('.qp-fix-remove').addEventListener('click', async () => {
+      const chip = panel.querySelector(`.qp-given[data-fix="${fixCode}"]`);
+      const html = whoHtml(tr) +
+        `<div class="qc-sec"><div class="qc-lbl">Remove a recorded dose</div><ul class="qc-list"><li><span>${esc(chip.dataset.name)}</span><small>given ${longDate(chip.dataset.date)}</small></li></ul></div>` +
+        `<p class="qc-note">The dose will show as not given. If it was taken from barangay stock, the dose is returned. The removal is written to the activity log and the risk is re-assessed.</p>`;
+      if (!await askConfirm('Confirm removing a dose', html, 'Confirm, remove dose', true)) return;
+      const r = await post('quick-remove', id, { code: fixCode });
+      if (!r.ok) { fix.insertAdjacentHTML('beforeend', '<div class="qp-msg err" style="flex-basis:100%"></div>'); fix.lastElementChild.textContent = r.error; return; }
+      updateRow(tr, r.row);
+      toast(`<div class="row1"><span>${esc(chip.dataset.name)} removed. Now <b>${r.risk}</b>.</span></div>`);
+      closePanel(); openPanel(tr);
+    });
     fix.querySelector('.qp-fix-save').addEventListener('click', async () => {
       const chip = panel.querySelector(`.qp-given[data-fix="${fixCode}"]`);
       if (!fixDate.value || fixDate.value === chip.dataset.date) { fix.hidden = true; return; }
@@ -443,6 +466,40 @@ tr.qp-row > td { background: #f8fafc !important; padding: 0 !important; border-b
       openForm(false);
       toast(`<div class="row1"><span>Child information saved for <b>${esc(c.display_name)}</b>.${r.risk ? ` Now <b>${r.risk}</b>.` : ''}</span></div>`);
       if (diffs.includes('date_of_birth')) { closePanel(); openPanel(tr); }  // due dates move with the new age
+    });
+
+    // other records: optional vaccines, campaigns, Vitamin A, MNP
+    const oSec = panel.querySelector('.qp-other-sec');
+    const oView = oSec.querySelector('.qp-other-view'), oForm = oSec.querySelector('.qp-other-form');
+    const oMsg = oSec.querySelector('.qp-other-msg'), oEdit = oSec.querySelector('.qp-other-edit');
+    const oShown = (n, v) => n === 'mnp_given' ? (v ? 'Yes' : 'No') : (v ? longDate(v) : 'Not given');
+    let oSaved = {};
+    const oFields = () => [...oForm.querySelectorAll('[name]')];
+    oFields().forEach(i => { oSaved[i.name] = i.value; });
+    function oOpen(open) { oView.hidden = open; oForm.hidden = !open; oEdit.hidden = open; oMsg.hidden = true; }
+    oEdit.addEventListener('click', () => oOpen(true));
+    oSec.querySelector('.qp-other-cancel').addEventListener('click', () => { oFields().forEach(i => { i.value = oSaved[i.name]; }); oOpen(false); });
+    oSec.querySelector('.qp-other-save').addEventListener('click', async () => {
+      const diffs = oFields().filter(i => i.value !== oSaved[i.name]);
+      if (!diffs.length) { oOpen(false); return; }
+      const bad = oFields().find(i => i.type === 'date' && i.value && (i.value > today || i.value < dobMin));
+      if (bad) { oMsg.hidden = false; oMsg.textContent = `${bad.dataset.label}: the date must be between the child's birth and today.`; return; }
+      const oElse = oSec.querySelector('.qp-other-elsewhere');
+      const html = whoHtml(tr) + `<div class="qc-sec"><div class="qc-lbl">Changes</div><ul class="qc-list">` +
+        diffs.map(i => `<li><span>${esc(i.dataset.label)}</span><small>${esc(oShown(i.name, oSaved[i.name]))}<span class="qc-arrow">to</span><b style="color:var(--text-primary)">${esc(oShown(i.name, i.value))}</b></small></li>`).join('') +
+        `</ul></div>` + (oElse && oElse.checked ? `<p class="qc-note">Transferred in: no stock is taken from this barangay.</p>` : '');
+      if (!await askConfirm('Confirm other records', html, 'Confirm, save changes')) return;
+      const data = {};
+      oFields().forEach(i => { data[i.name] = i.value; });
+      if (oElse && oElse.checked) data.given_elsewhere = '1';
+      const r = await post('quick-other', id, data);
+      if (!r.ok) { oMsg.hidden = false; oMsg.textContent = r.error; return; }
+      oSaved = {};
+      oFields().forEach(i => { if (r.values[i.name] !== undefined) i.value = r.values[i.name]; oSaved[i.name] = i.value; });
+      oView.querySelectorAll('[data-f]').forEach(dd => { dd.textContent = oShown(dd.dataset.f, r.values[dd.dataset.f]); });
+      updateRow(tr, r.row);
+      oOpen(false);
+      toast(`<div class="row1"><span>Other records saved.</span></div>` + (r.warnings.length ? `<div class="row2">${r.warnings.map(esc).join('<br>')}</div>` : ''));
     });
 
     refresh();
