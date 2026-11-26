@@ -4,20 +4,20 @@
   <div class="qp-doses">
     {% for g in groups %}{% set gi = loop.index %}
     <div class="qp-grp">
-      <div class="qp-gl">{{ g.label }}{% if g.overdue_days %} <span class="qp-late-txt">· overdue {{ g.overdue_days }} days</span>{% endif %}</div>
+      <div class="qp-gl">{{ g.label }}{% if g.overdue_days %} <span class="qp-late-txt">overdue {{ g.overdue_days }} days</span>{% endif %}</div>
       <div class="qp-gc">
         {% for d in g.doses %}
         {% if d.status == 'given' %}
         <button type="button" class="qp-c qp-given" data-fix="{{ d.code }}" data-date="{{ d.date.isoformat() }}" data-name="{{ d.name }}"
-                title="Given {{ d.date.strftime('%m/%d/%y') }} · click to correct the date">
-          <em>✓ {{ d.short }}</em><small>{{ d.date.strftime('%m/%d/%y') }}</small></button>
+                title="Given {{ d.date.strftime('%m/%d/%y') }}. Click to correct the date.">
+          <em>{{ d.short }}</em><small>{{ d.date.strftime('%m/%d/%y') }}</small></button>
         {% elif d.status in ('due', 'overdue') and not d.lock %}
         <label class="qp-c qp-pick {{ 'qp-late' if d.status == 'overdue' else 'qp-due' }}">
           <em><input type="checkbox" class="qp-cb" value="{{ d.code }}" data-short="{{ d.short }}"
                  data-earliest="{{ d.earliest.isoformat() }}" data-latest="{{ d.latest.isoformat() }}" data-gid="{{ gi }}"
                  data-name="{{ d.name }}" data-due="{{ d.due_on.strftime('%m/%d/%y') }}" data-late="{{ d.overdue_days }}"
                  data-stock="{{ d.stock if (show_stock and d.stock is not none) else '' }}"> {{ d.short }}</em><small>{{ 'due ' if d.status == 'due' }}{{ d.due_on.strftime('%m/%d/%y') }}</small>
-          {% if show_stock and d.stock is not none %}<small class="qp-st {{ 'qp-st0' if d.stock <= 0 }}">{{ '⚠ 0 in stock' if d.stock <= 0 else d.stock ~ ' in stock' }}</small>{% endif %}
+          {% if show_stock and d.stock is not none %}<small class="qp-st {{ 'qp-st0' if d.stock <= 0 }}">{{ '0 in stock' if d.stock <= 0 else d.stock ~ ' in stock' }}</small>{% endif %}
         </label>
         {% elif d.status in ('due', 'overdue') %}
         <span class="qp-c qp-locked {{ 'qp-late-locked' if d.status == 'overdue' }}" title="Can be recorded {{ d.lock }}">
@@ -54,8 +54,8 @@
 
   <div class="qp-foot">
     <div class="qp-info">
-      <span class="qp-info-view">Guardian <b class="qp-g">{{ child.guardian_name or '—' }}</b><i></i><b class="qp-p">{{ child.guardian_contact or '—' }}</b><i></i><span class="qp-a">{{ child.address or '—' }}</span>
-        <button type="button" class="qp-link qp-info-edit">✎ Edit info</button></span>
+      <span class="qp-info-view"><span>Guardian: <b class="qp-g">{{ child.guardian_name or '—' }}</b></span><span>Contact: <b class="qp-p">{{ child.guardian_contact or '—' }}</b></span><span>Address: <b class="qp-a">{{ child.address or '—' }}</b></span>
+        <button type="button" class="qp-link qp-info-edit">Edit info</button></span>
       <span class="qp-info-form" hidden>
         <input class="qp-in" name="guardian_name" placeholder="Guardian name" value="{{ child.guardian_name or '' }}">
         <input class="qp-in" name="guardian_contact" placeholder="09171234567" inputmode="tel" value="{{ child.guardian_contact or '' }}">
@@ -64,6 +64,6 @@
         <button type="button" class="btn btn-outline btn-sm qp-info-cancel">Cancel</button>
       </span>
     </div>
-    <a class="qp-link" href="{{ url_for(request.blueprint ~ '.child_record', child_id=child.id) }}">Open full record →</a>
+    <a class="qp-link" href="{{ url_for(request.blueprint ~ '.child_record', child_id=child.id) }}">Open full record</a>
   </div>
 </div>

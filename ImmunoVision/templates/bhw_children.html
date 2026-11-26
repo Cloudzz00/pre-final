@@ -113,7 +113,7 @@
 {% for c in children %}
 <tr data-child-id="{{ c.id }}" tabindex="0" aria-expanded="false" title="Click to record doses or update details">
   <td>
-    <span class="qp-chev" aria-hidden="true">▶</span><span class="id-chip"><span class="sex-dot {{ c.sex }}"></span>{{ c.barangay.name[:2]|upper }}-{{ '%03d'|format(c.id) }}</span>
+    <span class="qp-chev" aria-hidden="true">{{ icon('chevron-left', 12, 2.5) }}</span><span class="id-chip"><span class="sex-dot {{ c.sex }}"></span>{{ c.barangay.name[:2]|upper }}-{{ '%03d'|format(c.id) }}</span>
   </td>
   <td><a href="{{ url_for('bhw.child_record', child_id=c.id) }}" class="child-name-link">{{ c.display_name }}</a></td>
   <td>{{ c.date_registered.strftime('%m/%d/%y') }}</td>
