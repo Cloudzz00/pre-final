@@ -76,7 +76,7 @@
       <li>{{ d.name }}{% if d.status == 'overdue' %} <span class="text-muted">({{ d.note }})</span>{% endif %}</li>
       {% endfor %}
     </ul>
-    <a href="{{ url_for('rhu.edit_child', child_id=due_now_child.id) }}" class="btn btn-primary btn-sm" style="margin-top:4px;">{{ icon('pencil', 14) }} Record doses given today</a>
+    <a href="{{ url_for('rhu.children', open=due_now_child.id) }}" class="btn btn-primary btn-sm" style="margin-top:4px;">{{ icon('pencil', 14) }} Record doses given today</a>
     {% else %}
     <p>Nothing due yet based on age — next dose isn't scheduled until later.</p>
     {% endif %}
@@ -86,8 +86,9 @@
 
 <p class="text-muted" style="margin-top:-8px;">{{ children|length }} children found</p>
 
+<p class="qp-hint">Click a child's row to record doses or update guardian details.</p>
 <div class="table-wrap">
-<table class="data-table pin-first-2">
+<table class="data-table pin-first-2 children-table" data-quick-base="{{ url_for('rhu.quick_panel', child_id=0)[:-6] }}" data-today="{{ today.isoformat() }}">
 <thead>
 <tr>
   <th>ID</th><th>Name</th><th>Reg. Date</th><th>Date of Birth</th><th>Sex</th><th>Barangay</th>
@@ -100,14 +101,14 @@
     </button>
   </th>
   {% for code, name, antigen, dose_no, rec_days in vaccine_schedule %}<th class="vaccine-group-head dose-col">{{ name }}</th>{% endfor %}
-  <th>Risk</th><th>Actions</th>
+  <th>Risk</th>
 </tr>
 </thead>
 <tbody>
 {% for c in children %}
-<tr>
+<tr data-child-id="{{ c.id }}" tabindex="0" aria-expanded="false" title="Click to record doses or update details">
   <td>
-    <span class="id-chip"><span class="sex-dot {{ c.sex }}"></span>{{ c.barangay.name[:2]|upper }}-{{ '%03d'|format(c.id) }}</span>
+    <span class="qp-chev" aria-hidden="true">▶</span><span class="id-chip"><span class="sex-dot {{ c.sex }}"></span>{{ c.barangay.name[:2]|upper }}-{{ '%03d'|format(c.id) }}</span>
   </td>
   <td title="{{ c.display_name }}"><a href="{{ url_for('rhu.child_record', child_id=c.id) }}" class="child-name-link">{{ c.display_name }}</a></td>
   <td>{{ c.date_registered.strftime('%m/%d/%y') }}</td>
@@ -125,16 +126,12 @@
   </td>
   {% for code, name, antigen, dose_no, rec_days in vaccine_schedule %}
     {% set given = dose_matrix[c.id][code] %}
-    <td class="dose-col {{ 'cell-green' if given else 'cell-muted' }}">
+    <td data-code="{{ code }}" class="dose-col {{ 'cell-green' if given else 'cell-muted' }}">
       {{ given.strftime('%m/%d/%y') if given else '—' }}
     </td>
   {% endfor %}
   {% set label = risk_labels[c.id] %}
   <td>{% if label %}<span class="badge badge-{{ 'red' if label=='At-Risk' else 'green' }}">{{ label }}</span>{% else %}<span class="badge badge-gray">Pending</span>{% endif %}</td>
-  <td class="flex-gap">
-    <a href="{{ url_for('rhu.child_record', child_id=c.id) }}" class="btn btn-outline btn-sm">{{ icon('search', 14) }} View</a>
-    <a href="{{ url_for('rhu.edit_child', child_id=c.id) }}" class="btn btn-outline btn-sm">{{ icon('pencil', 14) }} Edit</a>
-  </td>
 </tr>
 {% else %}
 <tr><td colspan="20"><div class="empty-state"><div class="ic">{{ icon('folder', 34) }}</div><div class="t">No children found</div></div></td></tr>
@@ -145,6 +142,7 @@
 <div class="scroll-hint">&harr; Scroll right to see Actions</div>
 
 {% include "register_child_modal.html" %}
+{% include "_child_quick.html" %}
 {% if request.args.get('add') %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {

@@ -1,0 +1,353 @@
+{# Child Records quick panel: styles and behaviour, included by the RHU and BHW
+   lists. Click a row (or press Enter on it) to open the child's panel under it. #}
+<style>
+.children-table tbody tr[data-child-id] { cursor: pointer; }
+.children-table tbody tr[data-child-id]:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+.qp-chev { display: inline-block; width: 10px; color: var(--text-secondary); font-size: 9px; margin-right: 8px; vertical-align: 1px; transition: transform .15s; }
+tr.qp-open td { background: var(--primary-tint) !important; }
+tr.qp-open td:first-child { box-shadow: inset 3px 0 0 var(--primary); }
+tr.qp-open .qp-chev { transform: rotate(90deg); color: var(--primary); }
+tr.qp-done td { background: #f0fdf4 !important; transition: background .4s; }
+tr.qp-row > td { background: #fff !important; padding: 0 !important; box-shadow: inset 3px 0 0 var(--primary); border-bottom: 1px solid var(--border) !important; cursor: default; }
+.qp-holder { position: sticky; left: 0; box-sizing: border-box; padding: 14px 20px 16px 0; white-space: normal; }
+.qp-loading { padding: 8px 0; color: var(--text-secondary); font-size: 13px; }
+.qp { display: flex; flex-direction: column; gap: 14px; font-size: 12px; white-space: normal; }
+.qp * { white-space: normal; }
+.qp-doses { display: flex; flex-wrap: wrap; gap: 10px 12px; align-items: flex-start; }
+.qp-grp { display: flex; flex-direction: column; gap: 4px; }
+.qp-gl { font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-secondary); display: flex; gap: 6px; align-items: center; min-height: 16px; white-space: nowrap !important; }
+.qp-gl.late { color: var(--red); }
+.qp-all { border: 0; background: none; padding: 0; font: inherit; font-size: 11px; letter-spacing: 0; text-transform: none; color: var(--primary); font-weight: 700; text-decoration: underline; cursor: pointer; }
+.qp-gc { display: flex; gap: 3px; flex-wrap: wrap; }
+.qp-c { box-sizing: border-box; display: inline-flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 5px 7px; border-radius: 8px; border: 1px solid var(--border-strong); background: #fff; font: inherit; font-size: 12px; color: var(--text-primary); text-align: left; white-space: nowrap !important; }
+.qp-c em { font-style: normal; font-weight: 600; display: flex; align-items: center; gap: 5px; white-space: nowrap !important; }
+.qp-c small { font-size: 10.5px; font-weight: 500; opacity: .85; white-space: nowrap !important; }
+.qp-given { background: var(--green-bg); border-color: transparent; color: #166534; cursor: pointer; }
+.qp-given:hover { border-color: #86efac; }
+.qp-pick { cursor: pointer; border: 1.5px dashed; }
+.qp-pick input { width: 13px; height: 13px; margin: 0; }
+.qp-late { border-color: var(--red); color: var(--red); }
+.qp-late input { accent-color: var(--red); }
+.qp-due { border-color: var(--primary); color: var(--primary); }
+.qp-due input { accent-color: var(--primary); }
+.qp-late.qp-on { background: var(--red-bg); border-style: solid; box-shadow: 0 0 0 2px rgba(220,38,38,.15); }
+.qp-due.qp-on { background: var(--primary-tint); border-style: solid; box-shadow: 0 0 0 2px rgba(37,99,235,.15); }
+.qp-st { font-size: 10px !important; font-weight: 600 !important; color: #6b7280; opacity: 1 !important; }
+.qp-st0 { color: #b45309 !important; }
+.qp-up, .qp-locked { background: #f9fafb; border-style: dashed; color: var(--text-secondary); font-weight: 500; cursor: not-allowed; }
+.qp-late-locked { color: #b91c1c; border-color: #fca5a5; }
+.qp-fix { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 10px 14px; font-size: 12.5px; }
+.qp-fix[hidden] { display: none; }
+.qp-fix input, .qp-rec-date input, .qp-in { box-sizing: border-box; height: 34px; padding: 0 9px; border: 1px solid var(--border-strong); border-radius: 8px; font: inherit; font-size: 13px; background: #fff; }
+.qp-rec { display: flex; align-items: flex-start; gap: 24px; background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; }
+.qp-rec.qp-empty { background: #fff; border-style: dashed; }
+.qp-rec-what { flex: 1; min-width: 0; }
+.qp-lbl { display: block; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-secondary); margin: 0 0 6px; }
+.qp-none { font-size: 13.5px; font-weight: 600; color: var(--text-primary); }
+.qp-list { display: flex; gap: 6px; flex-wrap: wrap; }
+.qp-list:empty { display: none; }
+.qp-pill { border-radius: 999px; padding: 3px 12px; font-weight: 600; font-size: 12.5px; border: 1px solid; }
+.qp-pill.late { background: var(--red-bg); color: var(--red); border-color: var(--red-light); }
+.qp-pill.due { background: var(--primary-tint); color: var(--primary); border-color: #bfdbfe; }
+.qp-help { font-size: 11.5px; color: var(--text-secondary); margin-top: 6px; }
+.qp-help[hidden], .qp-msg[hidden], .qp-none[hidden] { display: none; }
+.qp-msg { margin-top: 8px; font-size: 12px; border-radius: 8px; padding: 7px 10px; line-height: 1.4; }
+.qp-msg.err { background: var(--red-bg); color: #991b1b; border: 1px solid var(--red-light); }
+.qp-msg.warn { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+.qp-rec-date { flex: none; width: 190px; }
+.qp-rec-date input { width: 100%; }
+.qp-rec-date input.qp-changed { border: 1.5px solid #f59e0b; background: #fffbeb; }
+.qp-date-note.qp-changed { color: #b45309; font-weight: 600; }
+.qp-btn { flex: none; align-self: center; height: 44px; padding: 0 22px; font-size: 14px; font-weight: 700; border-radius: 10px; }
+.qp-btn:disabled { background: #e5e7eb; color: #6b7280; cursor: not-allowed; border: 0; }
+.qp-btn:not(:disabled) { background: var(--primary); color: #fff; border: 0; }
+.qp-foot { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; color: var(--text-secondary); font-size: 12.5px; }
+.qp-info { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.qp-info-view { display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.qp-info-view b { color: var(--text-primary); font-weight: 600; }
+.qp-info-view i { width: 3px; height: 3px; border-radius: 50%; background: var(--border-strong); display: inline-block; }
+.qp-info-form { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.qp-info-form[hidden], .qp-info-view[hidden] { display: none; }
+.qp-in { width: 150px; height: 30px; font-size: 12.5px; }
+.qp-in-wide { width: 190px; }
+.qp-link { border: 0; background: none; padding: 0; font: inherit; color: var(--primary); font-weight: 600; text-decoration: none; cursor: pointer; }
+.qp-foot > .qp-link { margin-left: auto; }
+.qp-hint { color: var(--text-secondary); font-size: 13px; margin: -4px 0 10px; }
+.qp-toast { position: fixed; right: 28px; bottom: 24px; z-index: 60; max-width: 440px; background: #111827; color: #fff; border-radius: 12px; padding: 12px 16px; font-size: 13px; box-shadow: 0 12px 30px rgba(0,0,0,.25); display: flex; flex-direction: column; gap: 6px; }
+.qp-toast .row1 { display: flex; gap: 14px; align-items: flex-start; }
+.qp-toast .row2 { color: #cbd5e1; font-size: 12.5px; line-height: 1.45; }
+.qp-toast .row2 b { color: #fff; }
+.qp-toast button { margin-left: auto; border: 0; background: none; color: #93c5fd; font: inherit; font-weight: 700; cursor: pointer; padding: 0; }
+@media (max-width: 760px) {
+  .qp-holder { padding: 12px 12px 14px 12px !important; }
+  .qp-rec { flex-direction: column; gap: 12px; }
+  .qp-rec-date { width: 100%; }
+  .qp-btn { width: 100%; align-self: stretch; }
+  .qp-foot > .qp-link { margin-left: 0; }
+  .qp-toast { left: 12px; right: 12px; max-width: none; }
+}
+</style>
+
+<script>
+(function () {
+  const table = document.querySelector('table.children-table');
+  if (!table) return;
+  const base = table.dataset.quickBase;            // e.g. /bhw/children/0
+  const url = (id, action) => base.replace(/\/0$/, '/' + id) + '/' + action;
+  const today = table.dataset.today;
+  const fmt = iso => { const [y, m, d] = iso.split('-'); return m + '/' + d + '/' + y.slice(2); };
+  const store = {
+    get() { try { return sessionStorage.getItem('qpDate'); } catch (e) { return null; } },
+    set(v) { try { v ? sessionStorage.setItem('qpDate', v) : sessionStorage.removeItem('qpDate'); } catch (e) {} }
+  };
+  let openRow = null;
+
+  function rows() { return [...table.querySelectorAll('tbody tr[data-child-id]')]; }
+
+  function closePanel() {
+    if (!openRow) return;
+    openRow.classList.remove('qp-open');
+    openRow.setAttribute('aria-expanded', 'false');
+    const next = openRow.nextElementSibling;
+    if (next && next.classList.contains('qp-row')) next.remove();
+    openRow = null;
+  }
+
+  async function openPanel(tr, focusPanel) {
+    if (openRow === tr) { closePanel(); return; }
+    closePanel();
+    openRow = tr;
+    tr.classList.add('qp-open');
+    tr.setAttribute('aria-expanded', 'true');
+    const row = document.createElement('tr');
+    row.className = 'qp-row';
+    row.innerHTML = `<td colspan="${tr.cells.length}"><div class="qp-holder"><div class="qp-loading">Loading…</div></div></td>`;
+    tr.after(row);
+    const holder = row.querySelector('.qp-holder');
+    sizeHolder(tr, holder);
+    try {
+      const res = await fetch(url(tr.dataset.childId, 'panel'), { headers: { 'X-Requested-With': 'fetch' } });
+      if (!res.ok) throw new Error();
+      holder.innerHTML = await res.text();
+      initPanel(tr, holder.querySelector('.qp'));
+      if (focusPanel) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    } catch (e) {
+      holder.innerHTML = '<div class="qp-loading">Could not load this child. Please try again.</div>';
+    }
+  }
+
+  function sizeHolder(tr, holder) {  // line the panel up with the ID text and the visible table width
+    const wrap = table.closest('.table-wrap') || table.parentElement;
+    const chip = tr.querySelector('.id-chip');
+    const left = chip ? chip.getBoundingClientRect().left - tr.getBoundingClientRect().left : 16;
+    holder.style.paddingLeft = Math.max(12, left) + 'px';
+    holder.style.width = wrap.clientWidth + 'px';
+  }
+
+  function post(action, id, data) {
+    const fd = new FormData();
+    Object.entries(data).forEach(([k, v]) => [].concat(v).forEach(x => fd.append(k, x)));
+    return fetch(url(id, action), { method: 'POST', body: fd, headers: { 'X-Requested-With': 'fetch' } })
+      .then(r => r.json().catch(() => ({ ok: false, error: 'Something went wrong. Please try again.' })));
+  }
+
+  function updateRow(tr, state) {
+    const sum = tr.querySelector('td.dose-summary');
+    if (sum) {
+      const b = sum.querySelector('b'); if (b) b.textContent = state.done;
+      const fill = sum.querySelector('.progress-fill');
+      if (fill) {
+        fill.style.width = Math.round(state.done / state.total * 100) + '%';
+        fill.classList.remove('green', 'amber', 'red');
+        fill.classList.add(state.done === state.total ? 'green' : (state.done >= state.total * 0.75 ? 'amber' : 'red'));
+      }
+    }
+    Object.entries(state.dates || {}).forEach(([code, d]) => {
+      const cell = tr.querySelector(`td[data-code="${code}"]`);
+      if (!cell) return;
+      const bhw = cell.classList.contains('dose-check-cell');
+      cell.classList.toggle(bhw ? 'dose-given' : 'cell-green', !!d);
+      cell.classList.toggle(bhw ? 'dose-not-given' : 'cell-muted', !d);
+      if (bhw) { const s = cell.querySelector('span'); if (s) { s.textContent = d ? '✓' : '—'; s.title = d ? d : 'No vaccination record'; } }
+      else cell.textContent = d || '—';
+    });
+    const badge = tr.querySelector('.badge');
+    if (badge && state.risk) {
+      badge.textContent = state.risk;
+      badge.className = 'badge ' + (state.risk === 'At-Risk' ? 'badge-red' : 'badge-green');
+    }
+  }
+
+  let toastTimer = null;
+  function toast(html, undo) {
+    document.querySelectorAll('.qp-toast').forEach(t => t.remove());
+    const t = document.createElement('div');
+    t.className = 'qp-toast';
+    t.setAttribute('role', 'status');
+    t.innerHTML = html;
+    if (undo) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = 'Undo';
+      b.addEventListener('click', () => { t.remove(); undo(); });
+      t.querySelector('.row1').appendChild(b);
+    }
+    document.body.appendChild(t);
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.remove(), 12000);
+  }
+
+  function initPanel(tr, panel) {
+    const id = tr.dataset.childId;
+    const boxes = [...panel.querySelectorAll('.qp-cb')];
+    const rec = panel.querySelector('.qp-rec');
+    const list = panel.querySelector('.qp-list');
+    const none = panel.querySelector('.qp-none');
+    const helpEmpty = panel.querySelector('.qp-help-empty');
+    const helpSome = panel.querySelector('.qp-help-some');
+    const msg = panel.querySelector('.qp-msg');
+    const dateIn = panel.querySelector('.qp-date');
+    const note = panel.querySelector('.qp-date-note');
+    const btn = panel.querySelector('.qp-btn');
+    const dobMin = dateIn.min;
+
+    const remembered = store.get();
+    if (remembered && remembered <= today && remembered >= dobMin) dateIn.value = remembered;
+
+    function showMsg(text, kind) { msg.hidden = !text; msg.className = 'qp-msg ' + (kind || ''); msg.textContent = text || ''; }
+
+    function refresh() {
+      const picked = boxes.filter(b => b.checked);
+      boxes.forEach(b => b.closest('.qp-pick').classList.toggle('qp-on', b.checked));
+      list.innerHTML = picked.map(b => `<span class="qp-pill ${b.closest('.qp-late') ? 'late' : 'due'}">${b.dataset.short}</span>`).join('');
+      none.hidden = picked.length > 0;
+      helpEmpty.hidden = picked.length > 0;
+      helpSome.hidden = picked.length === 0;
+      rec.classList.toggle('qp-empty', picked.length === 0);
+      const changed = dateIn.value && dateIn.value !== today;
+      dateIn.classList.toggle('qp-changed', !!changed);
+      note.classList.toggle('qp-changed', !!changed);
+      note.textContent = changed ? 'Changed from today · kept for the next child' : 'Today';
+      // the earliest date every selected dose allows
+      const earliest = picked.reduce((m, b) => b.dataset.earliest > m ? b.dataset.earliest : m, dobMin);
+      dateIn.min = earliest;
+      let problem = '';
+      if (!dateIn.value) problem = 'Please choose the date the doses were given.';
+      else if (dateIn.value > today) problem = 'The date cannot be after today.';
+      else {
+        const early = picked.filter(b => dateIn.value < b.dataset.earliest);
+        if (early.length) problem = early.map(b => `${b.dataset.short} can't be recorded before ${fmt(b.dataset.earliest)}.`).join(' ') + ' Change the date or untick it.';
+      }
+      const noStock = picked.filter(b => b.closest('.qp-pick').querySelector('.qp-st0')).map(b => b.dataset.short);
+      if (problem) showMsg(problem, 'err');
+      else if (noStock.length) showMsg(`No stock for ${noStock.join(', ')} in your barangay. It will be saved and flagged as recorded with no stock; request a transfer from the RHU.`, 'warn');
+      else showMsg('');
+      btn.disabled = picked.length === 0 || !!problem;
+      btn.textContent = picked.length === 0 ? 'Select a dose first'
+        : `✓ Record ${picked.length} dose${picked.length === 1 ? '' : 's'}`;
+    }
+
+    boxes.forEach(b => b.addEventListener('change', refresh));
+    panel.querySelectorAll('.qp-all').forEach(a => a.addEventListener('click', () => {
+      const group = boxes.filter(b => b.dataset.gid === a.dataset.gid);
+      const all = group.every(b => b.checked);
+      group.forEach(b => { b.checked = !all; });
+      refresh();
+    }));
+    dateIn.addEventListener('change', () => { store.set(dateIn.value && dateIn.value !== today ? dateIn.value : null); refresh(); });
+
+    btn.addEventListener('click', async () => {
+      const codes = boxes.filter(b => b.checked).map(b => b.value);
+      if (!codes.length || btn.disabled) return;
+      btn.disabled = true; btn.textContent = 'Saving…';
+      const r = await post('quick-record', id, { codes, date: dateIn.value });
+      if (!r.ok) { showMsg(r.error, 'err'); btn.disabled = false; btn.textContent = `✓ Record ${codes.length} dose${codes.length === 1 ? '' : 's'}`; return; }
+      updateRow(tr, r.row);
+      tr.classList.add('qp-done');
+      const parts = [];
+      if (r.still_needed.length) parts.push(`Can still be given today: <b>${r.still_needed.join(', ')}</b>`);
+      if (r.next_visit) parts.push(`Next: <b>${r.next_visit.doses.join(', ')}</b> from ${r.next_visit.date}`);
+      toast(`<div class="row1"><span>✓ <b>${r.child}</b>: ${r.recorded.join(', ')} recorded · now <b>${r.risk}</b></span></div>` +
+            (parts.length ? `<div class="row2">${parts.join('<br>')}</div>` : ''),
+            async () => {
+              const u = await post('quick-undo', id, { codes: r.codes, date: r.date });
+              if (u.ok) { updateRow(tr, u.row); tr.classList.remove('qp-done'); toast(`<div class="row1"><span>Undone: ${r.recorded.join(', ')} removed for <b>${r.child}</b></span></div>`); if (openRow === tr) { closePanel(); openPanel(tr); } }
+              else toast(`<div class="row1"><span>${u.error}</span></div>`);
+            });
+      const all = rows();
+      const next = all[all.indexOf(tr) + 1];
+      closePanel();
+      if (next) openPanel(next, true);
+    });
+
+    // correct the date of a dose already given
+    const fix = panel.querySelector('.qp-fix');
+    const fixDate = fix.querySelector('.qp-fix-date');
+    let fixCode = null;
+    panel.querySelectorAll('.qp-given').forEach(c => c.addEventListener('click', () => {
+      fixCode = c.dataset.fix;
+      fix.querySelector('.qp-fix-name').textContent = c.querySelector('em').textContent.replace('✓', '').trim();
+      fixDate.value = c.dataset.date;
+      fixDate.min = dobMin;
+      fix.hidden = false;
+      fix.querySelectorAll('.qp-msg').forEach(m => m.remove());
+      fixDate.focus();
+    }));
+    fix.querySelector('.qp-fix-cancel').addEventListener('click', () => { fix.hidden = true; });
+    fix.querySelector('.qp-fix-save').addEventListener('click', async () => {
+      const r = await post('quick-fix-date', id, { code: fixCode, date: fixDate.value });
+      fix.querySelectorAll('.qp-msg').forEach(m => m.remove());
+      if (!r.ok) { fix.insertAdjacentHTML('beforeend', `<div class="qp-msg err" style="flex-basis:100%"></div>`); fix.lastElementChild.textContent = r.error; return; }
+      updateRow(tr, r.row);
+      if (!r.unchanged) toast(`<div class="row1"><span>Date corrected · now <b>${r.risk}</b></span></div>`);
+      closePanel(); openPanel(tr);
+    });
+
+    // guardian details
+    const view = panel.querySelector('.qp-info-view'), form = panel.querySelector('.qp-info-form');
+    panel.querySelector('.qp-info-edit').addEventListener('click', () => { view.hidden = true; form.hidden = false; form.querySelector('input').focus(); });
+    panel.querySelector('.qp-info-cancel').addEventListener('click', () => { form.hidden = true; view.hidden = false; });
+    panel.querySelector('.qp-info-save').addEventListener('click', async () => {
+      const data = {};
+      form.querySelectorAll('input').forEach(i => { data[i.name] = i.value; });
+      const r = await post('quick-info', id, data);
+      form.querySelectorAll('.qp-msg').forEach(m => m.remove());
+      if (!r.ok) { form.insertAdjacentHTML('beforeend', '<div class="qp-msg err" style="flex-basis:100%"></div>'); form.lastElementChild.textContent = r.error; return; }
+      view.querySelector('.qp-g').textContent = r.guardian_name;
+      view.querySelector('.qp-p').textContent = r.guardian_contact;
+      view.querySelector('.qp-a').textContent = r.address;
+      form.hidden = true; view.hidden = false;
+      toast('<div class="row1"><span>Guardian details saved</span></div>');
+    });
+
+    refresh();
+  }
+
+  // open/close by clicking a row (links keep working), Enter/Space, arrow keys
+  table.addEventListener('click', e => {
+    const tr = e.target.closest('tbody tr[data-child-id]');
+    if (!tr || e.target.closest('a, button, input, label, select')) return;
+    openPanel(tr);
+  });
+  table.addEventListener('keydown', e => {
+    const tr = e.target.closest && e.target.closest('tbody tr[data-child-id]');
+    if (!tr || e.target !== tr) return;
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPanel(tr); }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const all = rows(), i = all.indexOf(tr) + (e.key === 'ArrowDown' ? 1 : -1);
+      if (all[i]) all[i].focus();
+    }
+  });
+  window.addEventListener('resize', () => {
+    if (!openRow) return;
+    const h = openRow.nextElementSibling && openRow.nextElementSibling.querySelector('.qp-holder');
+    if (h) sizeHolder(openRow, h);
+  });
+
+  const auto = new URLSearchParams(location.search).get('open');
+  if (auto) {
+    const tr = table.querySelector(`tbody tr[data-child-id="${auto}"]`);
+    if (tr) { openPanel(tr, true); tr.scrollIntoView({ block: 'center' }); }
+  }
+})();
+</script>
