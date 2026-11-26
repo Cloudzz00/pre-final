@@ -14,7 +14,7 @@
         {% elif d.status in ('due', 'overdue') and not d.lock %}
         <label class="qp-c qp-pick {{ 'qp-late' if d.status == 'overdue' else 'qp-due' }}">
           <em><input type="checkbox" class="qp-cb" value="{{ d.code }}" data-short="{{ d.short }}"
-                 data-earliest="{{ d.earliest.isoformat() }}" data-gid="{{ gi }}"
+                 data-earliest="{{ d.earliest.isoformat() }}" data-latest="{{ d.latest.isoformat() }}" data-gid="{{ gi }}"
                  data-name="{{ d.name }}" data-due="{{ d.due_on.strftime('%m/%d/%y') }}" data-late="{{ d.overdue_days }}"
                  data-stock="{{ d.stock if (show_stock and d.stock is not none) else '' }}"> {{ d.short }}</em><small>{{ 'due ' if d.status == 'due' }}{{ d.due_on.strftime('%m/%d/%y') }}</small>
           {% if show_stock and d.stock is not none %}<small class="qp-st {{ 'qp-st0' if d.stock <= 0 }}">{{ '⚠ 0 in stock' if d.stock <= 0 else d.stock ~ ' in stock' }}</small>{% endif %}
@@ -41,15 +41,17 @@
   </div>
 
   <div class="qp-rec qp-empty" data-dob="{{ child.date_of_birth.isoformat() }}">
-    <div class="qp-rec-what">
-      <div class="qp-lbl">Doses to record</div>
-      <div class="qp-none">None selected yet</div>
-      <div class="qp-rows"></div>
+    <div class="qp-rec-head">
+      <span class="qp-lbl">Doses to record</span>
+      <span class="qp-none">None selected yet</span>
+    </div>
+    <div class="qp-rows"></div>
+    <div class="qp-msg" hidden></div>
+    <div class="qp-rec-foot">
       <div class="qp-help qp-help-empty">Tap the doses above that the child received. Faded doses can't be selected yet; each shows when it can be.</div>
       <div class="qp-help qp-help-some" hidden>Enter the date each dose was given. Tap a dose above again to remove it.</div>
-      <div class="qp-msg" hidden></div>
+      <button type="button" class="btn qp-btn" disabled>Select a dose first</button>
     </div>
-    <button type="button" class="btn qp-btn" disabled>Select a dose first</button>
   </div>
 
   <div class="qp-foot">

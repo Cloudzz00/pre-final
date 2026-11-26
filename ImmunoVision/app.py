@@ -4957,7 +4957,12 @@ def _quick_doses(child):
     detail = {d["code"]: d for d in child_detail(child)["schedule"]}
     dates = _core_dose_dates(child)
     stock = _quick_stock(child)
-    previous = {}
+    previous, following = {}, {}
+    last = {}
+    for code, _n, antigen, _d, _r in dp.VACCINE_SCHEDULE:
+        if antigen in last:
+            following[last[antigen]] = code
+        last[antigen] = code
     rows = []
     for code, name, antigen, dose_no, rec_days in dp.VACCINE_SCHEDULE:
         d = detail.get(code)
@@ -4968,7 +4973,7 @@ def _quick_doses(child):
         previous[antigen] = code
         row = {"code": code, "name": name, "short": _short_dose_name(code), "status": d["status"],
                "date": d["date"], "due_on": d["due_on"], "visit": _VISIT_LABELS.get(rec_days, ""),
-               "earliest": None, "lock": None, "stock": stock.get(vt.antigen_id) if stock else None,
+               "earliest": None, "latest": None, "lock": None, "stock": stock.get(vt.antigen_id) if stock else None,
                "overdue_days": (today - d["due_on"]).days if d["status"] == "overdue" else 0}
         if d["status"] in ("due", "overdue"):
             earliest = child.date_of_birth + timedelta(days=dp.DOSE_MIN_AGE_DAYS.get(code, 0))
@@ -4978,8 +4983,15 @@ def _quick_doses(child):
                 if prev:
                     earliest = max(earliest, dates[prev] + timedelta(days=dp.MIN_DOSE_GAP_DAYS))
                 row["earliest"] = earliest
+                latest = today
+                nxt = following.get(code)
+                if nxt and dates.get(nxt):  # a later dose is already recorded: keep 4 weeks before it
+                    latest = min(today, dates[nxt] - timedelta(days=dp.MIN_DOSE_GAP_DAYS))
+                row["latest"] = latest
                 if earliest > today:
                     row["lock"] = f"from {earliest:%m/%d/%y}"
+                elif latest < earliest:
+                    row["lock"] = f"fix {_short_dose_name(nxt)} date first"
         rows.append(row)
     return rows
 
