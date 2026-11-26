@@ -1767,6 +1767,16 @@ def _dose_date_error(dob, dated_doses):  # dose date check
     return None  # ok
 
 
+def _schedule_error(dob, dates_by_code, check_codes):
+    """Refuses core dose dates that break the DOH schedule (too young, out of
+    order, or under 4 weeks after the previous dose of the same vaccine).
+    Only newly entered or changed doses are checked. Message or None."""
+    problems = dp.schedule_violations(dob, dates_by_code, set(check_codes))
+    if not problems:
+        return None
+    return "Dose dates must follow the vaccination schedule. " + " ".join(problems) + " Nothing was saved."
+
+
 NAME_PUNCTUATION = set(" .'-")
 PH_MOBILE_RE = re.compile(r"(?:09|\+639)\d{9}")
 
@@ -1835,7 +1845,9 @@ def _create_form_errors(form):
     names = _schedule_names()
     dated = [(names[code], _parse_form_date(form.get(f"dose_{code}")))
              for code, *_ in dp.VACCINE_SCHEDULE if form.get(f"dose_{code}_given")]
-    return _dose_date_error(dob, dated)
+    new = {code: _parse_form_date(form.get(f"dose_{code}"))
+           for code, *_ in dp.VACCINE_SCHEDULE if form.get(f"dose_{code}_given")}
+    return _dose_date_error(dob, dated) or _schedule_error(dob, new, new.keys())
 
 
 def _edit_form_errors(child, form):
@@ -1852,7 +1864,19 @@ def _edit_form_errors(child, form):
     dated = [(names[code], _parse_form_date(form.get(f"dose_{code}"))) for code in _KNOWN_DOSE_CODES]
     dated += [(c.name, _parse_form_date(form.get(f"dose_campaign_{c.id}")))
               for c in eligible_campaigns_for_child(child)]
-    return _dose_date_error(dob, dated)
+    # Schedule check: the dates as they will be saved, judging only the doses
+    # whose date this save adds or changes.
+    current = _core_dose_dates(child)
+    submitted = {code: _parse_form_date(form.get(f"dose_{code}")) for code in dp.VACCINE_CODES}
+    changed = [code for code in dp.VACCINE_CODES if submitted[code] != current.get(code)]
+    return _dose_date_error(dob, dated) or _schedule_error(dob, submitted, changed)
+
+
+def _core_dose_dates(child):
+    """{dose code: date given} for the child's core schedule doses."""
+    codes = {vt.id: vt.code for vt in VaccineType.query.all()}
+    return {codes[r.vaccine_type_id]: r.date_administered for r in child.vaccination_records
+            if r.campaign_id is None and r.date_administered and codes.get(r.vaccine_type_id) in dp.VACCINE_CODES}
 
 
 # The core/optional dose codes the Edit Child form's generic per-code loop is
@@ -4215,6 +4239,10 @@ def record_dose(child_id):
         flash("Please enter a valid date.", "error")
         return redirect(_due_list_return_url())
     date_error = _dose_date_error(child.date_of_birth, [(vt.name, administered)])
+    if not date_error and vt.code in dp.VACCINE_CODES:
+        dates = _core_dose_dates(child)
+        dates[vt.code] = administered
+        date_error = _schedule_error(child.date_of_birth, dates, [vt.code])
     if date_error:
         flash(date_error, "error")
         return redirect(_due_list_return_url())
@@ -4223,7 +4251,7 @@ def record_dose(child_id):
     db.session.commit()
     result = _recompute_risk(child)
     log_activity(f"Recorded {vt.name} dose for {child_label(child)}")
-    flash(f"Saved {child.display_name}'s {vt.name} dose. Risk re-assessed: {result['label']}", "success")
+    flash(f"Saved {child.display_name}'s {vt.name}. Risk re-assessed: {result['label']}", "success")
     if warning:
         flash(f"{warning} was recorded past its usual eligibility age — please double-check this dose.", "warning")
     return redirect(_due_list_return_url())

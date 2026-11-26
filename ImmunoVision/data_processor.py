@@ -92,6 +92,51 @@ VACCINE_SCHEDULE = [  # DOH schedule
     ("MMR2", "MMR 2nd Dose", "MMR", 2, 365),  # 12 months
 ]
 VACCINE_CODES = [row[0] for row in VACCINE_SCHEDULE]  # dose codes
+
+# Earliest a dose may be given, so recorded dates follow the DOH schedule.
+# A dose's own minimum age (first doses of each series, and the 9-month
+# doses) plus a minimum gap between doses of the same vaccine.
+DOSE_MIN_AGE_DAYS = {"PENTA1": 42, "OPV1": 42, "PCV1": 42, "IPV1": 98,  # 6 / 14 weeks
+                     "IPV2": 270, "MMR1": 270}  # 9 months
+MIN_DOSE_GAP_DAYS = 28  # 4 weeks between doses of the same vaccine
+
+
+def schedule_violations(dob, dates_by_code, check_codes):
+    """Messages for dose dates that break the schedule, or [].
+
+    dates_by_code holds every core dose date as it will be saved; only the
+    doses in check_codes (newly entered or changed) are judged, so records
+    imported with older problems never stop a child from being saved.
+    A dose is refused if it is before its minimum age, before the previous
+    dose of the same vaccine, or less than MIN_DOSE_GAP_DAYS after it (and
+    likewise if a changed earlier dose would land too close to a later one)."""
+    fmt = lambda d: d.strftime("%m/%d/%y")
+    name = {code: n for code, n, *_ in VACCINE_SCHEDULE}
+    out = []
+    series = {}
+    for code, _n, antigen, dose_no, _days in VACCINE_SCHEDULE:
+        series.setdefault(antigen, []).append(code)
+    for code in VACCINE_CODES:
+        given = dates_by_code.get(code)
+        if given is None or code not in check_codes or dob is None:
+            continue
+        min_age = DOSE_MIN_AGE_DAYS.get(code)
+        if min_age and (given - dob).days < min_age:
+            earliest = dob + timedelta(days=min_age)
+            out.append(f"{name[code]} can't be recorded before {fmt(earliest)} "
+                       f"(the child is too young for it on {fmt(given)}).")
+    for codes in series.values():
+        dated = [(c, dates_by_code.get(c)) for c in codes]
+        for (prev, d1), (cur, d2) in zip(dated, dated[1:]):
+            if d1 is None or d2 is None or not ({prev, cur} & set(check_codes)):
+                continue
+            if d2 < d1:
+                out.append(f"{name[cur]} ({fmt(d2)}) can't be dated before {name[prev]} ({fmt(d1)}).")
+            elif (d2 - d1).days < MIN_DOSE_GAP_DAYS:
+                earliest = d1 + timedelta(days=MIN_DOSE_GAP_DAYS)
+                out.append(f"{name[cur]} can't be recorded before {fmt(earliest)}, "
+                           f"4 weeks after {name[prev]} ({fmt(d1)}).")
+    return out
 ANTIGEN_OF = {code: vaccine for code, _name, vaccine, _n, _age in VACCINE_SCHEDULE}  # dose -> vaccine
 
 # BCG is no longer given after the first year; every other dose can be caught up.
