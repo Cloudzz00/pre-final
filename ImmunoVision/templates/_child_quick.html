@@ -51,18 +51,22 @@ tr.qp-row > td { background: #f8fafc !important; padding: 0 !important; border-b
 .qc-box .modal-head h3 { margin: 0; font-size: 17px; }
 .qc-who { display: flex; align-items: baseline; gap: 10px; padding: 0 0 14px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
 .qc-who b { font-size: 15px; } .qc-who span { color: var(--text-secondary); font-size: 12.5px; }
-.qc-sec { margin-bottom: 14px; }
+.qc-sec { margin-bottom: 16px; }
 .qc-lbl { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 6px; }
 .qc-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-.qc-list li { display: flex; justify-content: space-between; gap: 12px; padding: 9px 12px; font-size: 13.5px; border-top: 1px solid var(--border); }
+.qc-list li { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 10px 14px; font-size: 13.5px; border-top: 1px solid var(--border); }
 .qc-list li:first-child { border-top: 0; }
 .qc-list li small { color: var(--text-secondary); font-size: 12px; white-space: nowrap; }
 .qc-list li small.late { color: var(--red); font-weight: 600; }
 .qc-big { font-size: 16px; font-weight: 700; }
 .qc-chg { margin-left: 6px; font-size: 12px; font-weight: 500; color: var(--text-secondary); }
-.qc-note { font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; margin: 0; }
-.qc-warn { font-size: 12.5px; line-height: 1.45; color: #92400e; margin: 0 0 12px; }
-.qc-arrow { color: var(--text-secondary); margin: 0 5px; font-weight: 400; }
+.qc-note { font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; margin: 0 0 10px; }
+.qc-body > :last-child { margin-bottom: 0; }
+.qc-warn { font-size: 12.5px; line-height: 1.5; color: #92400e; margin: 0 0 10px; }
+.qc-arrow { color: var(--text-secondary); font-weight: 400; }
+.qc-chgval { display: inline-flex; align-items: baseline; gap: 6px; white-space: nowrap; font-size: 13px; }
+.qc-chgval .qc-old { color: var(--text-secondary); }
+.qc-chgval b { color: var(--text-primary); font-weight: 700; }
 .qc-danger { background: var(--red); color: #fff; border: 0; }
 .qc-danger:hover { filter: brightness(1.05); }
 .qc-box .modal-footer .btn { min-width: 110px; justify-content: center; }
@@ -253,7 +257,7 @@ tr.qp-row > td { background: #f8fafc !important; padding: 0 !important; border-b
       const notToday = added.some(i => i.value !== today);
       const empty = elsewhere ? [] : added.filter(i => i.dataset.stock && +i.dataset.stock <= 0).map(i => i.dataset.short);
       const html = whoHtml(tr) + `<div class="qc-sec"><div class="qc-lbl">Changes (${diffs.length})</div><ul class="qc-list">` +
-        diffs.map(i => `<li><span>${esc(i.dataset.label)}</span><small>${esc(vShownF(i, vSaved[i.name]))}<span class="qc-arrow">to</span><b style="color:var(--text-primary)">${esc(vShownF(i, i.value))}</b></small></li>`).join('') +
+        diffs.map(i => `<li><span>${esc(i.dataset.label)}</span><span class="qc-chgval"><span class="qc-old">${esc(vShownF(i, vSaved[i.name]))}</span><span class="qc-arrow">to</span><b>${esc(vShownF(i, i.value))}</b></span></li>`).join('') +
         `</ul></div>` +
         (notToday ? `<div class="qc-warn">A new dose is not dated today. Make sure it matches the date written on the child's card.</div>` : '') +
         (empty.length ? `<div class="qc-warn">No stock for ${esc(empty.join(', '))}. It will be saved and flagged as recorded with no stock.</div>` : '') +
@@ -304,7 +308,7 @@ tr.qp-row > td { background: #f8fafc !important; padding: 0 !important; border-b
       const diffs = Object.keys(labels).filter(k => data[k] !== saved[k]);
       if (!diffs.length) { openForm(false); return; }
       const html = whoHtml(tr) + `<div class="qc-sec"><div class="qc-lbl">Changes</div><ul class="qc-list">` +
-        diffs.map(k => `<li><span>${labels[k]}</span><small>${esc(shown(k, saved[k]))}<span class="qc-arrow">to</span><b style="color:var(--text-primary)">${esc(shown(k, data[k]))}</b></small></li>`).join('') +
+        diffs.map(k => `<li><span>${labels[k]}</span><span class="qc-chgval"><span class="qc-old">${esc(shown(k, saved[k]))}</span><span class="qc-arrow">to</span><b>${esc(shown(k, data[k]))}</b></span></li>`).join('') +
         `</ul></div>` + (diffs.includes('date_of_birth') ? `<p class="qc-note">The child's age changes, so the due dates and risk are recalculated.</p>` : '');
       if (!await askConfirm('Confirm child information', html, 'Confirm, save changes')) return;
       const r = await post('quick-info', id, data);
