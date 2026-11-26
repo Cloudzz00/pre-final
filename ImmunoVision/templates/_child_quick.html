@@ -3,12 +3,11 @@
 <style>
 .children-table tbody tr[data-child-id] { cursor: pointer; }
 .children-table tbody tr[data-child-id]:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
-.qp-chev { display: inline-block; width: 10px; color: var(--text-secondary); font-size: 9px; margin-right: 8px; vertical-align: 1px; transition: transform .15s; }
-tr.qp-open td { background: var(--primary-tint) !important; }
-tr.qp-open td:first-child { box-shadow: inset 3px 0 0 var(--primary); }
-tr.qp-open .qp-chev { transform: rotate(90deg); color: var(--primary); }
-tr.qp-done td { background: #f0fdf4 !important; transition: background .4s; }
-tr.qp-row > td { background: #fff !important; padding: 0 !important; box-shadow: inset 3px 0 0 var(--primary); border-bottom: 1px solid var(--border) !important; cursor: default; }
+.qp-chev { display: inline-flex; width: 12px; margin-right: 8px; vertical-align: -1px; color: var(--text-secondary); transform: rotate(180deg); transition: transform .15s; }
+tr.qp-open td { background: #f8fafc !important; }
+tr.qp-open .qp-chev { transform: rotate(270deg); color: var(--text-primary); }
+tr.qp-done td { background: #f6fef9 !important; transition: background .4s; }
+tr.qp-row > td { background: #f8fafc !important; padding: 0 !important; border-bottom: 1px solid var(--border-strong) !important; cursor: default; }
 .qp-holder { position: sticky; left: 0; box-sizing: border-box; padding: 14px 20px 16px 0; white-space: normal; }
 .qp-loading { padding: 8px 0; color: var(--text-secondary); font-size: 13px; }
 .qp { display: flex; flex-direction: column; gap: 14px; font-size: 12px; white-space: normal; }
@@ -16,71 +15,63 @@ tr.qp-row > td { background: #fff !important; padding: 0 !important; box-shadow:
 .qp-doses { display: flex; flex-wrap: wrap; gap: 10px 12px; align-items: flex-start; }
 .qp-grp { display: flex; flex-direction: column; gap: 4px; }
 .qp-gl { font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-primary); display: flex; gap: 4px; align-items: center; min-height: 16px; white-space: nowrap !important; }
-.qp-late-txt { color: var(--red); }
+.qp-late-txt { color: var(--red); margin-left: 6px; }
 .qp-gc { display: flex; gap: 3px; flex-wrap: wrap; }
 .qp-c { box-sizing: border-box; display: inline-flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 5px 7px; border-radius: 8px; border: 1px solid var(--border-strong); background: #fff; font: inherit; font-size: 12px; color: var(--text-primary); text-align: left; white-space: nowrap !important; }
 .qp-c em { font-style: normal; font-weight: 600; display: flex; align-items: center; gap: 5px; white-space: nowrap !important; }
-.qp-c small { font-size: 10.5px; font-weight: 500; opacity: .85; white-space: nowrap !important; }
-.qp-given { background: var(--green-bg); border-color: transparent; color: #166534; cursor: pointer; }
-.qp-given:hover { border-color: #86efac; }
-.qp-pick { cursor: pointer; border: 1.5px dashed; }
-.qp-pick input { width: 13px; height: 13px; margin: 0; }
-.qp-late { border-color: var(--red); color: var(--red); }
-.qp-late input { accent-color: var(--red); }
-.qp-due { border-color: var(--primary); color: var(--primary); }
-.qp-due input { accent-color: var(--primary); }
-.qp-late.qp-on { background: var(--red-bg); border-style: solid; box-shadow: 0 0 0 2px rgba(220,38,38,.15); }
-.qp-due.qp-on { background: var(--primary-tint); border-style: solid; box-shadow: 0 0 0 2px rgba(37,99,235,.15); }
-.qp-st { font-size: 10px !important; font-weight: 600 !important; color: #6b7280; opacity: 1 !important; }
-.qp-st0 { color: #b45309 !important; }
-.qp-up, .qp-locked { background: #f9fafb; border-style: dashed; color: var(--text-secondary); font-weight: 500; cursor: not-allowed; }
-.qp-late-locked { color: #b91c1c; border-color: #fca5a5; }
-.qp-fix { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 10px 14px; font-size: 12.5px; }
+.qp-c small { font-size: 10.5px; font-weight: 500; color: var(--text-secondary); white-space: nowrap !important; }
+.qp-given { background: #eef2f6; border-color: transparent; cursor: pointer; }
+.qp-given:hover { border-color: var(--border-strong); }
+.qp-pick { cursor: pointer; background: #fff; }
+.qp-pick input { width: 13px; height: 13px; margin: 0; accent-color: var(--primary); }
+.qp-late small:first-of-type { color: var(--red); }
+.qp-pick.qp-on { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+.qp-st { font-size: 10px !important; }
+.qp-st0 { color: var(--red) !important; }
+.qp-up, .qp-locked { background: transparent; border-color: var(--border); color: #9ca3af; font-weight: 500; cursor: not-allowed; }
+.qp-up em, .qp-locked em { font-weight: 500; }
+.qp-up small, .qp-locked small { color: #9ca3af; }
+.qp-fix { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 12.5px; }
 .qp-fix[hidden] { display: none; }
 .qp-fix input, .qp-drow input, .qp-in { box-sizing: border-box; height: 34px; padding: 0 9px; border: 1px solid var(--border-strong); border-radius: 8px; font: inherit; font-size: 13px; background: #fff; }
-.qp-rec { display: flex; align-items: flex-start; gap: 24px; background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; }
-.qp-rec.qp-empty { background: #fff; border-style: dashed; }
+.qp-rec { display: flex; align-items: flex-start; gap: 24px; background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; }
 .qp-rec-what { flex: 1; min-width: 0; }
 .qp-lbl { display: block; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-secondary); margin: 0 0 6px; }
 .qp-none { font-size: 13.5px; font-weight: 600; color: var(--text-primary); }
 .qp-list { display: flex; gap: 6px; flex-wrap: wrap; }
 .qp-list:empty { display: none; }
-.qp-pill { border-radius: 999px; padding: 3px 12px; font-weight: 600; font-size: 12.5px; border: 1px solid; }
-.qp-pill.late { background: var(--red-bg); color: var(--red); border-color: var(--red-light); }
-.qp-pill.due { background: var(--primary-tint); color: var(--primary); border-color: #bfdbfe; }
+.qp-pill { font-weight: 600; font-size: 13px; color: var(--text-primary); }
 .qp-help { font-size: 11.5px; color: var(--text-secondary); margin-top: 6px; }
 .qp-help[hidden], .qp-msg[hidden], .qp-none[hidden] { display: none; }
-.qp-msg { margin-top: 8px; font-size: 12px; border-radius: 8px; padding: 7px 10px; line-height: 1.4; }
-.qp-msg.err { background: var(--red-bg); color: #991b1b; border: 1px solid var(--red-light); }
-.qp-msg.warn { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+.qp-msg { margin-top: 8px; font-size: 12px; line-height: 1.4; }
+.qp-msg.err { color: var(--red); font-weight: 600; }
+.qp-msg.warn { color: #92400e; }
 .qp-rows { display: flex; flex-direction: column; gap: 8px; margin-top: 2px; }
 .qp-rows:empty { display: none; }
 .qp-drow { display: grid; grid-template-columns: 170px 190px 1fr; align-items: center; gap: 12px; }
 .qp-drow .qp-pill { justify-self: start; }
 .qp-drow input { width: 100%; }
-.qp-drow input.qp-changed { border: 1.5px solid #f59e0b; background: #fffbeb; }
-.qp-drow input.qp-bad { border: 1.5px solid var(--red); background: #fff5f5; }
+.qp-drow input.qp-bad { border-color: var(--red); }
 .qp-dnote { font-size: 11.5px; color: var(--text-secondary); }
-.qp-dnote.qp-changed { color: #b45309; font-weight: 600; }
+.qp-dnote.qp-changed { color: var(--text-primary); }
 .qp-dnote.qp-bad { color: var(--red); font-weight: 600; }
-.qp-btn { flex: none; align-self: center; height: 44px; padding: 0 22px; font-size: 14px; font-weight: 700; border-radius: 10px; }
-.qp-btn:disabled { background: #e5e7eb; color: #6b7280; cursor: not-allowed; border: 0; }
+.qp-btn { flex: none; align-self: center; height: 40px; padding: 0 20px; font-size: 13.5px; font-weight: 600; border-radius: 8px; }
+.qp-btn:disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; border: 0; }
 .qp-btn:not(:disabled) { background: var(--primary); color: #fff; border: 0; }
 .qp-foot { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; color: var(--text-secondary); font-size: 12.5px; }
 .qp-info { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
-.qp-info-view { display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.qp-info-view { display: inline-flex; gap: 18px; align-items: center; flex-wrap: wrap; }
 .qp-info-view b { color: var(--text-primary); font-weight: 600; }
-.qp-info-view i { width: 3px; height: 3px; border-radius: 50%; background: var(--border-strong); display: inline-block; }
 .qp-info-form { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .qp-info-form[hidden], .qp-info-view[hidden] { display: none; }
 .qp-in { width: 150px; height: 30px; font-size: 12.5px; }
 .qp-in-wide { width: 190px; }
-.qp-link { border: 0; background: none; padding: 0; font: inherit; color: var(--primary); font-weight: 600; text-decoration: none; cursor: pointer; }
+.qp-link { border: 0; background: none; padding: 0; font: inherit; color: var(--primary); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 .qp-foot > .qp-link { margin-left: auto; }
 .qp-hint { color: var(--text-secondary); font-size: 13px; margin: -4px 0 10px; }
 .qc-box { max-width: 520px; }
 .qc-box .modal-head h3 { margin: 0; font-size: 17px; }
-.qc-who { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 16px; }
+.qc-who { display: flex; align-items: baseline; gap: 10px; padding: 0 0 14px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
 .qc-who b { font-size: 15px; } .qc-who span { color: var(--text-secondary); font-size: 12.5px; }
 .qc-sec { margin-bottom: 14px; }
 .qc-lbl { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 6px; }
@@ -90,10 +81,10 @@ tr.qp-row > td { background: #fff !important; padding: 0 !important; box-shadow:
 .qc-list li small { color: var(--text-secondary); font-size: 12px; white-space: nowrap; }
 .qc-list li small.late { color: var(--red); font-weight: 600; }
 .qc-big { font-size: 16px; font-weight: 700; }
-.qc-chg { display: inline-block; margin-left: 8px; font-size: 12px; font-weight: 600; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; border-radius: 999px; padding: 1px 9px; }
+.qc-chg { margin-left: 6px; font-size: 12px; font-weight: 500; color: var(--text-secondary); }
 .qc-note { font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; margin: 0; }
-.qc-warn { font-size: 12.5px; line-height: 1.45; background: #fffbeb; color: #92400e; border: 1px solid #fde68a; border-radius: 8px; padding: 8px 10px; margin-bottom: 12px; }
-.qc-arrow { color: var(--text-secondary); margin: 0 6px; }
+.qc-warn { font-size: 12.5px; line-height: 1.45; color: #92400e; margin: 0 0 12px; }
+.qc-arrow { color: var(--text-secondary); margin: 0 5px; font-weight: 400; }
 .qc-box .modal-footer .btn { min-width: 110px; justify-content: center; }
 .qp-toast { position: fixed; right: 28px; bottom: 24px; z-index: 60; max-width: 440px; background: #111827; color: #fff; border-radius: 12px; padding: 12px 16px; font-size: 13px; box-shadow: 0 12px 30px rgba(0,0,0,.25); display: flex; flex-direction: column; gap: 6px; }
 .qp-toast .row1 { display: flex; gap: 14px; align-items: flex-start; }
@@ -158,7 +149,7 @@ tr.qp-row > td { background: #fff !important; padding: 0 !important; box-shadow:
   function whoHtml(tr) {
     const name = tr.querySelector('.child-name-link'), chip = tr.querySelector('.id-chip');
     const dob = tr.cells[3] ? tr.cells[3].textContent.trim() : '';
-    return `<div class="qc-who"><b>${esc(name ? name.textContent.trim() : '')}</b><span>${esc(chip ? chip.textContent.trim() : '')} · born ${esc(dob)}</span></div>`;
+    return `<div class="qc-who"><b>${esc(name ? name.textContent.trim() : '')}</b><span>${esc(chip ? chip.textContent.trim() : '')}, born ${esc(dob)}</span></div>`;
   }
   const longDate = iso => new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
 
@@ -312,7 +303,7 @@ tr.qp-row > td { background: #fff !important; padding: 0 !important; box-shadow:
         input.classList.toggle('qp-bad', !!bad);
         input.classList.toggle('qp-changed', changed);
         note.className = 'qp-dnote' + (bad ? ' qp-bad' : (changed ? ' qp-changed' : ''));
-        note.textContent = bad || (changed ? 'Not today · check the child\'s card' : 'Today');
+        note.textContent = bad || (changed ? 'Not today. Check the child\'s card.' : 'Today');
         if (bad) problems.push(b.value);
       });
       const noStock = picked.filter(b => b.closest('.qp-pick').querySelector('.qp-st0')).map(b => b.dataset.short);
@@ -321,7 +312,7 @@ tr.qp-row > td { background: #fff !important; padding: 0 !important; box-shadow:
       else showMsg('');
       btn.disabled = picked.length === 0 || problems.length > 0;
       btn.textContent = picked.length === 0 ? 'Select a dose first'
-        : `✓ Record ${picked.length} dose${picked.length === 1 ? '' : 's'}`;
+        : `Record ${picked.length} dose${picked.length === 1 ? '' : 's'}`;
     }
 
     boxes.forEach(b => b.addEventListener('change', refresh));
@@ -334,12 +325,12 @@ tr.qp-row > td { background: #fff !important; padding: 0 !important; box-shadow:
       const items = picked.map(b => {
         const late = +b.dataset.late, d = dateOf(b);
         return `<li><span>${esc(b.dataset.name)}<br><small class="${late ? 'late' : ''}">${late ? `overdue ${late} days` : `due ${b.dataset.due}`}</small></span>` +
-          `<b style="white-space:nowrap">${longDate(d)}${d !== today ? '<span class="qc-chg">not today</span>' : ''}</b></li>`;
+          `<b style="white-space:nowrap">${longDate(d)}${d !== today ? '<span class="qc-chg">(not today)</span>' : ''}</b></li>`;
       }).join('');
       const changed = picked.some(b => dateOf(b) !== today);
       const stocked = picked.filter(b => b.dataset.stock !== '');
       const empty = stocked.filter(b => +b.dataset.stock <= 0).map(b => b.dataset.short);
-      const used = stocked.filter(b => +b.dataset.stock > 0).map(b => `${b.dataset.short} (${b.dataset.stock} → ${+b.dataset.stock - 1})`);
+      const used = stocked.filter(b => +b.dataset.stock > 0).map(b => `${b.dataset.short} (${b.dataset.stock} left, ${+b.dataset.stock - 1} after)`);
       const html = whoHtml(tr) +
         `<div class="qc-sec"><div class="qc-lbl">Doses to record (${picked.length}) and date given</div><ul class="qc-list">${items}</ul></div>` +
         (changed ? `<div class="qc-warn">A date is not today. Make sure it matches the date written on the child's card.</div>` : '') +
@@ -351,13 +342,13 @@ tr.qp-row > td { background: #fff !important; padding: 0 !important; box-shadow:
       const payload = { codes };
       picked.forEach(b => { payload['date_' + b.value] = dateOf(b); });
       const r = await post('quick-record', id, payload);
-      if (!r.ok) { showMsg(r.error, 'err'); btn.disabled = false; btn.textContent = `✓ Record ${codes.length} dose${codes.length === 1 ? '' : 's'}`; return; }
+      if (!r.ok) { showMsg(r.error, 'err'); btn.disabled = false; btn.textContent = `Record ${codes.length} dose${codes.length === 1 ? '' : 's'}`; return; }
       updateRow(tr, r.row);
       tr.classList.add('qp-done');
       const parts = [];
       if (r.still_needed.length) parts.push(`Can still be given today: <b>${r.still_needed.join(', ')}</b>`);
       if (r.next_visit) parts.push(`Next: <b>${r.next_visit.doses.join(', ')}</b> from ${r.next_visit.date}`);
-      toast(`<div class="row1"><span>✓ <b>${r.child}</b>: ${r.recorded.join(', ')} recorded · now <b>${r.risk}</b></span></div>` +
+      toast(`<div class="row1"><span><b>${r.child}</b>: ${r.recorded.join(', ')} recorded. Now <b>${r.risk}</b>.</span></div>` +
             (parts.length ? `<div class="row2">${parts.join('<br>')}</div>` : ''),
             async () => {
               const undo = { codes: r.codes };
@@ -378,7 +369,7 @@ tr.qp-row > td { background: #fff !important; padding: 0 !important; box-shadow:
     let fixCode = null;
     panel.querySelectorAll('.qp-given').forEach(c => c.addEventListener('click', () => {
       fixCode = c.dataset.fix;
-      fix.querySelector('.qp-fix-name').textContent = c.querySelector('em').textContent.replace('✓', '').trim();
+      fix.querySelector('.qp-fix-name').textContent = c.querySelector('em').textContent.trim();
       fixDate.value = c.dataset.date;
       fixDate.min = dobMin;
       fix.hidden = false;
@@ -391,14 +382,14 @@ tr.qp-row > td { background: #fff !important; padding: 0 !important; box-shadow:
       if (!fixDate.value || fixDate.value === chip.dataset.date) { fix.hidden = true; return; }
       const html = whoHtml(tr) +
         `<div class="qc-sec"><div class="qc-lbl">Correct a recorded date</div><ul class="qc-list"><li><span>${esc(chip.dataset.name)}</span>` +
-        `<small><s>${longDate(chip.dataset.date)}</s><span class="qc-arrow">→</span><b style="color:var(--text-primary)">${longDate(fixDate.value)}</b></small></li></ul></div>` +
+        `<small><s>${longDate(chip.dataset.date)}</s><span class="qc-arrow">to</span><b style="color:var(--text-primary)">${longDate(fixDate.value)}</b></small></li></ul></div>` +
         `<p class="qc-note">The change is written to the activity log and the child's risk is re-assessed.</p>`;
       if (!await askConfirm('Confirm date correction', html, 'Confirm, change date')) return;
       const r = await post('quick-fix-date', id, { code: fixCode, date: fixDate.value });
       fix.querySelectorAll('.qp-msg').forEach(m => m.remove());
       if (!r.ok) { fix.insertAdjacentHTML('beforeend', `<div class="qp-msg err" style="flex-basis:100%"></div>`); fix.lastElementChild.textContent = r.error; return; }
       updateRow(tr, r.row);
-      if (!r.unchanged) toast(`<div class="row1"><span>Date corrected · now <b>${r.risk}</b></span></div>`);
+      if (!r.unchanged) toast(`<div class="row1"><span>Date corrected. Now <b>${r.risk}</b>.</span></div>`);
       closePanel(); openPanel(tr);
     });
 
@@ -414,7 +405,7 @@ tr.qp-row > td { background: #fff !important; padding: 0 !important; box-shadow:
       const diffs = Object.keys(labels).filter(k => (data[k] || '—') !== old[k]);
       if (!diffs.length) { form.hidden = true; view.hidden = false; return; }
       const html = whoHtml(tr) + `<div class="qc-sec"><div class="qc-lbl">Changes</div><ul class="qc-list">` +
-        diffs.map(k => `<li><span>${labels[k]}</span><small>${esc(old[k])}<span class="qc-arrow">→</span><b style="color:var(--text-primary)">${esc(data[k] || '—')}</b></small></li>`).join('') +
+        diffs.map(k => `<li><span>${labels[k]}</span><small>${esc(old[k])}<span class="qc-arrow">to</span><b style="color:var(--text-primary)">${esc(data[k] || '—')}</b></small></li>`).join('') +
         `</ul></div>`;
       if (!await askConfirm('Confirm guardian details', html, 'Confirm, save changes')) return;
       const r = await post('quick-info', id, data);
