@@ -38,32 +38,37 @@ tr.qp-row > td { background: #fff !important; padding: 0 !important; box-shadow:
 .qp-fix { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 10px 14px; font-size: 12.5px; }
 .qp-fix[hidden] { display: none; }
 .qp-fix input, .qp-drow input, .qp-in { box-sizing: border-box; height: 34px; padding: 0 9px; border: 1px solid var(--border-strong); border-radius: 8px; font: inherit; font-size: 13px; background: #fff; }
-.qp-rec { display: flex; align-items: flex-start; gap: 24px; background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; }
+.qp-rec { display: flex; flex-direction: column; gap: 12px; background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; }
 .qp-rec.qp-empty { background: #fff; border-style: dashed; }
-.qp-rec-what { flex: 1; min-width: 0; }
+.qp-rec-head { display: flex; align-items: baseline; gap: 12px; }
+.qp-rec-head .qp-lbl { margin: 0; }
+.qp-rec-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
+.qp-rec.qp-empty .qp-rec-foot { border-top: 0; padding-top: 0; }
+.qp-rec-foot .qp-help { margin: 0; }
+.qp-help.qp-help-bad { color: var(--red); font-weight: 600; }
 .qp-lbl { display: block; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-secondary); margin: 0 0 6px; }
-.qp-none { font-size: 13.5px; font-weight: 600; color: var(--text-primary); }
-.qp-list { display: flex; gap: 6px; flex-wrap: wrap; }
-.qp-list:empty { display: none; }
+.qp-none { font-size: 13px; font-weight: 600; color: var(--text-primary); }
 .qp-pill { border-radius: 999px; padding: 3px 12px; font-weight: 600; font-size: 12.5px; border: 1px solid; }
 .qp-pill.late { background: var(--red-bg); color: var(--red); border-color: var(--red-light); }
 .qp-pill.due { background: var(--primary-tint); color: var(--primary); border-color: #bfdbfe; }
 .qp-help { font-size: 11.5px; color: var(--text-secondary); margin-top: 6px; }
 .qp-help[hidden], .qp-msg[hidden], .qp-none[hidden] { display: none; }
-.qp-msg { margin-top: 8px; font-size: 12px; border-radius: 8px; padding: 7px 10px; line-height: 1.4; }
+.qp-msg { margin-top: 0; font-size: 12px; border-radius: 8px; padding: 7px 10px; line-height: 1.4; }
 .qp-msg.err { background: var(--red-bg); color: #991b1b; border: 1px solid var(--red-light); }
 .qp-msg.warn { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
-.qp-rows { display: flex; flex-direction: column; gap: 8px; margin-top: 2px; }
+.qp-rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
 .qp-rows:empty { display: none; }
-.qp-drow { display: grid; grid-template-columns: 170px 190px 1fr; align-items: center; gap: 12px; }
-.qp-drow .qp-pill { justify-self: start; }
+.qp-drow { display: flex; flex-direction: column; gap: 6px; background: #fff; border: 1px solid var(--border); border-left: 3px solid var(--primary); border-radius: 10px; padding: 10px 12px; }
+.qp-drow.late { border-left-color: var(--red); }
+.qp-dname { font-weight: 700; font-size: 13px; color: var(--text-primary); }
+.qp-dname small { font-weight: 500; font-size: 11.5px; color: var(--text-secondary); margin-left: 4px; }
 .qp-drow input { width: 100%; }
 .qp-drow input.qp-changed { border: 1.5px solid #f59e0b; background: #fffbeb; }
 .qp-drow input.qp-bad { border: 1.5px solid var(--red); background: #fff5f5; }
-.qp-dnote { font-size: 11.5px; color: var(--text-secondary); }
+.qp-dnote { font-size: 11.5px; color: var(--text-secondary); min-height: 15px; }
 .qp-dnote.qp-changed { color: #b45309; font-weight: 600; }
 .qp-dnote.qp-bad { color: var(--red); font-weight: 600; }
-.qp-btn { flex: none; align-self: center; height: 44px; padding: 0 22px; font-size: 14px; font-weight: 700; border-radius: 10px; }
+.qp-btn { flex: none; height: 44px; padding: 0 22px; font-size: 14px; font-weight: 700; border-radius: 10px; }
 .qp-btn:disabled { background: #e5e7eb; color: #6b7280; cursor: not-allowed; border: 0; }
 .qp-btn:not(:disabled) { background: var(--primary); color: #fff; border: 0; }
 .qp-foot { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; color: var(--text-secondary); font-size: 12.5px; }
@@ -103,7 +108,7 @@ tr.qp-row > td { background: #fff !important; padding: 0 !important; box-shadow:
 @media (max-width: 760px) {
   .qp-holder { padding: 12px 12px 14px 12px !important; }
   .qp-rec { flex-direction: column; gap: 12px; }
-  .qp-drow { grid-template-columns: 1fr; gap: 4px; }
+  .qp-rec-foot { flex-direction: column; align-items: stretch; }
   .qp-btn { width: 100%; align-self: stretch; }
   .qp-foot > .qp-link { margin-left: 0; }
   .qp-toast { left: 12px; right: 12px; max-width: none; }
@@ -269,17 +274,19 @@ tr.qp-row > td { background: #fff !important; padding: 0 !important; box-shadow:
     const dobMin = rec.dataset.dob;
     const dateRows = {};  // dose code -> its row (kept while the dose stays selected)
 
-    function defaultDate() {
+    function defaultDate(b) {  // today, or the date used for the previous child; never past the dose's limit
       const remembered = store.get();
-      return remembered && remembered <= today && remembered >= dobMin ? remembered : today;
+      const d = remembered && remembered <= today && remembered >= dobMin ? remembered : today;
+      return d > b.dataset.latest ? b.dataset.latest : d;
     }
     function dateRow(b) {
       if (dateRows[b.value]) return dateRows[b.value];
       const row = document.createElement('div');
-      row.className = 'qp-drow';
+      const late = +b.dataset.late;
+      row.className = 'qp-drow' + (late ? ' late' : '');
       const inputId = `qp-d-${id}-${b.value}`;
-      row.innerHTML = `<label class="qp-pill ${b.closest('.qp-late') ? 'late' : 'due'}" for="${inputId}">${b.dataset.short}</label>` +
-        `<input type="date" id="${inputId}" aria-label="Date ${b.dataset.short} was given" max="${today}" min="${b.dataset.earliest > dobMin ? b.dataset.earliest : dobMin}" value="${defaultDate()}">` +
+      row.innerHTML = `<label class="qp-dname" for="${inputId}">${b.dataset.short}<small>${late ? `overdue ${late} days` : `due ${b.dataset.due}`}</small></label>` +
+        `<input type="date" id="${inputId}" aria-label="Date ${b.dataset.short} was given" max="${b.dataset.latest}" min="${b.dataset.earliest > dobMin ? b.dataset.earliest : dobMin}" value="${defaultDate(b)}">` +
         `<span class="qp-dnote"></span>`;
       row.querySelector('input').addEventListener('change', e => {
         store.set(e.target.value && e.target.value !== today ? e.target.value : null);
@@ -306,6 +313,7 @@ tr.qp-row > td { background: #fff !important; padding: 0 !important; box-shadow:
         if (!input.value) bad = 'Enter the date given';
         else if (input.value > today) bad = 'Cannot be after today';
         else if (input.value < b.dataset.earliest) bad = `Not before ${fmt(b.dataset.earliest)}`;
+        else if (input.value > b.dataset.latest) bad = `Not after ${fmt(b.dataset.latest)} (4 weeks before the next dose)`;
         const changed = !bad && input.value !== today;
         input.classList.toggle('qp-bad', !!bad);
         input.classList.toggle('qp-changed', changed);
@@ -314,8 +322,9 @@ tr.qp-row > td { background: #fff !important; padding: 0 !important; box-shadow:
         if (bad) problems.push(b.value);
       });
       const noStock = picked.filter(b => b.closest('.qp-pick').querySelector('.qp-st0')).map(b => b.dataset.short);
-      if (problems.length) showMsg('Fix the date marked in red. Doses must follow the schedule and cannot be dated after today.', 'err');
-      else if (noStock.length) showMsg(`No stock for ${noStock.join(', ')} in your barangay. It will be saved and flagged as recorded with no stock; request a transfer from the RHU.`, 'warn');
+      helpSome.textContent = problems.length ? 'Fix the date marked in red to continue.' : 'Enter the date each dose was given. Tap a dose above again to remove it.';
+      helpSome.classList.toggle('qp-help-bad', problems.length > 0);
+      if (noStock.length) showMsg(`No stock for ${noStock.join(', ')} in your barangay. It will be saved and flagged as recorded with no stock; request a transfer from the RHU.`, 'warn');
       else showMsg('');
       btn.disabled = picked.length === 0 || problems.length > 0;
       btn.textContent = picked.length === 0 ? 'Select a dose first'
