@@ -60,16 +60,20 @@ tr.qp-row > td { background: #f8fafc !important; padding: 0 !important; border-b
 .qp-btn { flex: none; align-self: center; height: 40px; padding: 0 20px; font-size: 13.5px; font-weight: 600; border-radius: 8px; }
 .qp-btn:disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; border: 0; }
 .qp-btn:not(:disabled) { background: var(--primary); color: #fff; border: 0; }
-.qp-foot { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; color: var(--text-secondary); font-size: 12.5px; }
-.qp-info { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
-.qp-info-view { display: inline-flex; gap: 18px; align-items: center; flex-wrap: wrap; }
-.qp-info-view b { color: var(--text-primary); font-weight: 600; }
-.qp-info-form { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.qp-foot { display: flex; justify-content: flex-end; font-size: 12.5px; }
+.qp-info-sec { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 12px 18px 14px; }
+.qp-sec-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.qp-sec-head .qp-lbl { margin: 0; }
+.qp-info-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 24px; margin: 0; }
+.qp-info-grid dt, .qp-info-grid label > span { display: block; font-size: 11px; color: var(--text-secondary); margin-bottom: 2px; }
+.qp-info-grid dd { margin: 0; font-size: 13px; font-weight: 600; color: var(--text-primary); overflow-wrap: anywhere; }
+.qp-info-grid label { display: block; margin: 0; }
+.qp-info-grid .qp-in { width: 100%; height: 34px; }
 .qp-info-form[hidden], .qp-info-view[hidden] { display: none; }
-.qp-in { width: 150px; height: 30px; font-size: 12.5px; }
-.qp-in-wide { width: 190px; }
+.qp-info-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.qp-info-actions .qp-help { margin: 0 auto 0 0; }
+.qp-in { box-sizing: border-box; height: 34px; padding: 0 9px; border: 1px solid var(--border-strong); border-radius: 8px; font: inherit; font-size: 13px; background: #fff; }
 .qp-link { border: 0; background: none; padding: 0; font: inherit; color: var(--primary); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
-.qp-foot > .qp-link { margin-left: auto; }
 .qp-hint { color: var(--text-secondary); font-size: 13px; margin: -4px 0 10px; }
 .qc-box { max-width: 520px; }
 .qc-box .modal-head h3 { margin: 0; font-size: 17px; }
@@ -103,7 +107,8 @@ tr.qp-row > td { background: #f8fafc !important; padding: 0 !important; border-b
   .qp-rec { flex-direction: column; gap: 12px; }
   .qp-drow { grid-template-columns: 1fr; gap: 4px; }
   .qp-btn { width: 100%; align-self: stretch; }
-  .qp-foot > .qp-link { margin-left: 0; }
+  .qp-info-grid { grid-template-columns: 1fr 1fr; }
+  .qp-info-actions { flex-wrap: wrap; }
   .qp-toast { left: 12px; right: 12px; max-width: none; }
 }
 </style>
@@ -262,7 +267,7 @@ tr.qp-row > td { background: #f8fafc !important; padding: 0 !important; border-b
     const none = panel.querySelector('.qp-none');
     const helpEmpty = panel.querySelector('.qp-help-empty');
     const helpSome = panel.querySelector('.qp-help-some');
-    const msg = panel.querySelector('.qp-msg');
+    const msg = rec.querySelector('.qp-msg');
     const btn = panel.querySelector('.qp-btn');
     const dobMin = rec.dataset.dob;
     const dateRows = {};  // dose code -> its row (kept while the dose stays selected)
@@ -400,29 +405,44 @@ tr.qp-row > td { background: #f8fafc !important; padding: 0 !important; border-b
       closePanel(); openPanel(tr);
     });
 
-    // guardian details
-    const view = panel.querySelector('.qp-info-view'), form = panel.querySelector('.qp-info-form');
-    panel.querySelector('.qp-info-edit').addEventListener('click', () => { view.hidden = true; form.hidden = false; form.querySelector('input').focus(); });
-    panel.querySelector('.qp-info-cancel').addEventListener('click', () => { form.hidden = true; view.hidden = false; });
-    panel.querySelector('.qp-info-save').addEventListener('click', async () => {
+    // child information
+    const infoSec = panel.querySelector('.qp-info-sec');
+    const view = infoSec.querySelector('.qp-info-view'), form = infoSec.querySelector('.qp-info-form');
+    const infoMsg = infoSec.querySelector('.qp-info-msg'), editBtn = infoSec.querySelector('.qp-info-edit');
+    const labels = { full_name: 'Full name', sex: 'Sex', date_of_birth: 'Date of birth', date_registered: 'Date registered',
+                     guardian_name: 'Guardian', guardian_contact: 'Contact number', address: 'Address' };
+    const shown = (k, v) => !v ? '—' : (k === 'sex' ? (v === 'M' ? 'Male' : 'Female') : (k.startsWith('date') ? longDate(v) : v));
+    let saved = {};
+    form.querySelectorAll('[name]').forEach(i => { saved[i.name] = i.value.trim(); });
+    function openForm(open) { view.hidden = open; form.hidden = !open; editBtn.hidden = open; infoMsg.hidden = true; if (open) form.querySelector('[name]').focus(); }
+    editBtn.addEventListener('click', () => openForm(true));
+    infoSec.querySelector('.qp-info-cancel').addEventListener('click', () => {
+      form.querySelectorAll('[name]').forEach(i => { i.value = saved[i.name]; });
+      openForm(false);
+    });
+    infoSec.querySelector('.qp-info-save').addEventListener('click', async () => {
       const data = {};
-      form.querySelectorAll('input').forEach(i => { data[i.name] = i.value.trim(); });
-      const old = { guardian_name: view.querySelector('.qp-g').textContent, guardian_contact: view.querySelector('.qp-p').textContent, address: view.querySelector('.qp-a').textContent };
-      const labels = { guardian_name: 'Guardian', guardian_contact: 'Contact number', address: 'Address' };
-      const diffs = Object.keys(labels).filter(k => (data[k] || '—') !== old[k]);
-      if (!diffs.length) { form.hidden = true; view.hidden = false; return; }
+      form.querySelectorAll('[name]').forEach(i => { data[i.name] = i.value.trim(); });
+      const diffs = Object.keys(labels).filter(k => data[k] !== saved[k]);
+      if (!diffs.length) { openForm(false); return; }
       const html = whoHtml(tr) + `<div class="qc-sec"><div class="qc-lbl">Changes</div><ul class="qc-list">` +
-        diffs.map(k => `<li><span>${labels[k]}</span><small>${esc(old[k])}<span class="qc-arrow">to</span><b style="color:var(--text-primary)">${esc(data[k] || '—')}</b></small></li>`).join('') +
-        `</ul></div>`;
-      if (!await askConfirm('Confirm guardian details', html, 'Confirm, save changes')) return;
+        diffs.map(k => `<li><span>${labels[k]}</span><small>${esc(shown(k, saved[k]))}<span class="qc-arrow">to</span><b style="color:var(--text-primary)">${esc(shown(k, data[k]))}</b></small></li>`).join('') +
+        `</ul></div>` + (diffs.includes('date_of_birth') ? `<p class="qc-note">The child's age changes, so the due dates and risk are recalculated.</p>` : '');
+      if (!await askConfirm('Confirm child information', html, 'Confirm, save changes')) return;
       const r = await post('quick-info', id, data);
-      form.querySelectorAll('.qp-msg').forEach(m => m.remove());
-      if (!r.ok) { form.insertAdjacentHTML('beforeend', '<div class="qp-msg err" style="flex-basis:100%"></div>'); form.lastElementChild.textContent = r.error; return; }
-      view.querySelector('.qp-g').textContent = r.guardian_name;
-      view.querySelector('.qp-p').textContent = r.guardian_contact;
-      view.querySelector('.qp-a').textContent = r.address;
-      form.hidden = true; view.hidden = false;
-      toast('<div class="row1"><span>Guardian details saved</span></div>');
+      if (!r.ok) { infoMsg.hidden = false; infoMsg.textContent = r.error; return; }
+      const c = r.child;
+      view.querySelectorAll('[data-f]').forEach(dd => { dd.textContent = shown(dd.dataset.f, c[dd.dataset.f]); });
+      saved = {}; form.querySelectorAll('[name]').forEach(i => { i.value = c[i.name] !== undefined ? c[i.name] : i.value; saved[i.name] = i.value.trim(); });
+      // update the list row
+      const link = tr.querySelector('.child-name-link'); if (link) link.textContent = c.display_name;
+      if (tr.cells[2]) tr.cells[2].textContent = c.reg_short;
+      if (tr.cells[3]) tr.cells[3].textContent = c.dob_short;
+      if (tr.cells[4]) tr.cells[4].textContent = c.sex;
+      updateRow(tr, r.row);
+      openForm(false);
+      toast(`<div class="row1"><span>Child information saved for <b>${esc(c.display_name)}</b>.${r.risk ? ` Now <b>${r.risk}</b>.` : ''}</span></div>`);
+      if (diffs.includes('date_of_birth')) { closePanel(); openPanel(tr); }  // due dates move with the new age
     });
 
     refresh();

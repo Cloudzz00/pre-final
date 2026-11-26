@@ -1825,6 +1825,8 @@ def _child_field_errors(form, child=None):
     if dob and dob > date.today():
         return "Date of birth cannot be in the future."
     registered = _parse_form_date(form.get("date_registered"))
+    if child is not None and dob == child.date_of_birth and registered == child.date_registered:
+        registered = None  # neither date changed: an imported record is saved as it is
     if registered:
         if registered > date.today():
             return "Date of registration cannot be in the future."
@@ -5155,22 +5157,67 @@ def quick_fix_date(child_id):
     return jsonify({"ok": True, "risk": result["label"], "row": _quick_row_state(child)})
 
 
+def _child_info_json(child):
+    return {"full_name": child.full_name or "", "display_name": child.display_name,
+            "sex": child.sex, "sex_label": "Male" if child.sex == "M" else "Female",
+            "date_of_birth": child.date_of_birth.isoformat(), "dob_short": f"{child.date_of_birth:%m/%d/%y}",
+            "date_registered": child.date_registered.isoformat() if child.date_registered else "",
+            "reg_short": f"{child.date_registered:%m/%d/%y}" if child.date_registered else "—",
+            "guardian_name": child.guardian_name or "", "guardian_contact": child.guardian_contact or "",
+            "address": child.address or ""}
+
+
 def quick_info(child_id):
-    """Guardian name, contact number and address, validated like the Edit form."""
+    """Saves the child's details from the panel: name, sex, date of birth,
+    date of registration, guardian, contact number and address. Validated like
+    the Edit Child form; a new date of birth may not put any recorded dose
+    before birth or before its scheduled age. Barangay stays admin-only."""
     child = _quick_child(child_id)
-    form = {"full_name": child.full_name or "", "guardian_name": request.form.get("guardian_name", "").strip(),
-            "guardian_contact": request.form.get("guardian_contact", "").strip(),
-            "address": request.form.get("address", "").strip()}
-    error = _child_field_errors(form, child)
+    f = {k: (request.form.get(k) or "").strip() for k in
+         ("full_name", "sex", "date_of_birth", "date_registered", "guardian_name", "guardian_contact", "address")}
+    if not f["full_name"]:
+        return _quick_error("Please enter the child's full name.")
+    if f["sex"] not in ("M", "F"):
+        return _quick_error("Please choose the child's sex.")
+    dob = _parse_form_date(f["date_of_birth"])
+    registered = _parse_form_date(f["date_registered"])
+    if dob is None:
+        return _quick_error("Please enter a valid date of birth.")
+    if registered is None:
+        return _quick_error("Please enter a valid date of registration.")
+    error = _child_field_errors(f, child)
     if error:
         return _quick_error(error)
-    child.guardian_name = form["guardian_name"] or None
-    child.guardian_contact = form["guardian_contact"] or None
-    child.address = form["address"] or None
+    if dob != child.date_of_birth:
+        dates = _core_dose_dates(child)
+        names = {code: n for code, n, *_ in dp.VACCINE_SCHEDULE}
+        newly_before = [names[c] for c, d in dates.items() if child.date_of_birth <= d < dob]
+        if newly_before:
+            return _quick_error("With this date of birth, " + ", ".join(newly_before)
+                                + " would be dated before the child was born. Check the date of birth or correct those doses first.")
+        before = set(dp.schedule_violations(child.date_of_birth, dates, set(dates)))
+        after = [m for m in dp.schedule_violations(dob, dates, set(dates)) if m not in before]
+        if after:
+            return _quick_error("This date of birth doesn't fit the doses already recorded. " + " ".join(after))
+    labels = {"full_name": "name", "sex": "sex", "date_of_birth": "date of birth", "date_registered": "date of registration",
+              "guardian_name": "guardian", "guardian_contact": "contact number", "address": "address"}
+    old = _child_info_json(child)
+    child.full_name = f["full_name"]
+    child.sex = f["sex"]
+    child.date_of_birth = dob
+    child.date_registered = registered
+    child.guardian_name = f["guardian_name"] or None
+    child.guardian_contact = f["guardian_contact"] or None
+    child.address = f["address"] or None
     db.session.commit()
-    log_activity(f"Updated guardian details for {child_label(child)}")
-    return jsonify({"ok": True, "guardian_name": child.guardian_name or "—",
-                    "guardian_contact": child.guardian_contact or "—", "address": child.address or "—"})
+    new = _child_info_json(child)
+    changed = [labels[k] for k in labels if old[k] != new[k]]
+    risk = None
+    if old["date_of_birth"] != new["date_of_birth"] or old["sex"] != new["sex"] or old["date_registered"] != new["date_registered"]:
+        risk = _recompute_risk(child)["label"]  # age, sex and registration feed the model
+    if changed:
+        log_activity(f"Updated {', '.join(changed)} for {child_label(child)}")
+    return jsonify({"ok": True, "child": new, "risk": risk, "row": _quick_row_state(child)})
 
 
 for _bp in (rhu_bp, bhw_bp):
