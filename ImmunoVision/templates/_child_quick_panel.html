@@ -1,6 +1,41 @@
 {# Quick panel for one child, loaded into the Child Records list when a row is
    opened. Nothing is pre-selected: the user taps each dose actually given. #}
 <div class="qp" data-child="{{ child.id }}" data-name="{{ child.display_name }}">
+  <div class="qp-info-sec">
+    <div class="qp-sec-head">
+      <span class="qp-lbl">Child information</span>
+      <button type="button" class="qp-link qp-info-edit">Edit</button>
+    </div>
+    <dl class="qp-info-grid qp-info-view">
+      <div><dt>Full name</dt><dd data-f="full_name">{{ child.full_name or '—' }}</dd></div>
+      <div><dt>Sex</dt><dd data-f="sex">{{ 'Male' if child.sex == 'M' else 'Female' }}</dd></div>
+      <div><dt>Date of birth</dt><dd data-f="date_of_birth">{{ child.date_of_birth.strftime('%m/%d/%Y') }}</dd></div>
+      <div><dt>Date registered</dt><dd data-f="date_registered">{{ child.date_registered.strftime('%m/%d/%Y') if child.date_registered else '—' }}</dd></div>
+      <div><dt>Guardian</dt><dd data-f="guardian_name">{{ child.guardian_name or '—' }}</dd></div>
+      <div><dt>Contact number</dt><dd data-f="guardian_contact">{{ child.guardian_contact or '—' }}</dd></div>
+      <div><dt>Address</dt><dd data-f="address">{{ child.address or '—' }}</dd></div>
+      <div><dt>Barangay</dt><dd>{{ child.barangay.name if child.barangay else '—' }}</dd></div>
+    </dl>
+    <div class="qp-info-form" hidden>
+      <div class="qp-info-grid">
+        <label><span>Full name</span><input class="qp-in" name="full_name" value="{{ child.full_name or '' }}" required></label>
+        <label><span>Sex</span><select class="qp-in" name="sex"><option value="M" {{ 'selected' if child.sex == 'M' }}>Male</option><option value="F" {{ 'selected' if child.sex == 'F' }}>Female</option></select></label>
+        <label><span>Date of birth</span><input class="qp-in" type="date" name="date_of_birth" max="{{ today.isoformat() }}" value="{{ child.date_of_birth.isoformat() }}"></label>
+        <label><span>Date registered</span><input class="qp-in" type="date" name="date_registered" max="{{ today.isoformat() }}" value="{{ child.date_registered.isoformat() if child.date_registered else '' }}"></label>
+        <label><span>Guardian</span><input class="qp-in" name="guardian_name" placeholder="Guardian name" value="{{ child.guardian_name or '' }}"></label>
+        <label><span>Contact number</span><input class="qp-in" name="guardian_contact" placeholder="09171234567" inputmode="tel" value="{{ child.guardian_contact or '' }}"></label>
+        <label><span>Address</span><input class="qp-in" name="address" placeholder="Purok, Barangay" value="{{ child.address or '' }}"></label>
+        <label><span>Barangay</span><input class="qp-in" value="{{ child.barangay.name if child.barangay else '' }}" disabled title="Barangay reassignment is done by the System Administrator"></label>
+      </div>
+      <div class="qp-info-actions">
+        <span class="qp-help">Barangay can only be changed by the System Administrator.</span>
+        <button type="button" class="btn btn-outline btn-sm qp-info-cancel">Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm qp-info-save">Save changes</button>
+      </div>
+      <div class="qp-msg err qp-info-msg" hidden></div>
+    </div>
+  </div>
+
   <div class="qp-doses">
     {% for g in groups %}{% set gi = loop.index %}
     <div class="qp-grp">
@@ -53,17 +88,6 @@
   </div>
 
   <div class="qp-foot">
-    <div class="qp-info">
-      <span class="qp-info-view"><span>Guardian: <b class="qp-g">{{ child.guardian_name or '—' }}</b></span><span>Contact: <b class="qp-p">{{ child.guardian_contact or '—' }}</b></span><span>Address: <b class="qp-a">{{ child.address or '—' }}</b></span>
-        <button type="button" class="qp-link qp-info-edit">Edit info</button></span>
-      <span class="qp-info-form" hidden>
-        <input class="qp-in" name="guardian_name" placeholder="Guardian name" value="{{ child.guardian_name or '' }}">
-        <input class="qp-in" name="guardian_contact" placeholder="09171234567" inputmode="tel" value="{{ child.guardian_contact or '' }}">
-        <input class="qp-in qp-in-wide" name="address" placeholder="Purok, Barangay" value="{{ child.address or '' }}">
-        <button type="button" class="btn btn-primary btn-sm qp-info-save">Save</button>
-        <button type="button" class="btn btn-outline btn-sm qp-info-cancel">Cancel</button>
-      </span>
-    </div>
     <a class="qp-link" href="{{ url_for(request.blueprint ~ '.child_record', child_id=child.id) }}">Open full record</a>
   </div>
 </div>
