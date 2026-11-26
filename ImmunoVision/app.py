@@ -4909,6 +4909,265 @@ def settings():
 # Admin blueprint
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Child Records quick panel: open a child's row in the list to record doses,
+# correct a date or update guardian details without leaving the page. Shared
+# by the RHU and BHW lists; every rule is checked here on the server.
+# ---------------------------------------------------------------------------
+
+_VISIT_LABELS = {0: "Birth", 42: "6 wks", 70: "10 wks", 98: "14 wks", 270: "9 mos", 365: "12 mos"}
+_SHORT_ANTIGEN = {"BCG": "BCG", "HEPB": "HepB", "PENTA": "Penta", "OPV": "OPV", "PCV": "PCV",
+                  "IPV": "IPV", "MMR": "MMR"}
+
+
+def _short_dose_name(code):
+    _c, _n, antigen, dose_no, _d = next(r for r in dp.VACCINE_SCHEDULE if r[0] == code)
+    single = sum(1 for r in dp.VACCINE_SCHEDULE if r[2] == antigen) == 1
+    return _SHORT_ANTIGEN.get(antigen, antigen) + ("" if single else f" {dose_no}")
+
+
+def _quick_child(child_id):
+    """The child, if this user may update it (a BHW only in their barangay)."""
+    child = db.session.get(Child, child_id) or abort(404)
+    if current_user.role == "bhw" and child.barangay_id != current_user.barangay_id:
+        abort(403)
+    return child
+
+
+def _quick_stock(child):
+    """{antigen id: doses available} for a BHW's barangay, for vaccines whose
+    stock is tracked; RHU recording does not use barangay stock, so {}."""
+    if current_user.role != "bhw" or child.barangay_id is None:
+        return {}
+    bid = child.barangay_id
+    reserved = reserved_doses(bid)
+    out = {}
+    for a in core_antigens():
+        if stock_tracking_started(bid, a.id):
+            on_hand = sum(lot.doses_on_hand for lot in usable_lots(bid, a.id))
+            out[a.id] = max(0, on_hand - min(reserved.get(a.id, 0), on_hand))
+    return out
+
+
+def _quick_doses(child):
+    """Every core dose with its status and, for doses that can be recorded
+    now, the earliest date the schedule allows."""
+    today = date.today()
+    vt_by_code = {vt.code: vt for vt in VaccineType.query.all()}
+    detail = {d["code"]: d for d in child_detail(child)["schedule"]}
+    dates = _core_dose_dates(child)
+    stock = _quick_stock(child)
+    previous = {}
+    rows = []
+    for code, name, antigen, dose_no, rec_days in dp.VACCINE_SCHEDULE:
+        d = detail.get(code)
+        vt = vt_by_code.get(code)
+        if d is None or vt is None:
+            continue
+        prev = previous.get(antigen)
+        previous[antigen] = code
+        row = {"code": code, "name": name, "short": _short_dose_name(code), "status": d["status"],
+               "date": d["date"], "due_on": d["due_on"], "visit": _VISIT_LABELS.get(rec_days, ""),
+               "earliest": None, "lock": None, "stock": stock.get(vt.antigen_id) if stock else None,
+               "overdue_days": (today - d["due_on"]).days if d["status"] == "overdue" else 0}
+        if d["status"] in ("due", "overdue"):
+            earliest = child.date_of_birth + timedelta(days=dp.DOSE_MIN_AGE_DAYS.get(code, 0))
+            if prev and dates.get(prev) is None:
+                row["lock"] = f"after {_short_dose_name(prev)}"
+            else:
+                if prev:
+                    earliest = max(earliest, dates[prev] + timedelta(days=dp.MIN_DOSE_GAP_DAYS))
+                row["earliest"] = earliest
+                if earliest > today:
+                    row["lock"] = f"from {earliest:%m/%d/%y}"
+        rows.append(row)
+    return rows
+
+
+def _quick_groups(rows):
+    groups = []
+    for r in rows:
+        if not groups or groups[-1]["label"] != r["visit"]:
+            groups.append({"label": r["visit"], "doses": []})
+        groups[-1]["doses"].append(r)
+    for g in groups:
+        late = [d["overdue_days"] for d in g["doses"] if d["status"] == "overdue"]
+        g["overdue_days"] = max(late) if late else 0
+        g["selectable"] = any(d["status"] in ("due", "overdue") and not d["lock"] for d in g["doses"])
+    return groups
+
+
+def _quick_row_state(child):
+    """What the list row shows after a change: doses given and risk label."""
+    g.pop("_iv_cache", None)  # records changed in this request
+    vt_lookup = {vt.code: vt for vt in VaccineType.query.all()}
+    doses = _dose_matrix([child], vt_lookup)[child.id]
+    latest = _latest_risk(child)
+    return {"done": sum(1 for v in doses.values() if v), "total": len(dp.VACCINE_SCHEDULE),
+            "risk": latest.risk_label if latest else None,
+            "dates": {code: (v.strftime("%m/%d/%y") if v else None) for code, v in doses.items()}}
+
+
+def _quick_next_steps(child):
+    """After recording: doses that can still be given today, and the next
+    date more doses become allowed (by age or the 4-week gap)."""
+    today = date.today()
+    dates = _core_dose_dates(child)
+    prev_of = {}
+    for code, _n, antigen, _d, _r in dp.VACCINE_SCHEDULE:
+        prev_of[code] = prev_of.get(antigen)
+        prev_of[antigen] = code
+    when = {}
+    for r in _quick_doses(child):
+        if r["status"] in ("due", "overdue") and r["earliest"]:
+            when[r["short"]] = max(today, r["earliest"])
+        elif r["status"] == "upcoming":
+            prev = prev_of.get(r["code"])
+            if prev and dates.get(prev) is None:
+                continue  # waits for the previous dose first
+            gap = dates[prev] + timedelta(days=dp.MIN_DOSE_GAP_DAYS) if prev else r["due_on"]
+            when[r["short"]] = max(r["due_on"], gap)
+    now = [n for n, d in when.items() if d <= today]
+    later = {n: d for n, d in when.items() if d > today}
+    nxt = None
+    if later:
+        first = min(later.values())
+        nxt = {"doses": [n for n, d in later.items() if d == first], "date": f"{first:%m/%d/%y}"}
+    return {"still_needed": now, "next_visit": nxt}
+
+
+def _quick_error(message, status=400):
+    return jsonify({"ok": False, "error": message}), status
+
+
+def quick_panel(child_id):
+    child = _quick_child(child_id)
+    rows = _quick_doses(child)
+    return render_template("_child_quick_panel.html", child=child, groups=_quick_groups(rows),
+                           today=date.today(), show_stock=current_user.role == "bhw")
+
+
+def quick_record(child_id):
+    """Records the selected doses on one date. Refused, with the reason, if
+    any dose is already given, not yet due, missing its previous dose, or the
+    date breaks the schedule; nothing is saved unless every dose passes."""
+    child = _quick_child(child_id)
+    codes = [c for c in request.form.getlist("codes") if c]
+    if not codes:
+        return _quick_error("Select at least one dose to record.")
+    administered = _parse_form_date(request.form.get("date"))
+    if administered is None:
+        return _quick_error("Please enter a valid date.")
+    rows = {r["code"]: r for r in _quick_doses(child)}
+    for code in codes:
+        r = rows.get(code)
+        if r is None:
+            return _quick_error("Unknown dose.")
+        if r["status"] == "given":
+            return _quick_error(f"{r['short']} is already recorded.")
+        if r["status"] not in ("due", "overdue"):
+            return _quick_error(f"{r['short']} is not due yet.")
+        if r["lock"] and r["lock"].startswith("after"):
+            return _quick_error(f"Record {r['lock'][6:]} before {r['short']}.")
+    names = [rows[c]["name"] for c in codes]
+    error = _dose_date_error(child.date_of_birth, [(n, administered) for n in names])
+    if not error:
+        dates = _core_dose_dates(child)
+        dates.update({c: administered for c in codes})
+        error = _schedule_error(child.date_of_birth, dates, codes)
+    if error:
+        return _quick_error(error)
+    vt_by_code = {vt.code: vt for vt in VaccineType.query.all()}
+    existing = {r.vaccine_type_id: r for r in child.vaccination_records if r.campaign_id is None}
+    for code in codes:
+        vt = vt_by_code[code]
+        _write_dose(child, vt, existing.get(vt.id), administered)
+    db.session.commit()
+    result = _recompute_risk(child)
+    short = [rows[c]["short"] for c in codes]
+    log_activity(f"Recorded {', '.join(names)} ({administered.isoformat()}) for {child_label(child)}")
+    return jsonify({"ok": True, "child": child.display_name, "recorded": short, "codes": codes,
+                    "date": administered.isoformat(), "risk": result["label"],
+                    "row": _quick_row_state(child), **_quick_next_steps(child)})
+
+
+def quick_undo(child_id):
+    """Removes doses just recorded (same codes, same date), returning their stock."""
+    child = _quick_child(child_id)
+    codes = request.form.getlist("codes")
+    when = _parse_form_date(request.form.get("date"))
+    vt_by_code = {vt.code: vt for vt in VaccineType.query.all()}
+    existing = {r.vaccine_type_id: r for r in child.vaccination_records if r.campaign_id is None}
+    undone = []
+    for code in codes:
+        vt = vt_by_code.get(code)
+        rec = existing.get(vt.id) if vt else None
+        if rec is not None and rec.date_administered == when:
+            _write_dose(child, vt, rec, None)
+            undone.append(vt.name)
+    if not undone:
+        return _quick_error("Nothing to undo; the doses were already changed.")
+    db.session.commit()
+    result = _recompute_risk(child)
+    return jsonify({"ok": True, "risk": result["label"], "row": _quick_row_state(child)})
+
+
+def quick_fix_date(child_id):
+    """Corrects the date of a dose already recorded; the same schedule rules
+    apply to the new date, and the change is logged."""
+    child = _quick_child(child_id)
+    code = request.form.get("code", "")
+    new = _parse_form_date(request.form.get("date"))
+    vt = VaccineType.query.filter_by(code=code).first()
+    if vt is None or code not in dp.VACCINE_CODES:
+        return _quick_error("Unknown dose.")
+    if new is None:
+        return _quick_error("Please enter a valid date.")
+    rec = next((r for r in child.vaccination_records if r.campaign_id is None
+                and r.vaccine_type_id == vt.id and r.date_administered), None)
+    if rec is None:
+        return _quick_error("This dose has not been recorded yet.")
+    if rec.date_administered == new:
+        return jsonify({"ok": True, "unchanged": True, "row": _quick_row_state(child)})
+    error = _dose_date_error(child.date_of_birth, [(vt.name, new)])
+    if not error:
+        dates = _core_dose_dates(child)
+        dates[code] = new
+        error = _schedule_error(child.date_of_birth, dates, [code])
+    if error:
+        return _quick_error(error)
+    _write_dose(child, vt, rec, new)
+    db.session.commit()
+    result = _recompute_risk(child)
+    return jsonify({"ok": True, "risk": result["label"], "row": _quick_row_state(child)})
+
+
+def quick_info(child_id):
+    """Guardian name, contact number and address, validated like the Edit form."""
+    child = _quick_child(child_id)
+    form = {"full_name": child.full_name or "", "guardian_name": request.form.get("guardian_name", "").strip(),
+            "guardian_contact": request.form.get("guardian_contact", "").strip(),
+            "address": request.form.get("address", "").strip()}
+    error = _child_field_errors(form, child)
+    if error:
+        return _quick_error(error)
+    child.guardian_name = form["guardian_name"] or None
+    child.guardian_contact = form["guardian_contact"] or None
+    child.address = form["address"] or None
+    db.session.commit()
+    log_activity(f"Updated guardian details for {child_label(child)}")
+    return jsonify({"ok": True, "guardian_name": child.guardian_name or "—",
+                    "guardian_contact": child.guardian_contact or "—", "address": child.address or "—"})
+
+
+for _bp in (rhu_bp, bhw_bp):
+    _bp.add_url_rule("/children/<int:child_id>/panel", "quick_panel", quick_panel)
+    _bp.add_url_rule("/children/<int:child_id>/quick-record", "quick_record", quick_record, methods=["POST"])
+    _bp.add_url_rule("/children/<int:child_id>/quick-undo", "quick_undo", quick_undo, methods=["POST"])
+    _bp.add_url_rule("/children/<int:child_id>/quick-fix-date", "quick_fix_date", quick_fix_date, methods=["POST"])
+    _bp.add_url_rule("/children/<int:child_id>/quick-info", "quick_info", quick_info, methods=["POST"])
+
+
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
 
