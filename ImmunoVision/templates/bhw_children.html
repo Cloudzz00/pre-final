@@ -2,6 +2,7 @@
 {% from "_icons.html" import icon %}
 {% block page_subtitle %}View and manage registered children in your barangay.{% endblock %}
 {% block content %}
+<div class="children-toolbar">
 <form class="filter-bar children-filters" method="get">
   <div class="search-input-wrap">
     <span class="si-icon">{{ icon('search', 16) }}</span>
@@ -62,8 +63,9 @@
 
   {% if selected_status or search or selected_risk or selected_year or age_group != 'all' or selected_sort != 'newest' %}<a class="btn btn-outline btn-sm cf-clear" href="{{ url_for(request.endpoint) }}" title="Clear filters" aria-label="Clear filters">{{ icon('x', 14) }}</a>{% endif %}
 
-  <button type="button" class="btn btn-primary rounded-pill-btn cf-add" data-open-modal="registerChildModal">+ Add Child</button>
 </form>
+<button type="button" class="btn btn-primary rounded-pill-btn cf-add" data-open-modal="registerChildModal">+ Add Child</button>
+</div>
 
 {% if due_now_child %}
 <div class="alert-banner {{ 'warning' if due_now_doses else 'success' }}" style="margin-bottom:18px;">
