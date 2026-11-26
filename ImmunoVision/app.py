@@ -28,7 +28,7 @@ from collections import Counter, defaultdict
 from datetime import date, datetime, timedelta, timezone
 
 from flask import (Flask, Blueprint, render_template, request, redirect, url_for, flash, abort,
-                   jsonify, g, has_request_context, Response)
+                   jsonify, g, has_request_context, Response, session)
 from flask_login import login_user, logout_user, login_required, current_user
 from sqlalchemy import func
 
@@ -5320,7 +5320,93 @@ def quick_other(child_id):
                                "vitamin_a_date": fmt(child.vitamin_a_date), "mnp_given": "1" if child.mnp_given else ""}})
 
 
+def quick_vaccines(child_id):
+    """Saves the Vaccination records section: every core dose date at once.
+    A date may be added, corrected or cleared (cleared = not given). Only the
+    doses that changed are judged: not before birth or after today, not for a
+    dose the child is not old enough for, in series order, and following the
+    schedule's minimum ages and 4-week gaps. Nothing is saved unless all pass."""
+    child = _quick_child(child_id)
+    rows = {r["code"]: r for r in _quick_doses(child)}
+    current = _core_dose_dates(child)
+    submitted = {}
+    for code in dp.VACCINE_CODES:
+        raw = request.form.get(f"date_{code}")
+        if raw is None:  # field not sent (not editable): unchanged
+            submitted[code] = current.get(code)
+            continue
+        raw = raw.strip()
+        submitted[code] = _parse_form_date(raw) if raw else None
+        if raw and submitted[code] is None:
+            return _quick_error("Please enter valid dates.")
+    changed = [c for c in dp.VACCINE_CODES if submitted[c] != current.get(c)]
+    if not changed:
+        return jsonify({"ok": True, "unchanged": True, "row": _quick_row_state(child)})
+    short = {c: _short_dose_name(c) for c in dp.VACCINE_CODES}
+    prev_of, next_of, last = {}, {}, {}
+    for code, _n, antigen, _d, _r in dp.VACCINE_SCHEDULE:
+        if antigen in last:
+            prev_of[code], next_of[last[antigen]] = last[antigen], code
+        last[antigen] = code
+    for c in changed:
+        r = rows.get(c)
+        if submitted[c] and current.get(c) is None and r and r["status"] == "upcoming":
+            return _quick_error(f"{short[c]} is not due yet (due {r['due_on']:%m/%d/%Y}).")
+        if submitted[c] and current.get(c) is None and r and r["status"] == "past-window":
+            return _quick_error(f"{short[c]} is no longer given at this age.")
+        if submitted[c] and prev_of.get(c) and submitted[prev_of[c]] is None:
+            return _quick_error(f"Record {short[prev_of[c]]} before {short[c]}.")
+        if submitted[c] is None and next_of.get(c) and submitted[next_of[c]]:
+            return _quick_error(f"{short[c]} can't be removed while {short[next_of[c]]} is recorded.")
+    names = {code: n for code, n, *_ in dp.VACCINE_SCHEDULE}
+    dated_changes = [c for c in changed if submitted[c]]
+    error = _dose_date_error(child.date_of_birth, [(names[c], submitted[c]) for c in dated_changes])
+    if not error:
+        error = _schedule_error(child.date_of_birth, {k: v for k, v in submitted.items() if v}, dated_changes)
+    if error:
+        return _quick_error(error)
+    elsewhere = bool(request.form.get("given_elsewhere"))
+    vt_by_code = {vt.code: vt for vt in VaccineType.query.all()}
+    existing = {r.vaccine_type_id: r for r in child.vaccination_records if r.campaign_id is None}
+    for c in changed:
+        vt = vt_by_code[c]
+        _write_dose(child, vt, existing.get(vt.id), submitted[c], elsewhere)
+    db.session.commit()
+    result = _recompute_risk(child)
+    new = [c for c in changed if current.get(c) is None]
+    if new:
+        log_activity("Recorded " + ", ".join(f"{names[c]} ({submitted[c].isoformat()})" for c in new)
+                     + f" for {child_label(child)}")
+    session["qp_undo"] = {"child": child.id,
+                          "before": {c: (current[c].isoformat() if current.get(c) else "") for c in changed}}
+    return jsonify({"ok": True, "child": child.display_name, "risk": result["label"],
+                    "added": [short[c] for c in new],
+                    "changed": [short[c] for c in changed if c not in new],
+                    "row": _quick_row_state(child), **_quick_next_steps(child)})
+
+
+def quick_vaccines_undo(child_id):
+    """Puts back the dose dates exactly as they were before the last save of
+    the Vaccination records section (kept on the server, not sent by the page)."""
+    child = _quick_child(child_id)
+    data = session.pop("qp_undo", None)
+    if not data or data.get("child") != child.id:
+        return _quick_error("Nothing to undo.")
+    vt_by_code = {vt.code: vt for vt in VaccineType.query.all()}
+    existing = {r.vaccine_type_id: r for r in child.vaccination_records if r.campaign_id is None}
+    for code, old in data["before"].items():
+        vt = vt_by_code.get(code)
+        if vt is not None:
+            _write_dose(child, vt, existing.get(vt.id), _parse_form_date(old) if old else None)
+    db.session.commit()
+    result = _recompute_risk(child)
+    log_activity(f"Undid the last vaccination change for {child_label(child)}")
+    return jsonify({"ok": True, "risk": result["label"], "row": _quick_row_state(child)})
+
+
 for _bp in (rhu_bp, bhw_bp):
+    _bp.add_url_rule("/children/<int:child_id>/quick-vaccines", "quick_vaccines", quick_vaccines, methods=["POST"])
+    _bp.add_url_rule("/children/<int:child_id>/quick-vaccines-undo", "quick_vaccines_undo", quick_vaccines_undo, methods=["POST"])
     _bp.add_url_rule("/children/<int:child_id>/quick-remove", "quick_remove", quick_remove, methods=["POST"])
     _bp.add_url_rule("/children/<int:child_id>/quick-other", "quick_other", quick_other, methods=["POST"])
     _bp.add_url_rule("/children/<int:child_id>/panel", "quick_panel", quick_panel)

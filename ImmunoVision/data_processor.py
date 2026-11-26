@@ -110,7 +110,7 @@ def schedule_violations(dob, dates_by_code, check_codes):
     A dose is refused if it is before its minimum age, before the previous
     dose of the same vaccine, or less than MIN_DOSE_GAP_DAYS after it (and
     likewise if a changed earlier dose would land too close to a later one)."""
-    fmt = lambda d: d.strftime("%m/%d/%y")
+    fmt = lambda d: d.strftime("%m/%d/%Y")
     name = {code: n for code, n, *_ in VACCINE_SCHEDULE}
     out = []
     series = {}
