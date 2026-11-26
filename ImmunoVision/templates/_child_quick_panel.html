@@ -4,7 +4,7 @@
   <div class="qp-doses">
     {% for g in groups %}{% set gi = loop.index %}
     <div class="qp-grp">
-      <div class="qp-gl">{{ g.label }}{% if g.overdue_days %} <span class="qp-late-txt">overdue {{ g.overdue_days }} days</span>{% endif %}</div>
+      <div class="qp-gl">{{ g.label }}{% if g.overdue_days %}<span class="qp-late-txt">overdue {{ g.overdue_days }} days</span>{% endif %}</div>
       <div class="qp-gc">
         {% for d in g.doses %}
         {% if d.status == 'given' %}
