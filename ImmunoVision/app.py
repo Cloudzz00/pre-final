@@ -4991,7 +4991,7 @@ def _quick_doses(child):
                     latest = min(today, dates[nxt] - timedelta(days=dp.MIN_DOSE_GAP_DAYS))
                 row["latest"] = latest
                 if earliest > today:
-                    row["lock"] = f"from {earliest:%m/%d/%y}"
+                    row["lock"] = f"from {earliest:%m/%d/%Y}"
                 elif latest < earliest:
                     row["lock"] = f"fix {_short_dose_name(nxt)} first"
         rows.append(row)
@@ -5046,7 +5046,7 @@ def _quick_next_steps(child):
     nxt = None
     if later:
         first = min(later.values())
-        nxt = {"doses": [n for n, d in later.items() if d == first], "date": f"{first:%m/%d/%y}"}
+        nxt = {"doses": [n for n, d in later.items() if d == first], "date": f"{first:%m/%d/%Y}"}
     return {"still_needed": now, "next_visit": nxt}
 
 

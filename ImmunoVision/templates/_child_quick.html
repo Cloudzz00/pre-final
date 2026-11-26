@@ -10,7 +10,7 @@ tr.qp-done td { background: #f6fef9 !important; transition: background .4s; }
 tr.qp-row > td { background: #f8fafc !important; padding: 0 !important; border-bottom: 1px solid var(--border-strong) !important; cursor: default; }
 .qp-holder { position: sticky; left: 0; box-sizing: border-box; padding: 14px 20px 16px 0; white-space: normal; }
 .qp-loading { padding: 8px 0; color: var(--text-secondary); font-size: 13px; }
-.qp { display: flex; flex-direction: column; gap: 14px; font-size: 12px; white-space: normal; }
+.qp { display: flex; flex-direction: column; gap: 12px; font-size: 12px; white-space: normal; }
 .qp * { white-space: normal; }
 .qp-holder { container-type: inline-size; }
 .qp-doses { display: grid; grid-template-columns: 1fr; gap: 10px 36px; justify-content: start; }
@@ -33,10 +33,10 @@ tr.qp-row > td { background: #f8fafc !important; padding: 0 !important; border-b
 .qp-up, .qp-locked { background: transparent; border-color: var(--border); color: #9ca3af; font-weight: 500; cursor: not-allowed; }
 .qp-up em, .qp-locked em { font-weight: 500; }
 .qp-up small, .qp-locked small { color: #9ca3af; }
-.qp-fix { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 12.5px; }
+.qp-fix { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; border-top: 1px solid var(--border); margin-top: 14px; padding-top: 14px; font-size: 12.5px; }
 .qp-fix[hidden] { display: none; }
 .qp-fix input, .qp-drow input, .qp-in { box-sizing: border-box; height: 34px; padding: 0 9px; border: 1px solid var(--border-strong); border-radius: 8px; font: inherit; font-size: 13px; background: #fff; }
-.qp-rec { display: flex; align-items: flex-start; gap: 24px; background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; }
+.qp-rec { display: flex; align-items: flex-start; gap: 24px; border-top: 1px solid var(--border); margin-top: 14px; padding-top: 14px; }
 .qp-rec-what { flex: 1; min-width: 0; }
 .qp-lbl { display: block; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-secondary); margin: 0 0 6px; }
 .qp-none { font-size: 13.5px; font-weight: 600; color: var(--text-primary); }
@@ -61,9 +61,11 @@ tr.qp-row > td { background: #f8fafc !important; padding: 0 !important; border-b
 .qp-btn:disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; border: 0; }
 .qp-btn:not(:disabled) { background: var(--primary); color: #fff; border: 0; }
 .qp-foot { display: flex; justify-content: flex-end; font-size: 12.5px; }
-.qp-info-sec { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 12px 18px 14px; }
-.qp-sec-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.qp-sec-head .qp-lbl { margin: 0; }
+.qp-card { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px 16px; }
+.qp-sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+.qp-title { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-primary); }
+.qp-sec-note { font-size: 11.5px; color: var(--text-secondary); }
+.qp-sub { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-secondary); margin: 0 0 6px; }
 .qp-info-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 24px; margin: 0; }
 .qp-info-grid dt, .qp-info-grid label > span { display: block; font-size: 11px; color: var(--text-secondary); margin-bottom: 2px; }
 .qp-info-grid dd { margin: 0; font-size: 13px; font-weight: 600; color: var(--text-primary); overflow-wrap: anywhere; }
@@ -125,7 +127,7 @@ tr.qp-row > td { background: #f8fafc !important; padding: 0 !important; border-b
   const base = table.dataset.quickBase;            // e.g. /bhw/children/0
   const url = (id, action) => base.replace(/\/0$/, '/' + id) + '/' + action;
   const today = table.dataset.today;
-  const fmt = iso => { const [y, m, d] = iso.split('-'); return m + '/' + d + '/' + y.slice(2); };
+  const fmt = iso => { const [y, m, d] = iso.split('-'); return m + '/' + d + '/' + y; };
   const store = {
     get() { try { return sessionStorage.getItem('qpDate'); } catch (e) { return null; } },
     set(v) { try { v ? sessionStorage.setItem('qpDate', v) : sessionStorage.removeItem('qpDate'); } catch (e) {} }
