@@ -41,18 +41,29 @@
       <span class="qp-title">Vaccination records</span>
       <button type="button" class="qp-link qp-vacc-edit">Edit</button>
     </div>
-    <dl class="qp-info-grid qp-vacc-view">
-      {% for g in groups %}{% for d in g.doses %}
-      <div><dt>{{ d.short }} <span class="qp-age">({{ g.label }})</span></dt>
-        {% if d.status == 'given' %}<dd>{{ d.date.strftime('%m/%d/%Y') }}</dd>
-        {% elif d.status == 'overdue' %}<dd class="qp-v-late">Overdue, due {{ d.due_on.strftime('%m/%d/%Y') }}</dd>
-        {% elif d.status == 'due' %}<dd class="qp-v-due">Due {{ d.due_on.strftime('%m/%d/%Y') }}</dd>
-        {% elif d.status == 'past-window' %}<dd class="qp-v-muted">Age passed</dd>
-        {% else %}<dd class="qp-v-muted">Due {{ d.due_on.strftime('%m/%d/%Y') }}</dd>{% endif %}
-      </div>
-      {% endfor %}{% endfor %}
-    </dl>
+    <div class="qp-vacc-view">
+      <div class="qp-sub">Routine vaccines</div>
+    <dl class="qp-info-grid">
+        {% for g in groups %}{% for d in g.doses %}
+        <div><dt>{{ d.short }} <span class="qp-age">({{ g.label }})</span></dt>
+          {% if d.status == 'given' %}<dd>{{ d.date.strftime('%m/%d/%Y') }}</dd>
+          {% elif d.status == 'overdue' %}<dd class="qp-v-late">Overdue, due {{ d.due_on.strftime('%m/%d/%Y') }}</dd>
+          {% elif d.status == 'due' %}<dd class="qp-v-due">Due {{ d.due_on.strftime('%m/%d/%Y') }}</dd>
+          {% elif d.status == 'past-window' %}<dd class="qp-v-muted">Age passed</dd>
+          {% else %}<dd class="qp-v-muted">Due {{ d.due_on.strftime('%m/%d/%Y') }}</dd>{% endif %}
+        </div>
+        {% endfor %}{% endfor %}
+      </dl>
+      <div class="qp-sub qp-sub-gap">Other vaccines and supplements</div>
+    <dl class="qp-info-grid">
+        {% for o in other.optional %}<div><dt>{{ o.name }} (optional)</dt><dd data-f="dose_{{ o.code }}">{{ o.date.strftime('%m/%d/%Y') if o.date else 'Not given' }}</dd></div>{% endfor %}
+        {% for c in other.campaigns %}<div><dt>Campaign: {{ c.name }}</dt><dd data-f="dose_campaign_{{ c.id }}">{{ c.date.strftime('%m/%d/%Y') if c.date else 'Not given' }}</dd></div>{% endfor %}
+        <div><dt>Vitamin A</dt><dd data-f="vitamin_a_date">{{ child.vitamin_a_date.strftime('%m/%d/%Y') if child.vitamin_a_date else 'Not given' }}</dd></div>
+        <div><dt>MNP given</dt><dd data-f="mnp_given">{{ 'Yes' if child.mnp_given else 'No' }}</dd></div>
+      </dl>
+    </div>
     <div class="qp-vacc-form" hidden>
+      <div class="qp-sub">Routine vaccines</div>
       <div class="qp-info-grid">
         {% for g in groups %}{% for d in g.doses %}
         {% set locked = d.status in ('upcoming', 'past-window') %}
@@ -67,41 +78,20 @@
         </label>
         {% endfor %}{% endfor %}
       </div>
-      {% if show_stock %}<label class="qp-elsewhere"><input type="checkbox" class="qp-vacc-elsewhere"> Transferred in: new doses here were given at another health center, so no stock is taken from this barangay.</label>{% endif %}
-      <div class="qp-info-actions">
-        <span class="qp-help">Enter the date each dose was given. Clear a date to remove a dose. Dates must follow the schedule.</span>
-        <button type="button" class="btn btn-outline btn-sm qp-vacc-cancel">Cancel</button>
-        <button type="button" class="btn btn-primary btn-sm qp-vacc-save">Save changes</button>
-      </div>
-      <div class="qp-msg err qp-vacc-msg" hidden></div>
-    </div>
-  </div>
-
-  <div class="qp-card qp-other-sec">
-    <div class="qp-sec-head">
-      <span class="qp-title">Other records</span>
-      <button type="button" class="qp-link qp-other-edit">Edit</button>
-    </div>
-    <dl class="qp-info-grid qp-other-view">
-      {% for o in other.optional %}<div><dt>{{ o.name }} (optional)</dt><dd data-f="dose_{{ o.code }}">{{ o.date.strftime('%m/%d/%Y') if o.date else 'Not given' }}</dd></div>{% endfor %}
-      {% for c in other.campaigns %}<div><dt>Campaign: {{ c.name }}</dt><dd data-f="dose_campaign_{{ c.id }}">{{ c.date.strftime('%m/%d/%Y') if c.date else 'Not given' }}</dd></div>{% endfor %}
-      <div><dt>Vitamin A</dt><dd data-f="vitamin_a_date">{{ child.vitamin_a_date.strftime('%m/%d/%Y') if child.vitamin_a_date else 'Not given' }}</dd></div>
-      <div><dt>MNP given</dt><dd data-f="mnp_given">{{ 'Yes' if child.mnp_given else 'No' }}</dd></div>
-    </dl>
-    <div class="qp-other-form" hidden>
+      <div class="qp-sub qp-sub-gap">Other vaccines and supplements</div>
       <div class="qp-info-grid">
         {% for o in other.optional %}<label><span>{{ o.name }} (optional)</span><input class="qp-in" type="date" name="dose_{{ o.code }}" data-label="{{ o.name }}" max="{{ today.isoformat() }}" min="{{ child.date_of_birth.isoformat() }}" value="{{ o.date.isoformat() if o.date else '' }}"></label>{% endfor %}
         {% for c in other.campaigns %}<label><span>Campaign: {{ c.name }}</span><input class="qp-in" type="date" name="dose_campaign_{{ c.id }}" data-label="Campaign: {{ c.name }}" max="{{ today.isoformat() }}" min="{{ child.date_of_birth.isoformat() }}" value="{{ c.date.isoformat() if c.date else '' }}"></label>{% endfor %}
         <label><span>Vitamin A (date given)</span><input class="qp-in" type="date" name="vitamin_a_date" data-label="Vitamin A" max="{{ today.isoformat() }}" min="{{ child.date_of_birth.isoformat() }}" value="{{ child.vitamin_a_date.isoformat() if child.vitamin_a_date else '' }}"></label>
         <label><span>MNP given</span><select class="qp-in" name="mnp_given" data-label="MNP given"><option value="" {{ 'selected' if not child.mnp_given }}>No</option><option value="1" {{ 'selected' if child.mnp_given }}>Yes</option></select></label>
       </div>
-      {% if show_stock %}<label class="qp-elsewhere"><input type="checkbox" class="qp-other-elsewhere"> Transferred in: new doses here were given at another health center, so no stock is taken from this barangay.</label>{% endif %}
+      {% if show_stock %}<label class="qp-elsewhere"><input type="checkbox" class="qp-vacc-elsewhere"> Transferred in: new doses here were given at another health center, so no stock is taken from this barangay.</label>{% endif %}
       <div class="qp-info-actions">
-        <span class="qp-help">Leave a date empty if it was not given. Optional vaccines and campaigns don't change the risk status.</span>
-        <button type="button" class="btn btn-outline btn-sm qp-other-cancel">Cancel</button>
-        <button type="button" class="btn btn-primary btn-sm qp-other-save">Save changes</button>
+        <span class="qp-help">Enter the date each dose was given. Clear a date to remove it. Routine doses must follow the schedule; optional vaccines and campaigns don't change the risk status.</span>
+        <button type="button" class="btn btn-outline btn-sm qp-vacc-cancel">Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm qp-vacc-save">Save changes</button>
       </div>
-      <div class="qp-msg err qp-other-msg" hidden></div>
+      <div class="qp-msg err qp-vacc-msg" hidden></div>
     </div>
   </div>
 
