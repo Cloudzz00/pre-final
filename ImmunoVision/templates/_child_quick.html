@@ -37,7 +37,7 @@ tr.qp-row > td { background: #fff !important; padding: 0 !important; box-shadow:
 .qp-late-locked { color: #b91c1c; border-color: #fca5a5; }
 .qp-fix { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 10px 14px; font-size: 12.5px; }
 .qp-fix[hidden] { display: none; }
-.qp-fix input, .qp-rec-date input, .qp-in { box-sizing: border-box; height: 34px; padding: 0 9px; border: 1px solid var(--border-strong); border-radius: 8px; font: inherit; font-size: 13px; background: #fff; }
+.qp-fix input, .qp-drow input, .qp-in { box-sizing: border-box; height: 34px; padding: 0 9px; border: 1px solid var(--border-strong); border-radius: 8px; font: inherit; font-size: 13px; background: #fff; }
 .qp-rec { display: flex; align-items: flex-start; gap: 24px; background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; }
 .qp-rec.qp-empty { background: #fff; border-style: dashed; }
 .qp-rec-what { flex: 1; min-width: 0; }
@@ -53,10 +53,16 @@ tr.qp-row > td { background: #fff !important; padding: 0 !important; box-shadow:
 .qp-msg { margin-top: 8px; font-size: 12px; border-radius: 8px; padding: 7px 10px; line-height: 1.4; }
 .qp-msg.err { background: var(--red-bg); color: #991b1b; border: 1px solid var(--red-light); }
 .qp-msg.warn { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
-.qp-rec-date { flex: none; width: 190px; }
-.qp-rec-date input { width: 100%; }
-.qp-rec-date input.qp-changed { border: 1.5px solid #f59e0b; background: #fffbeb; }
-.qp-date-note.qp-changed { color: #b45309; font-weight: 600; }
+.qp-rows { display: flex; flex-direction: column; gap: 8px; margin-top: 2px; }
+.qp-rows:empty { display: none; }
+.qp-drow { display: grid; grid-template-columns: 170px 190px 1fr; align-items: center; gap: 12px; }
+.qp-drow .qp-pill { justify-self: start; }
+.qp-drow input { width: 100%; }
+.qp-drow input.qp-changed { border: 1.5px solid #f59e0b; background: #fffbeb; }
+.qp-drow input.qp-bad { border: 1.5px solid var(--red); background: #fff5f5; }
+.qp-dnote { font-size: 11.5px; color: var(--text-secondary); }
+.qp-dnote.qp-changed { color: #b45309; font-weight: 600; }
+.qp-dnote.qp-bad { color: var(--red); font-weight: 600; }
 .qp-btn { flex: none; align-self: center; height: 44px; padding: 0 22px; font-size: 14px; font-weight: 700; border-radius: 10px; }
 .qp-btn:disabled { background: #e5e7eb; color: #6b7280; cursor: not-allowed; border: 0; }
 .qp-btn:not(:disabled) { background: var(--primary); color: #fff; border: 0; }
@@ -97,7 +103,7 @@ tr.qp-row > td { background: #fff !important; padding: 0 !important; box-shadow:
 @media (max-width: 760px) {
   .qp-holder { padding: 12px 12px 14px 12px !important; }
   .qp-rec { flex-direction: column; gap: 12px; }
-  .qp-rec-date { width: 100%; }
+  .qp-drow { grid-template-columns: 1fr; gap: 4px; }
   .qp-btn { width: 100%; align-self: stretch; }
   .qp-foot > .qp-link { margin-left: 0; }
   .qp-toast { left: 12px; right: 12px; max-width: none; }
@@ -254,77 +260,95 @@ tr.qp-row > td { background: #fff !important; padding: 0 !important; box-shadow:
     const id = tr.dataset.childId;
     const boxes = [...panel.querySelectorAll('.qp-cb')];
     const rec = panel.querySelector('.qp-rec');
-    const list = panel.querySelector('.qp-list');
+    const rowsBox = panel.querySelector('.qp-rows');
     const none = panel.querySelector('.qp-none');
     const helpEmpty = panel.querySelector('.qp-help-empty');
     const helpSome = panel.querySelector('.qp-help-some');
     const msg = panel.querySelector('.qp-msg');
-    const dateIn = panel.querySelector('.qp-date');
-    const note = panel.querySelector('.qp-date-note');
     const btn = panel.querySelector('.qp-btn');
-    const dobMin = dateIn.min;
+    const dobMin = rec.dataset.dob;
+    const dateRows = {};  // dose code -> its row (kept while the dose stays selected)
 
-    const remembered = store.get();
-    if (remembered && remembered <= today && remembered >= dobMin) dateIn.value = remembered;
+    function defaultDate() {
+      const remembered = store.get();
+      return remembered && remembered <= today && remembered >= dobMin ? remembered : today;
+    }
+    function dateRow(b) {
+      if (dateRows[b.value]) return dateRows[b.value];
+      const row = document.createElement('div');
+      row.className = 'qp-drow';
+      const inputId = `qp-d-${id}-${b.value}`;
+      row.innerHTML = `<label class="qp-pill ${b.closest('.qp-late') ? 'late' : 'due'}" for="${inputId}">${b.dataset.short}</label>` +
+        `<input type="date" id="${inputId}" aria-label="Date ${b.dataset.short} was given" max="${today}" min="${b.dataset.earliest > dobMin ? b.dataset.earliest : dobMin}" value="${defaultDate()}">` +
+        `<span class="qp-dnote"></span>`;
+      row.querySelector('input').addEventListener('change', e => {
+        store.set(e.target.value && e.target.value !== today ? e.target.value : null);
+        refresh();
+      });
+      return (dateRows[b.value] = row);
+    }
 
     function showMsg(text, kind) { msg.hidden = !text; msg.className = 'qp-msg ' + (kind || ''); msg.textContent = text || ''; }
 
     function refresh() {
       const picked = boxes.filter(b => b.checked);
       boxes.forEach(b => b.closest('.qp-pick').classList.toggle('qp-on', b.checked));
-      list.innerHTML = picked.map(b => `<span class="qp-pill ${b.closest('.qp-late') ? 'late' : 'due'}">${b.dataset.short}</span>`).join('');
+      Object.keys(dateRows).forEach(code => { if (!picked.some(b => b.value === code)) { dateRows[code].remove(); delete dateRows[code]; } });
+      picked.forEach(b => rowsBox.appendChild(dateRow(b)));  // keeps schedule order
       none.hidden = picked.length > 0;
       helpEmpty.hidden = picked.length > 0;
       helpSome.hidden = picked.length === 0;
       rec.classList.toggle('qp-empty', picked.length === 0);
-      const changed = dateIn.value && dateIn.value !== today;
-      dateIn.classList.toggle('qp-changed', !!changed);
-      note.classList.toggle('qp-changed', !!changed);
-      note.textContent = changed ? 'Changed from today · kept for the next child' : 'Today';
-      // the earliest date every selected dose allows
-      const earliest = picked.reduce((m, b) => b.dataset.earliest > m ? b.dataset.earliest : m, dobMin);
-      dateIn.min = earliest;
-      let problem = '';
-      if (!dateIn.value) problem = 'Please choose the date the doses were given.';
-      else if (dateIn.value > today) problem = 'The date cannot be after today.';
-      else {
-        const early = picked.filter(b => dateIn.value < b.dataset.earliest);
-        if (early.length) problem = early.map(b => `${b.dataset.short} can't be recorded before ${fmt(b.dataset.earliest)}.`).join(' ') + ' Change the date or untick it.';
-      }
+      const problems = [];
+      picked.forEach(b => {
+        const input = dateRows[b.value].querySelector('input'), note = dateRows[b.value].querySelector('.qp-dnote');
+        let bad = '';
+        if (!input.value) bad = 'Enter the date given';
+        else if (input.value > today) bad = 'Cannot be after today';
+        else if (input.value < b.dataset.earliest) bad = `Not before ${fmt(b.dataset.earliest)}`;
+        const changed = !bad && input.value !== today;
+        input.classList.toggle('qp-bad', !!bad);
+        input.classList.toggle('qp-changed', changed);
+        note.className = 'qp-dnote' + (bad ? ' qp-bad' : (changed ? ' qp-changed' : ''));
+        note.textContent = bad || (changed ? 'Not today · check the child\'s card' : 'Today');
+        if (bad) problems.push(b.value);
+      });
       const noStock = picked.filter(b => b.closest('.qp-pick').querySelector('.qp-st0')).map(b => b.dataset.short);
-      if (problem) showMsg(problem, 'err');
+      if (problems.length) showMsg('Fix the date marked in red. Doses must follow the schedule and cannot be dated after today.', 'err');
       else if (noStock.length) showMsg(`No stock for ${noStock.join(', ')} in your barangay. It will be saved and flagged as recorded with no stock; request a transfer from the RHU.`, 'warn');
       else showMsg('');
-      btn.disabled = picked.length === 0 || !!problem;
+      btn.disabled = picked.length === 0 || problems.length > 0;
       btn.textContent = picked.length === 0 ? 'Select a dose first'
         : `✓ Record ${picked.length} dose${picked.length === 1 ? '' : 's'}`;
     }
 
     boxes.forEach(b => b.addEventListener('change', refresh));
-    dateIn.addEventListener('change', () => { store.set(dateIn.value && dateIn.value !== today ? dateIn.value : null); refresh(); });
+    const dateOf = b => dateRows[b.value].querySelector('input').value;
 
     btn.addEventListener('click', async () => {
       const codes = boxes.filter(b => b.checked).map(b => b.value);
       if (!codes.length || btn.disabled) return;
       const picked = boxes.filter(b => b.checked);
       const items = picked.map(b => {
-        const late = +b.dataset.late;
-        return `<li><span>${esc(b.dataset.name)}</span><small class="${late ? 'late' : ''}">${late ? `overdue ${late} days` : `due ${b.dataset.due}`}</small></li>`;
+        const late = +b.dataset.late, d = dateOf(b);
+        return `<li><span>${esc(b.dataset.name)}<br><small class="${late ? 'late' : ''}">${late ? `overdue ${late} days` : `due ${b.dataset.due}`}</small></span>` +
+          `<b style="white-space:nowrap">${longDate(d)}${d !== today ? '<span class="qc-chg">not today</span>' : ''}</b></li>`;
       }).join('');
-      const changed = dateIn.value !== today;
+      const changed = picked.some(b => dateOf(b) !== today);
       const stocked = picked.filter(b => b.dataset.stock !== '');
       const empty = stocked.filter(b => +b.dataset.stock <= 0).map(b => b.dataset.short);
       const used = stocked.filter(b => +b.dataset.stock > 0).map(b => `${b.dataset.short} (${b.dataset.stock} → ${+b.dataset.stock - 1})`);
       const html = whoHtml(tr) +
-        `<div class="qc-sec"><div class="qc-lbl">Doses to record (${picked.length})</div><ul class="qc-list">${items}</ul></div>` +
-        `<div class="qc-sec"><div class="qc-lbl">Date given</div><div class="qc-big">${longDate(dateIn.value)}${changed ? '<span class="qc-chg">not today</span>' : ''}</div></div>` +
-        (changed ? `<div class="qc-warn">This date is not today. Make sure it matches the date written on the child's card.</div>` : '') +
+        `<div class="qc-sec"><div class="qc-lbl">Doses to record (${picked.length}) and date given</div><ul class="qc-list">${items}</ul></div>` +
+        (changed ? `<div class="qc-warn">A date is not today. Make sure it matches the date written on the child's card.</div>` : '') +
         (empty.length ? `<div class="qc-warn">No stock for ${esc(empty.join(', '))}. ${empty.length === 1 ? 'It' : 'They'} will be saved and flagged as recorded with no stock.</div>` : '') +
         (used.length ? `<div class="qc-sec"><div class="qc-lbl">Barangay stock</div><p class="qc-note">1 dose each will be taken: ${esc(used.join(', '))}.</p></div>` : '') +
         `<p class="qc-note">The child's risk is re-assessed after saving. You can undo right after.</p>`;
       if (!await askConfirm('Confirm recording', html, `Confirm, record ${picked.length} dose${picked.length === 1 ? '' : 's'}`)) return;
       btn.disabled = true; btn.textContent = 'Saving…';
-      const r = await post('quick-record', id, { codes, date: dateIn.value });
+      const payload = { codes };
+      picked.forEach(b => { payload['date_' + b.value] = dateOf(b); });
+      const r = await post('quick-record', id, payload);
       if (!r.ok) { showMsg(r.error, 'err'); btn.disabled = false; btn.textContent = `✓ Record ${codes.length} dose${codes.length === 1 ? '' : 's'}`; return; }
       updateRow(tr, r.row);
       tr.classList.add('qp-done');
@@ -334,7 +358,9 @@ tr.qp-row > td { background: #fff !important; padding: 0 !important; box-shadow:
       toast(`<div class="row1"><span>✓ <b>${r.child}</b>: ${r.recorded.join(', ')} recorded · now <b>${r.risk}</b></span></div>` +
             (parts.length ? `<div class="row2">${parts.join('<br>')}</div>` : ''),
             async () => {
-              const u = await post('quick-undo', id, { codes: r.codes, date: r.date });
+              const undo = { codes: r.codes };
+              Object.entries(r.dates).forEach(([c, d]) => { undo['date_' + c] = d; });
+              const u = await post('quick-undo', id, undo);
               if (u.ok) { updateRow(tr, u.row); tr.classList.remove('qp-done'); toast(`<div class="row1"><span>Undone: ${r.recorded.join(', ')} removed for <b>${r.child}</b></span></div>`); if (openRow === tr) { closePanel(); openPanel(tr); } }
               else toast(`<div class="row1"><span>${u.error}</span></div>`);
             });

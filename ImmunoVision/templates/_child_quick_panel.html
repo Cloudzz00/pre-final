@@ -40,19 +40,14 @@
     <button type="button" class="btn btn-outline btn-sm qp-fix-cancel">Cancel</button>
   </div>
 
-  <div class="qp-rec qp-empty">
+  <div class="qp-rec qp-empty" data-dob="{{ child.date_of_birth.isoformat() }}">
     <div class="qp-rec-what">
       <div class="qp-lbl">Doses to record</div>
       <div class="qp-none">None selected yet</div>
-      <div class="qp-list"></div>
+      <div class="qp-rows"></div>
       <div class="qp-help qp-help-empty">Tap the doses above that the child received. Faded doses can't be selected yet; each shows when it can be.</div>
-      <div class="qp-help qp-help-some" hidden>Tap a dose above again to remove it.</div>
+      <div class="qp-help qp-help-some" hidden>Enter the date each dose was given. Tap a dose above again to remove it.</div>
       <div class="qp-msg" hidden></div>
-    </div>
-    <div class="qp-rec-date">
-      <label class="qp-lbl" for="qp-date-{{ child.id }}">Date given</label>
-      <input type="date" id="qp-date-{{ child.id }}" class="qp-date" value="{{ today.isoformat() }}" max="{{ today.isoformat() }}" min="{{ child.date_of_birth.isoformat() }}">
-      <div class="qp-help qp-date-note">Today</div>
     </div>
     <button type="button" class="btn qp-btn" disabled>Select a dose first</button>
   </div>

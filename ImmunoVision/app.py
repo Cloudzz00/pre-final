@@ -5055,9 +5055,8 @@ def quick_record(child_id):
     codes = [c for c in request.form.getlist("codes") if c]
     if not codes:
         return _quick_error("Select at least one dose to record.")
-    administered = _parse_form_date(request.form.get("date"))
-    if administered is None:
-        return _quick_error("Please enter a valid date.")
+    # one date per dose (date_<code>); a single "date" applies to all
+    given_on = {c: _parse_form_date(request.form.get(f"date_{c}") or request.form.get("date")) for c in codes}
     rows = {r["code"]: r for r in _quick_doses(child)}
     for code in codes:
         r = rows.get(code)
@@ -5069,11 +5068,12 @@ def quick_record(child_id):
             return _quick_error(f"{r['short']} is not due yet.")
         if r["lock"] and r["lock"].startswith("after"):
             return _quick_error(f"Record {r['lock'][6:]} before {r['short']}.")
-    names = [rows[c]["name"] for c in codes]
-    error = _dose_date_error(child.date_of_birth, [(n, administered) for n in names])
+        if given_on[code] is None:
+            return _quick_error(f"Please enter a valid date for {r['short']}.")
+    error = _dose_date_error(child.date_of_birth, [(rows[c]["name"], given_on[c]) for c in codes])
     if not error:
         dates = _core_dose_dates(child)
-        dates.update({c: administered for c in codes})
+        dates.update(given_on)
         error = _schedule_error(child.date_of_birth, dates, codes)
     if error:
         return _quick_error(error)
@@ -5081,13 +5081,14 @@ def quick_record(child_id):
     existing = {r.vaccine_type_id: r for r in child.vaccination_records if r.campaign_id is None}
     for code in codes:
         vt = vt_by_code[code]
-        _write_dose(child, vt, existing.get(vt.id), administered)
+        _write_dose(child, vt, existing.get(vt.id), given_on[code])
     db.session.commit()
     result = _recompute_risk(child)
     short = [rows[c]["short"] for c in codes]
-    log_activity(f"Recorded {', '.join(names)} ({administered.isoformat()}) for {child_label(child)}")
+    log_activity("Recorded " + ", ".join(f"{rows[c]['name']} ({given_on[c].isoformat()})" for c in codes)
+                 + f" for {child_label(child)}")
     return jsonify({"ok": True, "child": child.display_name, "recorded": short, "codes": codes,
-                    "date": administered.isoformat(), "risk": result["label"],
+                    "dates": {c: given_on[c].isoformat() for c in codes}, "risk": result["label"],
                     "row": _quick_row_state(child), **_quick_next_steps(child)})
 
 
@@ -5095,13 +5096,13 @@ def quick_undo(child_id):
     """Removes doses just recorded (same codes, same date), returning their stock."""
     child = _quick_child(child_id)
     codes = request.form.getlist("codes")
-    when = _parse_form_date(request.form.get("date"))
     vt_by_code = {vt.code: vt for vt in VaccineType.query.all()}
     existing = {r.vaccine_type_id: r for r in child.vaccination_records if r.campaign_id is None}
     undone = []
     for code in codes:
         vt = vt_by_code.get(code)
         rec = existing.get(vt.id) if vt else None
+        when = _parse_form_date(request.form.get(f"date_{code}") or request.form.get("date"))
         if rec is not None and rec.date_administered == when:
             _write_dose(child, vt, rec, None)
             undone.append(vt.name)
