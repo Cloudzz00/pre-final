@@ -1878,9 +1878,13 @@ a.stat-link:hover::after, a.stat-link:focus-visible::after { opacity: 1; text-de
 .children-filters .filter-select.fs-shell .fs-value { padding: 0 26px 0 31px; }
 .children-filters .filter-select .select-sm { padding: 0 26px 0 31px; }
 .children-filters .btn-sm { height: 38px; }
-.children-filters .cf-add { flex: 0 0 auto; height: 38px; padding: 0 18px; margin-left: auto; white-space: nowrap; }
+.children-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.children-toolbar .children-filters { flex: 1 1 auto; min-width: 0; margin-bottom: 0; padding: 12px 14px; }
+.children-toolbar .cf-add { flex: 0 0 auto; height: 42px; padding: 0 20px; white-space: nowrap; }
 @media (max-width: 860px) {
+  .children-filters .search-input-wrap { flex: 1 1 100%; min-width: 100%; }
   .children-filters .filter-select { flex: 1 1 calc(50% - 4px); }
-  .children-filters .cf-add { width: 100%; margin-left: 0; }
+  .children-toolbar { flex-direction: column-reverse; align-items: stretch; }
+  .children-toolbar .cf-add { width: 100%; }
 }
 .children-filters .cf-clear { width: 38px; padding: 0; justify-content: center; flex: 0 0 auto; }
