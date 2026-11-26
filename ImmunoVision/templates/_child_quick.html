@@ -31,6 +31,8 @@ tr.qp-row > td { background: #f8fafc !important; padding: 0 !important; border-b
 .qp-info-grid label { display: block; margin: 0; }
 .qp-info-grid .qp-in { width: 100%; height: 34px; }
 .qp-info-form[hidden], .qp-info-view[hidden], .qp-other-form[hidden], .qp-other-view[hidden], .qp-vacc-form[hidden], .qp-vacc-view[hidden] { display: none; }
+.qp-sub { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-secondary); margin: 0 0 8px; }
+.qp-sub-gap { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
 .qp-age { font-weight: 400; color: var(--text-secondary); }
 .qp-info-grid dd.qp-v-late, small.qp-v-late { color: var(--red); }
 .qp-info-grid dd.qp-v-due { color: var(--primary); }
@@ -232,8 +234,8 @@ tr.qp-row > td { background: #f8fafc !important; padding: 0 !important; border-b
     const vSec = panel.querySelector('.qp-vacc-sec');
     const vView = vSec.querySelector('.qp-vacc-view'), vForm = vSec.querySelector('.qp-vacc-form');
     const vMsg = vSec.querySelector('.qp-vacc-msg'), vEdit = vSec.querySelector('.qp-vacc-edit');
-    const vFields = () => [...vForm.querySelectorAll('input[name]:not([disabled])')];
-    const vShown = v => v ? longDate(v) : 'Not given';
+    const vFields = () => [...vForm.querySelectorAll('[name]:not([disabled])')];
+    const vShownF = (i, v) => i.name === 'mnp_given' ? (v ? 'Yes' : 'No') : (v ? longDate(v) : 'Not given');
     let vSaved = {};
     vFields().forEach(i => { vSaved[i.name] = i.value; });
     function vOpen(open) { vView.hidden = open; vForm.hidden = !open; vEdit.hidden = open; vMsg.hidden = true; }
@@ -242,16 +244,16 @@ tr.qp-row > td { background: #f8fafc !important; padding: 0 !important; border-b
     vSec.querySelector('.qp-vacc-save').addEventListener('click', async () => {
       const diffs = vFields().filter(i => i.value !== vSaved[i.name]);
       if (!diffs.length) { vOpen(false); return; }
-      const bad = diffs.find(i => i.value && (i.value > today || i.value < dobMin));
-      if (bad) { vMsg.hidden = false; vMsg.textContent = `${bad.dataset.short}: the date must be between the child's birth and today.`; return; }
+      const bad = diffs.find(i => i.type === 'date' && i.value && (i.value > today || i.value < dobMin));
+      if (bad) { vMsg.hidden = false; vMsg.textContent = `${bad.dataset.short || bad.dataset.label}: the date must be between the child's birth and today.`; return; }
       const vElse = vSec.querySelector('.qp-vacc-elsewhere');
       const elsewhere = !!(vElse && vElse.checked);
-      const added = diffs.filter(i => !vSaved[i.name] && i.value);
-      const removed = diffs.filter(i => vSaved[i.name] && !i.value);
+      const added = diffs.filter(i => i.type === 'date' && !vSaved[i.name] && i.value);
+      const removed = diffs.filter(i => i.type === 'date' && vSaved[i.name] && !i.value);
       const notToday = added.some(i => i.value !== today);
-      const empty = elsewhere ? [] : added.filter(i => i.dataset.stock !== '' && +i.dataset.stock <= 0).map(i => i.dataset.short);
+      const empty = elsewhere ? [] : added.filter(i => i.dataset.stock && +i.dataset.stock <= 0).map(i => i.dataset.short);
       const html = whoHtml(tr) + `<div class="qc-sec"><div class="qc-lbl">Changes (${diffs.length})</div><ul class="qc-list">` +
-        diffs.map(i => `<li><span>${esc(i.dataset.label)}</span><small>${esc(vShown(vSaved[i.name]))}<span class="qc-arrow">to</span><b style="color:var(--text-primary)">${esc(vShown(i.value))}</b></small></li>`).join('') +
+        diffs.map(i => `<li><span>${esc(i.dataset.label)}</span><small>${esc(vShownF(i, vSaved[i.name]))}<span class="qc-arrow">to</span><b style="color:var(--text-primary)">${esc(vShownF(i, i.value))}</b></small></li>`).join('') +
         `</ul></div>` +
         (notToday ? `<div class="qc-warn">A new dose is not dated today. Make sure it matches the date written on the child's card.</div>` : '') +
         (empty.length ? `<div class="qc-warn">No stock for ${esc(empty.join(', '))}. It will be saved and flagged as recorded with no stock.</div>` : '') +
@@ -262,19 +264,19 @@ tr.qp-row > td { background: #f8fafc !important; padding: 0 !important; border-b
       const data = {};
       vFields().forEach(i => { data[i.name] = i.value; });
       if (elsewhere) data.given_elsewhere = '1';
-      const r = await post('quick-vaccines', id, data);
+      const r = await post('quick-records', id, data);
       if (!r.ok) { vMsg.hidden = false; vMsg.textContent = r.error; return; }
       if (r.unchanged) { vOpen(false); return; }
       updateRow(tr, r.row);
       tr.classList.add('qp-done');
-      const what = [r.added.length ? `${r.added.join(', ')} recorded` : '', r.changed.length ? `${r.changed.join(', ')} updated` : ''].filter(Boolean).join('; ');
+      const what = [r.added.length ? `${r.added.join(', ')} recorded` : '', r.changed.length ? `${r.changed.join(', ')} updated` : ''].filter(Boolean).join('; ') || 'records saved';
       const parts = [];
       if (r.still_needed.length) parts.push(`Can still be given today: <b>${r.still_needed.join(', ')}</b>`);
       if (r.next_visit) parts.push(`Next: <b>${r.next_visit.doses.join(', ')}</b> from ${r.next_visit.date}`);
       toast(`<div class="row1"><span><b>${esc(r.child)}</b>: ${esc(what)}. Now <b>${r.risk}</b>.</span></div>` +
-            (parts.length ? `<div class="row2">${parts.join('<br>')}</div>` : ''),
+            ((parts.length || r.warnings.length) ? `<div class="row2">${r.warnings.map(esc).concat(parts).join('<br>')}</div>` : ''),
             async () => {
-              const u = await post('quick-vaccines-undo', id, {});
+              const u = await post('quick-records-undo', id, {});
               if (u.ok) { updateRow(tr, u.row); tr.classList.remove('qp-done'); toast(`<div class="row1"><span>Undone. <b>${esc(r.child)}</b> is back to the previous dates.</span></div>`); if (openRow === tr) { closePanel(); openPanel(tr); } }
               else toast(`<div class="row1"><span>${esc(u.error)}</span></div>`);
             });
@@ -319,40 +321,6 @@ tr.qp-row > td { background: #f8fafc !important; padding: 0 !important; border-b
       openForm(false);
       toast(`<div class="row1"><span>Child information saved for <b>${esc(c.display_name)}</b>.${r.risk ? ` Now <b>${r.risk}</b>.` : ''}</span></div>`);
       if (diffs.includes('date_of_birth')) { closePanel(); openPanel(tr); }  // due dates move with the new age
-    });
-
-    // other records: optional vaccines, campaigns, Vitamin A, MNP
-    const oSec = panel.querySelector('.qp-other-sec');
-    const oView = oSec.querySelector('.qp-other-view'), oForm = oSec.querySelector('.qp-other-form');
-    const oMsg = oSec.querySelector('.qp-other-msg'), oEdit = oSec.querySelector('.qp-other-edit');
-    const oShown = (n, v) => n === 'mnp_given' ? (v ? 'Yes' : 'No') : (v ? longDate(v) : 'Not given');
-    let oSaved = {};
-    const oFields = () => [...oForm.querySelectorAll('[name]')];
-    oFields().forEach(i => { oSaved[i.name] = i.value; });
-    function oOpen(open) { oView.hidden = open; oForm.hidden = !open; oEdit.hidden = open; oMsg.hidden = true; }
-    oEdit.addEventListener('click', () => oOpen(true));
-    oSec.querySelector('.qp-other-cancel').addEventListener('click', () => { oFields().forEach(i => { i.value = oSaved[i.name]; }); oOpen(false); });
-    oSec.querySelector('.qp-other-save').addEventListener('click', async () => {
-      const diffs = oFields().filter(i => i.value !== oSaved[i.name]);
-      if (!diffs.length) { oOpen(false); return; }
-      const bad = oFields().find(i => i.type === 'date' && i.value && (i.value > today || i.value < dobMin));
-      if (bad) { oMsg.hidden = false; oMsg.textContent = `${bad.dataset.label}: the date must be between the child's birth and today.`; return; }
-      const oElse = oSec.querySelector('.qp-other-elsewhere');
-      const html = whoHtml(tr) + `<div class="qc-sec"><div class="qc-lbl">Changes</div><ul class="qc-list">` +
-        diffs.map(i => `<li><span>${esc(i.dataset.label)}</span><small>${esc(oShown(i.name, oSaved[i.name]))}<span class="qc-arrow">to</span><b style="color:var(--text-primary)">${esc(oShown(i.name, i.value))}</b></small></li>`).join('') +
-        `</ul></div>` + (oElse && oElse.checked ? `<p class="qc-note">Transferred in: no stock is taken from this barangay.</p>` : '');
-      if (!await askConfirm('Confirm other records', html, 'Confirm, save changes')) return;
-      const data = {};
-      oFields().forEach(i => { data[i.name] = i.value; });
-      if (oElse && oElse.checked) data.given_elsewhere = '1';
-      const r = await post('quick-other', id, data);
-      if (!r.ok) { oMsg.hidden = false; oMsg.textContent = r.error; return; }
-      oSaved = {};
-      oFields().forEach(i => { if (r.values[i.name] !== undefined) i.value = r.values[i.name]; oSaved[i.name] = i.value; });
-      oView.querySelectorAll('[data-f]').forEach(dd => { dd.textContent = oShown(dd.dataset.f, r.values[dd.dataset.f]); });
-      updateRow(tr, r.row);
-      oOpen(false);
-      toast(`<div class="row1"><span>Other records saved.</span></div>` + (r.warnings.length ? `<div class="row2">${r.warnings.map(esc).join('<br>')}</div>` : ''));
     });
 
   }
