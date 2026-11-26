@@ -36,63 +36,45 @@
     </div>
   </div>
 
-  <div class="qp-card qp-vacc">
+  <div class="qp-card qp-vacc-sec" data-dob="{{ child.date_of_birth.isoformat() }}">
     <div class="qp-sec-head">
       <span class="qp-title">Vaccination records</span>
-      <span class="qp-sec-note">Tap a dose given today to record it. Click a recorded dose to correct its date.</span>
+      <button type="button" class="qp-link qp-vacc-edit">Edit</button>
     </div>
-  <div class="qp-doses">
-    {% for g in groups %}{% set gi = loop.index %}
-    <div class="qp-grp">
-      <div class="qp-gl">{{ g.label }}{% if g.overdue_days %}<span class="qp-late-txt">overdue {{ g.overdue_days }} days</span>{% endif %}</div>
-      <div class="qp-gc">
-        {% for d in g.doses %}
-        {% if d.status == 'given' %}
-        <button type="button" class="qp-c qp-given" data-fix="{{ d.code }}" data-date="{{ d.date.isoformat() }}" data-name="{{ d.name }}"
-                title="Given {{ d.date.strftime('%m/%d/%Y') }}. Click to correct the date.">
-          <em>{{ d.short }}</em><small>{{ d.date.strftime('%m/%d/%Y') }}</small></button>
-        {% elif d.status in ('due', 'overdue') and not d.lock %}
-        <label class="qp-c qp-pick {{ 'qp-late' if d.status == 'overdue' else 'qp-due' }}">
-          <em><input type="checkbox" class="qp-cb" value="{{ d.code }}" data-short="{{ d.short }}"
-                 data-earliest="{{ d.earliest.isoformat() }}" data-latest="{{ d.latest.isoformat() }}" data-gid="{{ gi }}"
-                 data-name="{{ d.name }}" data-due="{{ d.due_on.strftime('%m/%d/%Y') }}" data-late="{{ d.overdue_days }}"
-                 data-stock="{{ d.stock if (show_stock and d.stock is not none) else '' }}"> {{ d.short }}</em><small>{{ d.due_on.strftime('%m/%d/%Y') }}</small>
-          {% if show_stock and d.stock is not none %}<small class="qp-st {{ 'qp-st0' if d.stock <= 0 }}">{{ '0 in stock' if d.stock <= 0 else d.stock ~ ' in stock' }}</small>{% endif %}
-        </label>
-        {% elif d.status in ('due', 'overdue') %}
-        <span class="qp-c qp-locked {{ 'qp-late-locked' if d.status == 'overdue' }}" title="Can be recorded {{ d.lock }}">
-          <em>{{ d.short }}</em><small>{{ d.lock[5:] if d.lock.startswith('from ') else d.lock }}</small></span>
-        {% elif d.status == 'past-window' %}
-        <span class="qp-c qp-up" title="No longer given at this age"><em>{{ d.short }}</em><small>age passed</small></span>
-        {% else %}
-        <span class="qp-c qp-up" title="Not due yet"><em>{{ d.short }}</em><small>{{ d.due_on.strftime('%m/%d/%Y') }}</small></span>
-        {% endif %}
-        {% endfor %}
+    <dl class="qp-info-grid qp-vacc-view">
+      {% for g in groups %}{% for d in g.doses %}
+      <div><dt>{{ d.short }} <span class="qp-age">({{ g.label }})</span></dt>
+        {% if d.status == 'given' %}<dd>{{ d.date.strftime('%m/%d/%Y') }}</dd>
+        {% elif d.status == 'overdue' %}<dd class="qp-v-late">Overdue, due {{ d.due_on.strftime('%m/%d/%Y') }}</dd>
+        {% elif d.status == 'due' %}<dd class="qp-v-due">Due {{ d.due_on.strftime('%m/%d/%Y') }}</dd>
+        {% elif d.status == 'past-window' %}<dd class="qp-v-muted">Age passed</dd>
+        {% else %}<dd class="qp-v-muted">Due {{ d.due_on.strftime('%m/%d/%Y') }}</dd>{% endif %}
       </div>
+      {% endfor %}{% endfor %}
+    </dl>
+    <div class="qp-vacc-form" hidden>
+      <div class="qp-info-grid">
+        {% for g in groups %}{% for d in g.doses %}
+        {% set locked = d.status in ('upcoming', 'past-window') %}
+        <label><span>{{ d.short }} ({{ g.label }})</span>
+          <input class="qp-in" type="date" name="date_{{ d.code }}" data-label="{{ d.name }}" data-short="{{ d.short }}"
+                 data-stock="{{ d.stock if (show_stock and d.stock is not none) else '' }}"
+                 max="{{ today.isoformat() }}" min="{{ child.date_of_birth.isoformat() }}"
+                 value="{{ d.date.isoformat() if d.date else '' }}" {{ 'disabled' if locked }}>
+          {% if locked %}<small class="qp-v-muted">{{ 'Age passed' if d.status == 'past-window' else 'Not due until ' ~ d.due_on.strftime('%m/%d/%Y') }}</small>
+          {% elif d.status == 'overdue' %}<small class="qp-v-late">Overdue since {{ d.due_on.strftime('%m/%d/%Y') }}</small>
+          {% elif show_stock and d.stock is not none and not d.date %}<small class="{{ 'qp-v-late' if d.stock <= 0 else 'qp-v-muted' }}">{{ d.stock }} in stock</small>{% endif %}
+        </label>
+        {% endfor %}{% endfor %}
+      </div>
+      {% if show_stock %}<label class="qp-elsewhere"><input type="checkbox" class="qp-vacc-elsewhere"> Transferred in: new doses here were given at another health center, so no stock is taken from this barangay.</label>{% endif %}
+      <div class="qp-info-actions">
+        <span class="qp-help">Enter the date each dose was given. Clear a date to remove a dose. Dates must follow the schedule.</span>
+        <button type="button" class="btn btn-outline btn-sm qp-vacc-cancel">Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm qp-vacc-save">Save changes</button>
+      </div>
+      <div class="qp-msg err qp-vacc-msg" hidden></div>
     </div>
-    {% endfor %}
-  </div>
-
-  <div class="qp-fix" hidden>
-    <span class="qp-fix-lbl">Correct the date of <b class="qp-fix-name"></b>:</span>
-    <input type="date" class="qp-fix-date" max="{{ today.isoformat() }}">
-    <button type="button" class="btn btn-primary btn-sm qp-fix-save">Save date</button>
-    <button type="button" class="btn btn-outline btn-sm qp-fix-cancel">Cancel</button>
-    <button type="button" class="btn btn-danger btn-sm qp-fix-remove">Remove dose</button>
-  </div>
-
-  <div class="qp-rec qp-empty" data-dob="{{ child.date_of_birth.isoformat() }}">
-    <div class="qp-rec-what">
-      <div class="qp-sub">Doses to record</div>
-      <div class="qp-none">None selected yet</div>
-      <div class="qp-rows"></div>
-      <div class="qp-help qp-help-empty">Tap the doses above that the child received. Faded doses can't be selected yet; each shows when it can be.</div>
-      <div class="qp-help qp-help-some" hidden>Enter the date each dose was given. Tap a dose above again to remove it.</div>
-      {% if show_stock %}<label class="qp-elsewhere" hidden><input type="checkbox" class="qp-elsewhere-cb"> Transferred in: these doses were given at another health center, so no stock is taken from this barangay.</label>{% endif %}
-      <div class="qp-msg" hidden></div>
-    </div>
-    <button type="button" class="btn qp-btn" disabled>Select a dose first</button>
-  </div>
   </div>
 
   <div class="qp-card qp-other-sec">

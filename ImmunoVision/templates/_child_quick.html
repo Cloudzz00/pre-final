@@ -12,66 +12,31 @@ tr.qp-row > td { background: #f8fafc !important; padding: 0 !important; border-b
 .qp-loading { padding: 8px 0; color: var(--text-secondary); font-size: 13px; }
 .qp { display: flex; flex-direction: column; gap: 12px; font-size: 12px; white-space: normal; }
 .qp * { white-space: normal; }
-.qp-holder { container-type: inline-size; }
-.qp-doses { display: grid; grid-template-columns: 1fr; gap: 10px 36px; justify-content: start; }
-@container (min-width: 960px) { .qp-doses { grid-template-columns: max-content max-content; grid-template-rows: repeat(3, auto); grid-auto-flow: column; } }
-.qp-grp { display: grid; grid-template-columns: 112px auto; gap: 12px; align-items: center; min-height: 44px; }
-.qp-gl { font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-primary); display: flex; flex-direction: column; gap: 2px; white-space: nowrap !important; }
-.qp-late-txt { color: var(--red); font-size: 10px; white-space: nowrap !important; }
-.qp-gc { display: grid; grid-template-columns: repeat(4, 82px); gap: 4px; }
-.qp-c { width: 82px; min-height: 40px; overflow: hidden; box-sizing: border-box; display: inline-flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 5px 7px; border-radius: 8px; border: 1px solid var(--border-strong); background: #fff; font: inherit; font-size: 12px; color: var(--text-primary); text-align: left; white-space: nowrap !important; }
-.qp-c em { font-style: normal; font-weight: 600; display: flex; align-items: center; gap: 5px; white-space: nowrap !important; }
-.qp-c small { font-size: 10.5px; font-weight: 500; color: var(--text-secondary); white-space: nowrap !important; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
-.qp-given { background: #eef2f6; border-color: transparent; cursor: pointer; }
-.qp-given:hover { border-color: var(--border-strong); }
-.qp-pick { cursor: pointer; background: #fff; }
-.qp-pick input { width: 13px; height: 13px; margin: 0; accent-color: var(--primary); }
-.qp-late small:first-of-type { color: var(--red); }
-.qp-pick.qp-on { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
-.qp-st { font-size: 10px !important; }
-.qp-st0 { color: var(--red) !important; }
-.qp-up, .qp-locked { background: transparent; border-color: var(--border); color: #9ca3af; font-weight: 500; cursor: not-allowed; }
-.qp-up em, .qp-locked em { font-weight: 500; }
-.qp-up small, .qp-locked small { color: #9ca3af; }
-.qp-fix { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; border-top: 1px solid var(--border); margin-top: 14px; padding-top: 14px; font-size: 12.5px; }
-.qp-fix[hidden] { display: none; }
-.qp-fix input, .qp-drow input, .qp-in { box-sizing: border-box; height: 34px; padding: 0 9px; border: 1px solid var(--border-strong); border-radius: 8px; font: inherit; font-size: 13px; background: #fff; }
-.qp-rec { display: flex; align-items: flex-start; gap: 24px; border-top: 1px solid var(--border); margin-top: 14px; padding-top: 14px; }
-.qp-rec-what { flex: 1; min-width: 0; }
 .qp-lbl { display: block; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-secondary); margin: 0 0 6px; }
-.qp-none { font-size: 13.5px; font-weight: 600; color: var(--text-primary); }
 .qp-list { display: flex; gap: 6px; flex-wrap: wrap; }
 .qp-list:empty { display: none; }
-.qp-pill { font-weight: 600; font-size: 13px; color: var(--text-primary); }
 .qp-help { font-size: 11.5px; color: var(--text-secondary); margin-top: 6px; }
-.qp-help[hidden], .qp-msg[hidden], .qp-none[hidden] { display: none; }
+.qp-help[hidden], .qp-msg[hidden] { display: none; }
 .qp-msg { margin-top: 8px; font-size: 12px; line-height: 1.4; }
 .qp-msg.err { color: var(--red); font-weight: 600; }
 .qp-msg.warn { color: #92400e; }
-.qp-rows { display: flex; flex-direction: column; gap: 8px; margin-top: 2px; }
-.qp-rows:empty { display: none; }
-.qp-drow { display: grid; grid-template-columns: 170px 190px 1fr; align-items: center; gap: 12px; }
-.qp-drow .qp-pill { justify-self: start; }
-.qp-drow input { width: 100%; }
-.qp-drow input.qp-bad { border-color: var(--red); }
-.qp-dnote { font-size: 11.5px; color: var(--text-secondary); }
-.qp-dnote.qp-changed { color: var(--text-primary); }
-.qp-dnote.qp-bad { color: var(--red); font-weight: 600; }
-.qp-btn { flex: none; align-self: center; height: 40px; padding: 0 20px; font-size: 13.5px; font-weight: 600; border-radius: 8px; }
-.qp-btn:disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; border: 0; }
-.qp-btn:not(:disabled) { background: var(--primary); color: #fff; border: 0; }
 .qp-foot { display: flex; justify-content: flex-end; font-size: 12.5px; }
 .qp-card { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px 16px; }
 .qp-sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
 .qp-title { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-primary); }
 .qp-sec-note { font-size: 11.5px; color: var(--text-secondary); }
-.qp-sub { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-secondary); margin: 0 0 6px; }
 .qp-info-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 24px; margin: 0; }
 .qp-info-grid dt, .qp-info-grid label > span { display: block; font-size: 11px; color: var(--text-secondary); margin-bottom: 2px; }
 .qp-info-grid dd { margin: 0; font-size: 13px; font-weight: 600; color: var(--text-primary); overflow-wrap: anywhere; }
 .qp-info-grid label { display: block; margin: 0; }
 .qp-info-grid .qp-in { width: 100%; height: 34px; }
-.qp-info-form[hidden], .qp-info-view[hidden], .qp-other-form[hidden], .qp-other-view[hidden] { display: none; }
+.qp-info-form[hidden], .qp-info-view[hidden], .qp-other-form[hidden], .qp-other-view[hidden], .qp-vacc-form[hidden], .qp-vacc-view[hidden] { display: none; }
+.qp-age { font-weight: 400; color: var(--text-secondary); }
+.qp-info-grid dd.qp-v-late, small.qp-v-late { color: var(--red); }
+.qp-info-grid dd.qp-v-due { color: var(--primary); }
+.qp-info-grid dd.qp-v-muted, small.qp-v-muted { color: #9ca3af; font-weight: 500; }
+.qp-info-grid label small { display: block; font-size: 11px; margin-top: 3px; }
+.qp-info-grid input[disabled] { background: #f8fafc; color: #9ca3af; }
 .qp-info-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 12px; }
 .qp-info-actions .qp-help { margin: 0 auto 0 0; }
 .qp-elsewhere { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; color: var(--text-secondary); margin-top: 10px; cursor: pointer; }
@@ -106,14 +71,6 @@ tr.qp-row > td { background: #f8fafc !important; padding: 0 !important; border-b
 .qp-toast button { margin-left: auto; border: 0; background: none; color: #93c5fd; font: inherit; font-weight: 700; cursor: pointer; padding: 0; }
 @media (max-width: 760px) {
   .qp-holder { padding: 12px 12px 14px 12px !important; }
-  .qp-doses { grid-template-columns: 1fr; }
-  .qp-grp { grid-template-columns: 1fr; gap: 4px; }
-  .qp-gl { flex-direction: row; gap: 8px; }
-  .qp-gc { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); }
-  .qp-c { width: auto; }
-  .qp-rec { flex-direction: column; gap: 12px; }
-  .qp-drow { grid-template-columns: 1fr; gap: 4px; }
-  .qp-btn { width: 100%; align-self: stretch; }
   .qp-info-grid { grid-template-columns: 1fr 1fr; }
   .qp-info-actions { flex-wrap: wrap; }
   .qp-toast { left: 12px; right: 12px; max-width: none; }
@@ -269,165 +226,59 @@ tr.qp-row > td { background: #f8fafc !important; padding: 0 !important; border-b
 
   function initPanel(tr, panel) {
     const id = tr.dataset.childId;
-    const boxes = [...panel.querySelectorAll('.qp-cb')];
-    const rec = panel.querySelector('.qp-rec');
-    const rowsBox = panel.querySelector('.qp-rows');
-    const none = panel.querySelector('.qp-none');
-    const helpEmpty = panel.querySelector('.qp-help-empty');
-    const helpSome = panel.querySelector('.qp-help-some');
-    const msg = rec.querySelector('.qp-msg');
-    const btn = panel.querySelector('.qp-btn');
-    const dobMin = rec.dataset.dob;
-    const elsewhereBox = rec.querySelector('.qp-elsewhere'), elsewhereCb = rec.querySelector('.qp-elsewhere-cb');
-    const dateRows = {};  // dose code -> its row (kept while the dose stays selected)
+    const dobMin = panel.querySelector('.qp-vacc-sec').dataset.dob;
 
-    function defaultDate(b) {
-      const remembered = store.get();
-      const d = remembered && remembered <= today && remembered >= dobMin ? remembered : today;
-      return d > b.dataset.latest ? b.dataset.latest : d;
-    }
-    function dateRow(b) {
-      if (dateRows[b.value]) return dateRows[b.value];
-      const row = document.createElement('div');
-      row.className = 'qp-drow';
-      const inputId = `qp-d-${id}-${b.value}`;
-      row.innerHTML = `<label class="qp-pill ${b.closest('.qp-late') ? 'late' : 'due'}" for="${inputId}">${b.dataset.short}</label>` +
-        `<input type="date" id="${inputId}" aria-label="Date ${b.dataset.short} was given" max="${b.dataset.latest}" min="${b.dataset.earliest > dobMin ? b.dataset.earliest : dobMin}" value="${defaultDate(b)}">` +
-        `<span class="qp-dnote"></span>`;
-      row.querySelector('input').addEventListener('change', e => {
-        store.set(e.target.value && e.target.value !== today ? e.target.value : null);
-        refresh();
-      });
-      return (dateRows[b.value] = row);
-    }
-
-    function showMsg(text, kind) { msg.hidden = !text; msg.className = 'qp-msg ' + (kind || ''); msg.textContent = text || ''; }
-
-    function refresh() {
-      const picked = boxes.filter(b => b.checked);
-      boxes.forEach(b => b.closest('.qp-pick').classList.toggle('qp-on', b.checked));
-      Object.keys(dateRows).forEach(code => { if (!picked.some(b => b.value === code)) { dateRows[code].remove(); delete dateRows[code]; } });
-      picked.forEach(b => rowsBox.appendChild(dateRow(b)));  // keeps schedule order
-      none.hidden = picked.length > 0;
-      helpEmpty.hidden = picked.length > 0;
-      helpSome.hidden = picked.length === 0;
-      rec.classList.toggle('qp-empty', picked.length === 0);
-      if (elsewhereBox) elsewhereBox.hidden = picked.length === 0;
-      const problems = [];
-      picked.forEach(b => {
-        const input = dateRows[b.value].querySelector('input'), note = dateRows[b.value].querySelector('.qp-dnote');
-        let bad = '';
-        if (!input.value) bad = 'Enter the date given';
-        else if (input.value > today) bad = 'Cannot be after today';
-        else if (input.value < b.dataset.earliest) bad = `Not before ${fmt(b.dataset.earliest)}`;
-        else if (input.value > b.dataset.latest) bad = `Not after ${fmt(b.dataset.latest)}`;
-        const changed = !bad && input.value !== today;
-        input.classList.toggle('qp-bad', !!bad);
-        input.classList.toggle('qp-changed', changed);
-        note.className = 'qp-dnote' + (bad ? ' qp-bad' : (changed ? ' qp-changed' : ''));
-        note.textContent = bad || (changed ? 'Not today. Check the child\'s card.' : 'Today');
-        if (bad) problems.push(b.value);
-      });
-      const noStock = picked.filter(b => b.closest('.qp-pick').querySelector('.qp-st0')).map(b => b.dataset.short);
-      if (problems.length) showMsg('Fix the date marked in red. Doses must follow the schedule and cannot be dated after today.', 'err');
-      else if (noStock.length) showMsg(`No stock for ${noStock.join(', ')} in your barangay. It will be saved and flagged as recorded with no stock; request a transfer from the RHU.`, 'warn');
-      else showMsg('');
-      btn.disabled = picked.length === 0 || problems.length > 0;
-      btn.textContent = picked.length === 0 ? 'Select a dose first'
-        : `Record ${picked.length} dose${picked.length === 1 ? '' : 's'}`;
-    }
-
-    boxes.forEach(b => b.addEventListener('change', refresh));
-    const dateOf = b => dateRows[b.value].querySelector('input').value;
-
-    btn.addEventListener('click', async () => {
-      const codes = boxes.filter(b => b.checked).map(b => b.value);
-      if (!codes.length || btn.disabled) return;
-      const picked = boxes.filter(b => b.checked);
-      const items = picked.map(b => {
-        const late = +b.dataset.late, d = dateOf(b);
-        return `<li><span>${esc(b.dataset.name)}<br><small class="${late ? 'late' : ''}">${late ? `overdue ${late} days` : `due ${b.dataset.due}`}</small></span>` +
-          `<b style="white-space:nowrap">${longDate(d)}${d !== today ? '<span class="qc-chg">(not today)</span>' : ''}</b></li>`;
-      }).join('');
-      const changed = picked.some(b => dateOf(b) !== today);
-      const elsewhere = !!(elsewhereCb && elsewhereCb.checked);
-      const stocked = elsewhere ? [] : picked.filter(b => b.dataset.stock !== '');
-      const empty = stocked.filter(b => +b.dataset.stock <= 0).map(b => b.dataset.short);
-      const used = stocked.filter(b => +b.dataset.stock > 0).map(b => `${b.dataset.short} (${b.dataset.stock} left, ${+b.dataset.stock - 1} after)`);
-      const html = whoHtml(tr) +
-        `<div class="qc-sec"><div class="qc-lbl">Doses to record (${picked.length}) and date given</div><ul class="qc-list">${items}</ul></div>` +
-        (changed ? `<div class="qc-warn">A date is not today. Make sure it matches the date written on the child's card.</div>` : '') +
-        (empty.length ? `<div class="qc-warn">No stock for ${esc(empty.join(', '))}. ${empty.length === 1 ? 'It' : 'They'} will be saved and flagged as recorded with no stock.</div>` : '') +
-        (used.length ? `<div class="qc-sec"><div class="qc-lbl">Barangay stock</div><p class="qc-note">1 dose each will be taken: ${esc(used.join(', '))}.</p></div>` : '') +
-        (elsewhere ? `<div class="qc-sec"><div class="qc-lbl">Transferred in</div><p class="qc-note">Given at another health center. No stock is taken from this barangay.</p></div>` : '') +
+    // vaccination records: all core doses, edited like the other sections
+    const vSec = panel.querySelector('.qp-vacc-sec');
+    const vView = vSec.querySelector('.qp-vacc-view'), vForm = vSec.querySelector('.qp-vacc-form');
+    const vMsg = vSec.querySelector('.qp-vacc-msg'), vEdit = vSec.querySelector('.qp-vacc-edit');
+    const vFields = () => [...vForm.querySelectorAll('input[name]:not([disabled])')];
+    const vShown = v => v ? longDate(v) : 'Not given';
+    let vSaved = {};
+    vFields().forEach(i => { vSaved[i.name] = i.value; });
+    function vOpen(open) { vView.hidden = open; vForm.hidden = !open; vEdit.hidden = open; vMsg.hidden = true; }
+    vEdit.addEventListener('click', () => vOpen(true));
+    vSec.querySelector('.qp-vacc-cancel').addEventListener('click', () => { vFields().forEach(i => { i.value = vSaved[i.name]; }); vOpen(false); });
+    vSec.querySelector('.qp-vacc-save').addEventListener('click', async () => {
+      const diffs = vFields().filter(i => i.value !== vSaved[i.name]);
+      if (!diffs.length) { vOpen(false); return; }
+      const bad = diffs.find(i => i.value && (i.value > today || i.value < dobMin));
+      if (bad) { vMsg.hidden = false; vMsg.textContent = `${bad.dataset.short}: the date must be between the child's birth and today.`; return; }
+      const vElse = vSec.querySelector('.qp-vacc-elsewhere');
+      const elsewhere = !!(vElse && vElse.checked);
+      const added = diffs.filter(i => !vSaved[i.name] && i.value);
+      const removed = diffs.filter(i => vSaved[i.name] && !i.value);
+      const notToday = added.some(i => i.value !== today);
+      const empty = elsewhere ? [] : added.filter(i => i.dataset.stock !== '' && +i.dataset.stock <= 0).map(i => i.dataset.short);
+      const html = whoHtml(tr) + `<div class="qc-sec"><div class="qc-lbl">Changes (${diffs.length})</div><ul class="qc-list">` +
+        diffs.map(i => `<li><span>${esc(i.dataset.label)}</span><small>${esc(vShown(vSaved[i.name]))}<span class="qc-arrow">to</span><b style="color:var(--text-primary)">${esc(vShown(i.value))}</b></small></li>`).join('') +
+        `</ul></div>` +
+        (notToday ? `<div class="qc-warn">A new dose is not dated today. Make sure it matches the date written on the child's card.</div>` : '') +
+        (empty.length ? `<div class="qc-warn">No stock for ${esc(empty.join(', '))}. It will be saved and flagged as recorded with no stock.</div>` : '') +
+        (removed.length ? `<p class="qc-note">Removed doses show as not given; any stock they used is returned.</p>` : '') +
+        (elsewhere && added.length ? `<p class="qc-note">Transferred in: no stock is taken from this barangay.</p>` : '') +
         `<p class="qc-note">The child's risk is re-assessed after saving. You can undo right after.</p>`;
-      if (!await askConfirm('Confirm recording', html, `Confirm, record ${picked.length} dose${picked.length === 1 ? '' : 's'}`)) return;
-      btn.disabled = true; btn.textContent = 'Saving…';
-      const payload = { codes };
-      if (elsewhere) payload.given_elsewhere = '1';
-      picked.forEach(b => { payload['date_' + b.value] = dateOf(b); });
-      const r = await post('quick-record', id, payload);
-      if (!r.ok) { showMsg(r.error, 'err'); btn.disabled = false; btn.textContent = `Record ${codes.length} dose${codes.length === 1 ? '' : 's'}`; return; }
+      if (!await askConfirm('Confirm vaccination records', html, 'Confirm, save changes', removed.length > 0 && !added.length)) return;
+      const data = {};
+      vFields().forEach(i => { data[i.name] = i.value; });
+      if (elsewhere) data.given_elsewhere = '1';
+      const r = await post('quick-vaccines', id, data);
+      if (!r.ok) { vMsg.hidden = false; vMsg.textContent = r.error; return; }
+      if (r.unchanged) { vOpen(false); return; }
       updateRow(tr, r.row);
       tr.classList.add('qp-done');
+      const what = [r.added.length ? `${r.added.join(', ')} recorded` : '', r.changed.length ? `${r.changed.join(', ')} updated` : ''].filter(Boolean).join('; ');
       const parts = [];
       if (r.still_needed.length) parts.push(`Can still be given today: <b>${r.still_needed.join(', ')}</b>`);
       if (r.next_visit) parts.push(`Next: <b>${r.next_visit.doses.join(', ')}</b> from ${r.next_visit.date}`);
-      toast(`<div class="row1"><span><b>${r.child}</b>: ${r.recorded.join(', ')} recorded. Now <b>${r.risk}</b>.</span></div>` +
+      toast(`<div class="row1"><span><b>${esc(r.child)}</b>: ${esc(what)}. Now <b>${r.risk}</b>.</span></div>` +
             (parts.length ? `<div class="row2">${parts.join('<br>')}</div>` : ''),
             async () => {
-              const undo = { codes: r.codes };
-              Object.entries(r.dates).forEach(([c, d]) => { undo['date_' + c] = d; });
-              const u = await post('quick-undo', id, undo);
-              if (u.ok) { updateRow(tr, u.row); tr.classList.remove('qp-done'); toast(`<div class="row1"><span>Undone: ${r.recorded.join(', ')} removed for <b>${r.child}</b></span></div>`); if (openRow === tr) { closePanel(); openPanel(tr); } }
-              else toast(`<div class="row1"><span>${u.error}</span></div>`);
+              const u = await post('quick-vaccines-undo', id, {});
+              if (u.ok) { updateRow(tr, u.row); tr.classList.remove('qp-done'); toast(`<div class="row1"><span>Undone. <b>${esc(r.child)}</b> is back to the previous dates.</span></div>`); if (openRow === tr) { closePanel(); openPanel(tr); } }
+              else toast(`<div class="row1"><span>${esc(u.error)}</span></div>`);
             });
-      const all = rows();
-      const next = all[all.indexOf(tr) + 1];
-      closePanel();
-      if (next) openPanel(next, true);
-    });
-
-    // correct the date of a dose already given
-    const fix = panel.querySelector('.qp-fix');
-    const fixDate = fix.querySelector('.qp-fix-date');
-    let fixCode = null;
-    panel.querySelectorAll('.qp-given').forEach(c => c.addEventListener('click', () => {
-      fixCode = c.dataset.fix;
-      fix.querySelector('.qp-fix-name').textContent = c.querySelector('em').textContent.trim();
-      fixDate.value = c.dataset.date;
-      fixDate.min = dobMin;
-      fix.hidden = false;
-      fix.querySelectorAll('.qp-msg').forEach(m => m.remove());
-      fixDate.focus();
-    }));
-    fix.querySelector('.qp-fix-cancel').addEventListener('click', () => { fix.hidden = true; });
-    fix.querySelector('.qp-fix-remove').addEventListener('click', async () => {
-      const chip = panel.querySelector(`.qp-given[data-fix="${fixCode}"]`);
-      const html = whoHtml(tr) +
-        `<div class="qc-sec"><div class="qc-lbl">Remove a recorded dose</div><ul class="qc-list"><li><span>${esc(chip.dataset.name)}</span><small>given ${longDate(chip.dataset.date)}</small></li></ul></div>` +
-        `<p class="qc-note">The dose will show as not given. If it was taken from barangay stock, the dose is returned. The removal is written to the activity log and the risk is re-assessed.</p>`;
-      if (!await askConfirm('Confirm removing a dose', html, 'Confirm, remove dose', true)) return;
-      const r = await post('quick-remove', id, { code: fixCode });
-      if (!r.ok) { fix.insertAdjacentHTML('beforeend', '<div class="qp-msg err" style="flex-basis:100%"></div>'); fix.lastElementChild.textContent = r.error; return; }
-      updateRow(tr, r.row);
-      toast(`<div class="row1"><span>${esc(chip.dataset.name)} removed. Now <b>${r.risk}</b>.</span></div>`);
-      closePanel(); openPanel(tr);
-    });
-    fix.querySelector('.qp-fix-save').addEventListener('click', async () => {
-      const chip = panel.querySelector(`.qp-given[data-fix="${fixCode}"]`);
-      if (!fixDate.value || fixDate.value === chip.dataset.date) { fix.hidden = true; return; }
-      const html = whoHtml(tr) +
-        `<div class="qc-sec"><div class="qc-lbl">Correct a recorded date</div><ul class="qc-list"><li><span>${esc(chip.dataset.name)}</span>` +
-        `<small><s>${longDate(chip.dataset.date)}</s><span class="qc-arrow">to</span><b style="color:var(--text-primary)">${longDate(fixDate.value)}</b></small></li></ul></div>` +
-        `<p class="qc-note">The change is written to the activity log and the child's risk is re-assessed.</p>`;
-      if (!await askConfirm('Confirm date correction', html, 'Confirm, change date')) return;
-      const r = await post('quick-fix-date', id, { code: fixCode, date: fixDate.value });
-      fix.querySelectorAll('.qp-msg').forEach(m => m.remove());
-      if (!r.ok) { fix.insertAdjacentHTML('beforeend', `<div class="qp-msg err" style="flex-basis:100%"></div>`); fix.lastElementChild.textContent = r.error; return; }
-      updateRow(tr, r.row);
-      if (!r.unchanged) toast(`<div class="row1"><span>Date corrected. Now <b>${r.risk}</b>.</span></div>`);
-      closePanel(); openPanel(tr);
+      closePanel(); openPanel(tr);  // show the new dates and statuses
     });
 
     // child information
@@ -504,7 +355,6 @@ tr.qp-row > td { background: #f8fafc !important; padding: 0 !important; border-b
       toast(`<div class="row1"><span>Other records saved.</span></div>` + (r.warnings.length ? `<div class="row2">${r.warnings.map(esc).join('<br>')}</div>` : ''));
     });
 
-    refresh();
   }
 
   // open/close by clicking a row (links keep working), Enter/Space, arrow keys
